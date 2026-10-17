@@ -62,7 +62,7 @@ jobs:
           echo "::notice title=Simulator::${DEVICE#*|}"
           cd ELRDKit
           xcodebuild \
-            -scheme ELRDKit-Package \
+            -scheme ELRDKit \
             -destination "id=${DEVICE%%|*}" \
             test > ../test.log 2>&1 || true
           cd ..

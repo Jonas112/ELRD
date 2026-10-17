@@ -14,3 +14,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E8 | 2026-10-17 | Keine externen Abhängigkeiten, nur Systemframeworks | Wartbarkeit, App-Review, Datenschutz |
 | E9 | 2026-10-17 | UUID-Schlüssel, Versions-/Autor-Metadaten, Soft-Delete und Änderungsjournal ab dem ersten Datenmodell | Mehrbenutzer-Modus später ohne Datenmodell-Umbau |
 | E10 | 2026-10-17 | Domain als reine Werttypen, SwiftData nur in der Persistenzschicht | Austauschbarkeit, Testbarkeit, Codable-DTOs für Sync |
+| E11 | 2026-10-17 | Xcode 26.6, Projektformat mit synchronisierten Ordnern; Logik im lokalen Package `ELRDKit` | Neue Dateien ohne Eingriff in die Projektdatei |
+| E12 | 2026-10-17 | Swift-5-Sprachmodus mit `StrictConcurrency` und `ExistentialAny` | Concurrency-Sicherheit ab Start, Swift-6-Umstieg später ohne Umbau |
+| E13 | 2026-10-17 | Tests mit Swift Testing; CI-Build auf GitHub Actions (`macos-26`) nur bei Code-Änderungen | Claude kann ohne Xcode Build-Ergebnisse prüfen; macOS-Minuten sparen |

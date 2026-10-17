@@ -1,0 +1,72 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+/// Gemeinsame Compiler-Einstellungen: Swift-5-Sprachmodus mit vollständiger
+/// Concurrency-Prüfung (siehe docs/ARCHITEKTUR.md).
+let commonSettings: [SwiftSetting] = [
+    .enableUpcomingFeature("StrictConcurrency"),
+    .enableUpcomingFeature("ExistentialAny"),
+]
+
+let package = Package(
+    name: "ELRDKit",
+    defaultLocalization: "de",
+    platforms: [
+        .iOS(.v17),
+    ],
+    products: [
+        .library(
+            name: "ELRDKit",
+            targets: [
+                "ELRDDomain",
+                "ELRDPersistence",
+                "ELRDSync",
+                "ELRDAuth",
+                "ELRDEntitlements",
+                "ELRDReports",
+                "ELRDStammdaten",
+                "ELRDFeatures",
+            ]
+        ),
+    ],
+    targets: [
+        // Reine Werttypen und Fachregeln. Keine Abhängigkeiten.
+        .target(name: "ELRDDomain", swiftSettings: commonSettings),
+
+        // SwiftData-Modelle, Mapping, Repositories.
+        .target(name: "ELRDPersistence", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+
+        // Änderungsjournal und Sync-Protokoll.
+        .target(name: "ELRDSync", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+
+        // Benutzer, Passwort-Hashing, Keychain, AuthProvider.
+        .target(name: "ELRDAuth", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+
+        // Freischaltungen / Abo-Status.
+        .target(name: "ELRDEntitlements", swiftSettings: commonSettings),
+
+        // PDF-Engine und Berichtsvorlagen.
+        .target(name: "ELRDReports", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+
+        // Stammdatenmodell und CSV-Regionsimport.
+        .target(name: "ELRDStammdaten", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+
+        // SwiftUI-Oberflächen und Designsystem.
+        .target(
+            name: "ELRDFeatures",
+            dependencies: [
+                "ELRDDomain",
+                "ELRDPersistence",
+                "ELRDSync",
+                "ELRDAuth",
+                "ELRDEntitlements",
+                "ELRDReports",
+                "ELRDStammdaten",
+            ],
+            swiftSettings: commonSettings
+        ),
+
+        .testTarget(name: "ELRDDomainTests", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+    ],
+    swiftLanguageModes: [.v5]
+)

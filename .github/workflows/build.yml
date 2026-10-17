@@ -1,0 +1,62 @@
+name: Build
+
+# Läuft nur bei Code-Änderungen (nicht bei reinen Doku-Commits), um
+# macOS-Minuten zu sparen. Manuell startbar über „Run workflow“.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ELRD/**"
+      - "ELRDKit/**"
+      - "ELRD.xcodeproj/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode-Version
+        run: xcodebuild -version
+
+      - name: App bauen (iOS Simulator)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project ELRD.xcodeproj \
+            -scheme ELRD \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Tests ELRDKit
+        run: |
+          set -o pipefail
+          DEVICE_ID=$(xcrun simctl list devices available -j \
+            | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for r,l in d.items() if 'iOS' in r for x in l if 'iPad' in x['name']))")
+          echo "Simulator: $DEVICE_ID"
+          cd ELRDKit
+          xcodebuild \
+            -scheme ELRDKit-Package \
+            -destination "id=$DEVICE_ID" \
+            test 2>&1 | tee ../test.log | grep -E "error:|✔|✘|Test run|TEST (SUCCEEDED|FAILED)" || true
+          grep -q "TEST SUCCEEDED" ../test.log
+
+      - name: Logs sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            build.log
+            test.log
+          if-no-files-found: ignore

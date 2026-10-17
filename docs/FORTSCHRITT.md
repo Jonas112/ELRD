@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** 2 – Projektgerüst
+**Nächster Schritt:** 3 – Domäne 1 (vorher: Build-Ergebnis von Schritt 2 prüfen)
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code und committet → Jonas baut in Xcode und meldet Fehler → Claude behebt sie zu Beginn des nächsten Schritts.
@@ -10,7 +10,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | # | Schritt | Status |
 |---|---|---|
 | 1 | Analyse, Funktionsinventar, Architektur, Entscheidungen | ✅ |
-| 2 | Projektgerüst: Xcode-Projekt (iPad, iPadOS 17), lokales Package `ELRDKit` mit Modulen, CI-Build | ⬜ |
+| 2 | Projektgerüst: Xcode-Projekt (iPad, iPadOS 17), lokales Package `ELRDKit` mit Modulen, CI-Build | 🧪 |
 | 3 | Domäne 1: Werttypen & Enums (SK, Einheitentyp, Alarmstichwort, Einsatzart, Geschlecht, Schockraum, Klinikstatus, IVENA) | ⬜ |
 | 4 | Domäne 2: Einsatz, Abschnitt, Einheit | ⬜ |
 | 5 | Domäne 3: Patient, Verletzung, Klinik | ⬜ |
@@ -101,3 +101,4 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
+- **Schritt 2 (2026-10-17):** Jonas nutzt Xcode 26.6. Projekt `ELRD.xcodeproj` (objectVersion 77) mit synchronisiertem Ordner `ELRD/` – neue Dateien dort erscheinen automatisch, `project.pbxproj` muss nicht angefasst werden. Lokales Package `ELRDKit` (ein Produkt `ELRDKit`, 8 Module als Platzhalter, Test-Target `ELRDDomainTests` mit Swift Testing). Neue Module = neues Target in `ELRDKit/Package.swift` + Eintrag im Produkt. Bundle-ID vorläufig `ELRD.App`, Team in Xcode unter „Signing & Capabilities“ setzen. CI: `.github/workflows/build.yml` auf `macos-26`, läuft nur bei Code-Änderungen; Build-Logs als Artefakt. Offen: Build in Xcode durch Jonas bestätigen.

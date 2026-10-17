@@ -1,0 +1,103 @@
+# Fortschritt
+
+**Nächster Schritt:** 2 – Projektgerüst
+**Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
+
+Ablauf je Schritt: Claude schreibt Code und committet → Jonas baut in Xcode und meldet Fehler → Claude behebt sie zu Beginn des nächsten Schritts.
+Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fertig
+
+## A – Fundament
+| # | Schritt | Status |
+|---|---|---|
+| 1 | Analyse, Funktionsinventar, Architektur, Entscheidungen | ✅ |
+| 2 | Projektgerüst: Xcode-Projekt (iPad, iPadOS 17), lokales Package `ELRDKit` mit Modulen, CI-Build | ⬜ |
+| 3 | Domäne 1: Werttypen & Enums (SK, Einheitentyp, Alarmstichwort, Einsatzart, Geschlecht, Schockraum, Klinikstatus, IVENA) | ⬜ |
+| 4 | Domäne 2: Einsatz, Abschnitt, Einheit | ⬜ |
+| 5 | Domäne 3: Patient, Verletzung, Klinik | ⬜ |
+| 6 | Domäne 4: Tagebuch, Anhang, Nachricht, Protokoll, Kartenobjekte | ⬜ |
+| 7 | Sync-Metadaten, Änderungsjournal, HLC-Zeitstempel, Patientennummern-Vergabe | ⬜ |
+| 8 | SwiftData-Schema und Mapping | ⬜ |
+| 9 | Repositories (SwiftData + In-Memory) | ⬜ |
+| 10 | Command-Schicht und `MissionStore`, Protokoll aus Journal, Testdaten | ⬜ |
+| 11 | Stammdatenmodell und CSV-Regionsimport | ⬜ |
+| 12 | Benutzer & Anmeldung: Passwort-Hash, Keychain, `AuthProvider`, Konto-Verknüpfung vorbereitet | ⬜ |
+| 13 | Freischaltungs-Schicht (Entitlements) für späteres Abo | ⬜ |
+| 14 | App-Rahmen: adaptive Navigation, Designsystem, Tastaturkürzel-Grundlage | ⬜ |
+
+## B – Einsätze
+| # | Schritt | Status |
+|---|---|---|
+| 15 | Anmeldung / Benutzerwahl | ⬜ |
+| 16 | Einsatzliste, Filter, neuer Einsatz | ⬜ |
+| 17 | Einsatzdaten bearbeiten, Einsatz beenden | ⬜ |
+
+## C – Patienten
+| # | Schritt | Status |
+|---|---|---|
+| 18 | Patientenliste, SK-Schnellanlage, Sortierung, Zähler | ⬜ |
+| 19 | Detail: Personendaten, SK, Nummern mit Dublettenprüfung | ⬜ |
+| 20 | Detail: Verletzungen | ⬜ |
+| 21 | Detail: IVENA, Schockraum, intubiert/stabil | ⬜ |
+| 22 | Detail: Transport, Zielklinik, Anmeldestatus | ⬜ |
+| 23 | Patienten-Grafikansicht | ⬜ |
+
+## D – Organisation
+| # | Schritt | Status |
+|---|---|---|
+| 24 | Abschnitte | ⬜ |
+| 25 | Einheiten: Stammdaten, temporär, Filter, Suche | ⬜ |
+| 26 | Platzhalter, Alarmstichworte RD 1–5, Platzhalter ersetzen | ⬜ |
+| 27 | Drag & Drop | ⬜ |
+
+## E – Lagekarte
+| # | Schritt | Status |
+|---|---|---|
+| 28 | Kartenbasis: Standort, OSM/OpenTopo, Maßstab | ⬜ |
+| 29 | Abschnitte auf der Karte | ⬜ |
+| 30 | Kreis- und Rechteck-Overlays, Overlay-Liste | ⬜ |
+| 31 | Freihandzeichnen | ⬜ |
+| 32 | Kartenausschnitt ins Tagebuch, Drucken (what3words optional) | ⬜ |
+
+## F – Tagebuch & Nachrichten
+| # | Schritt | Status |
+|---|---|---|
+| 33 | Texteinträge und Vorlagen | ⬜ |
+| 34 | Fotoeinträge | ⬜ |
+| 35 | Audioeinträge | ⬜ |
+| 36 | Nachrichten und Protokollansicht | ⬜ |
+
+## G – Übersicht
+| # | Schritt | Status |
+|---|---|---|
+| 37 | Einsatz-Dashboard | ⬜ |
+
+## H – Berichte (PDF)
+| # | Schritt | Status |
+|---|---|---|
+| 38 | PDF-Engine: Seitenfluss, Umbrüche, Kopf-/Fußzeile, Seitenzahlen | ⬜ |
+| 39 | Berichts-Design: Theme, Typografie, Tabellen, Logo/Banner | ⬜ |
+| 40 | Berichtsmodell: Vorlage, Kapitel, Optionen, Filter | ⬜ |
+| 41 | Kapitel Einsatzinfo und Organisation | ⬜ |
+| 42 | Kapitel Patienten (Tabelle und Einzelbogen) | ⬜ |
+| 43 | Kapitel Tagebuch und Protokoll | ⬜ |
+| 44 | Berichts-Editor mit Live-Vorschau | ⬜ |
+| 45 | Vorlagen verwalten, Standardvorlagen (Gesamt, Kurz, Klinik) | ⬜ |
+| 46 | Ausgabe: Teilen, Drucken, Mail an ILS, Dateinamen | ⬜ |
+
+## I – Einstellungen
+| # | Schritt | Status |
+|---|---|---|
+| 47 | Allgemeine Einstellungen, Fahrzeugbilder, Banner | ⬜ |
+| 48 | Stammdatenverwaltung und Regionsimport-Oberfläche | ⬜ |
+| 49 | IVENA-Einstellungen | ⬜ |
+| 50 | Onboarding und Vereinbarungen | ⬜ |
+
+## J – Abschluss
+| # | Schritt | Status |
+|---|---|---|
+| 51 | Abo mit StoreKit 2 | ⬜ |
+| 52 | Robustheit: Autosave, Fehlerbehandlung, Barrierefreiheit, Tastatur | ⬜ |
+| 53 | Sync-Schnittstelle und Konfliktstrategie finalisieren, Verknüpfung lokal ↔ Backend | ⬜ |
+
+## Übergabenotizen
+- **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

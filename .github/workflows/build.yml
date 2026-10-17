@@ -2,6 +2,8 @@ name: Build
 
 # Läuft nur bei Code-Änderungen (nicht bei reinen Doku-Commits), um
 # macOS-Minuten zu sparen. Manuell startbar über „Run workflow“.
+# Fehler werden zusätzlich als Annotationen ausgegeben, damit sie in der
+# Lauf-Übersicht stehen (auch ohne Log-Download lesbar).
 on:
   push:
     branches: [main]
@@ -24,32 +26,56 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Xcode-Version
-        run: xcodebuild -version
+        run: echo "::notice title=Xcode::$(xcodebuild -version | tr '\n' ' ')"
 
       - name: App bauen (iOS Simulator)
         run: |
-          set -o pipefail
           xcodebuild \
             -project ELRD.xcodeproj \
             -scheme ELRD \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
-            build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
-          grep -q "BUILD SUCCEEDED" build.log
+            build > build.log 2>&1 || true
+          grep -E "^/.*: (error|warning): " build.log | sort -u | head -40 | while IFS= read -r line; do
+            file="${line%%:*}"; rest="${line#*:}"; lineno="${rest%%:*}"
+            if [[ "$line" == *": error: "* ]]; then lvl=error; else lvl=warning; fi
+            echo "::$lvl file=${file#$GITHUB_WORKSPACE/},line=$lineno::${line##*: $lvl: }"
+          done
+          if ! grep -q "BUILD SUCCEEDED" build.log; then
+            grep -E "error:|failed|FAILED" build.log | grep -vE "^/" | sort -u | head -15 | while IFS= read -r line; do
+              echo "::error title=Build::$line"
+            done
+            exit 1
+          fi
 
       - name: Tests ELRDKit
         run: |
-          set -o pipefail
-          DEVICE_ID=$(xcrun simctl list devices available -j \
-            | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for r,l in d.items() if 'iOS' in r for x in l if 'iPad' in x['name']))")
-          echo "Simulator: $DEVICE_ID"
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = [d for runtime, lst in devices.items() if "iOS" in runtime for d in lst]
+          pick = next((d for d in ios if "iPad" in d["name"]), ios[0] if ios else None)
+          print(pick["udid"] + "|" + pick["name"] if pick else "")
+          ')
+          if [ -z "$DEVICE" ]; then echo "::error title=Tests::Kein iOS-Simulator gefunden"; exit 1; fi
+          echo "::notice title=Simulator::${DEVICE#*|}"
           cd ELRDKit
           xcodebuild \
             -scheme ELRDKit-Package \
-            -destination "id=$DEVICE_ID" \
-            test 2>&1 | tee ../test.log | grep -E "error:|✔|✘|Test run|TEST (SUCCEEDED|FAILED)" || true
-          grep -q "TEST SUCCEEDED" ../test.log
+            -destination "id=${DEVICE%%|*}" \
+            test > ../test.log 2>&1 || true
+          cd ..
+          grep -E "^/.*: error: |✘|Test .* failed|recorded an issue" test.log | sort -u | head -30 | while IFS= read -r line; do
+            echo "::error title=Test::$line"
+          done
+          if ! grep -q "TEST SUCCEEDED" test.log; then
+            grep -E "error|xcodebuild: |Unable|not found" test.log | sort -u | head -15 | while IFS= read -r line; do
+              echo "::error title=Tests::$line"
+            done
+            exit 1
+          fi
+          echo "::notice title=Tests::$(grep -E 'Test run with' test.log | tail -1)"
 
       - name: Logs sichern
         if: always()

@@ -25,3 +25,7 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E19 | 2026-10-18 | Verletzungen eingebettet im Patienten, je Eintrag eigene `InjuryID` | Einfacher Zugriff; Sync kann trotzdem einzelne Einträge zusammenführen |
 | E20 | 2026-10-18 | Zielklinik als Momentaufnahme (`HospitalSnapshot`) statt Verweis | Stammdaten-Änderungen verändern keine alten Einsätze/Berichte |
 | E21 | 2026-10-18 | Patientennummer ist Anzeige, Dubletten werden markiert statt blockiert | Im Einsatz nicht durch Validierung aufhalten; Schlüssel ist die UUID |
+| E22 | 2026-10-18 | Anhangstyp heißt `FileAttachment` | Konflikt mit `Testing.Attachment` (und generell zu allgemein) |
+| E23 | 2026-10-18 | Kreislauf mit drei Zuständen (`CirculationState`) | Wunsch Jonas: „nicht beurteilt“ von „stabil“ unterscheiden |
+| E24 | 2026-10-18 | Kartengeometrie in geografischen Koordinaten (`GeoBounds`), nicht `MKMapRect` | Plattformunabhängig, für Sync und PDF nutzbar |
+| E25 | 2026-10-18 | Protokolltexte nennen Patienten nur per Nummer | Datenschutz: Protokoll/Logs ohne Namen |

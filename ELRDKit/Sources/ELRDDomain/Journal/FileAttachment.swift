@@ -33,7 +33,7 @@ public enum AttachmentKind: Int, CaseIterable, Codable, Sendable, DisplayNamed {
 /// Die Datei liegt im App-Container, die Datenbank speichert nur diesen Verweis
 /// mit Prüfsumme (siehe docs/ARCHITEKTUR.md, Abschnitt Persistenz). Die Prüfsumme
 /// erlaubt später, beim Synchronisieren fehlende oder beschädigte Dateien zu erkennen.
-public struct Attachment: Identifiable, Hashable, Codable, Sendable {
+public struct FileAttachment: Identifiable, Hashable, Codable, Sendable {
     public let id: AttachmentID
     public let kind: AttachmentKind
     /// Größe in Bytes.

@@ -57,7 +57,7 @@ public enum MapShape: Hashable, Codable, Sendable {
     case circle(center: GeoCoordinate, radiusMeters: Double)
     case rectangle(bounds: GeoBounds)
     /// Freihandzeichnung als transparentes Bild, aufgespannt über `bounds`.
-    case drawing(bounds: GeoBounds, image: Attachment)
+    case drawing(bounds: GeoBounds, image: FileAttachment)
 
     /// Kleinster und größter erlaubter Kreisradius in Metern.
     public static let radiusRange: ClosedRange<Double> = 1...50_000

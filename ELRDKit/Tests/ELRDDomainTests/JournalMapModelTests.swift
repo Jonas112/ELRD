@@ -10,11 +10,11 @@ private enum Sample {
         .new(by: Fixture.author, at: Fixture.start.addingTimeInterval(offset))
     }
 
-    static func attachment(_ kind: AttachmentKind) -> Attachment {
-        Attachment(kind: kind, byteCount: 1024, sha256: checksum.uppercased(), createdAt: Fixture.start)
+    static func attachment(_ kind: AttachmentKind) -> FileAttachment {
+        FileAttachment(kind: kind, byteCount: 1024, sha256: checksum.uppercased(), createdAt: Fixture.start)
     }
 
-    static func entry(number: Int, minutes: Double, text: String = "Lage", attachments: [Attachment] = []) -> JournalEntry {
+    static func entry(number: Int, minutes: Double, text: String = "Lage", attachments: [FileAttachment] = []) -> JournalEntry {
         JournalEntry(
             missionID: missionID,
             metadata: meta(),
@@ -34,8 +34,8 @@ struct AttachmentTests {
         #expect(photo.fileName.hasPrefix(photo.id.rawValue.uuidString.lowercased()))
         #expect(photo.sha256 == Sample.checksum, "Prüfsumme wird klein geschrieben")
         #expect(photo.hasValidChecksum)
-        #expect(!Attachment(kind: .audio, byteCount: -5, sha256: "xyz", createdAt: Fixture.start).hasValidChecksum)
-        #expect(Attachment(kind: .audio, byteCount: -5, sha256: "", createdAt: Fixture.start).byteCount == 0)
+        #expect(!FileAttachment(kind: .audio, byteCount: -5, sha256: "xyz", createdAt: Fixture.start).hasValidChecksum)
+        #expect(FileAttachment(kind: .audio, byteCount: -5, sha256: "", createdAt: Fixture.start).byteCount == 0)
     }
 
     @Test func legacyRawValues() {

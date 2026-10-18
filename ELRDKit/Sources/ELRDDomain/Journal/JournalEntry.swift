@@ -13,7 +13,7 @@ public struct JournalEntry: VersionedEntity, MissionScoped {
     public var occurredAt: Date
     public var text: String
     public var origin: JournalOrigin
-    public private(set) var attachments: [Attachment]
+    public private(set) var attachments: [FileAttachment]
     /// Bild dieses Eintrags dient als Vorschaubild des Einsatzes in der Einsatzliste.
     public var isMissionThumbnail: Bool
 
@@ -25,7 +25,7 @@ public struct JournalEntry: VersionedEntity, MissionScoped {
         occurredAt: Date,
         text: String,
         origin: JournalOrigin = .manual,
-        attachments: [Attachment] = [],
+        attachments: [FileAttachment] = [],
         isMissionThumbnail: Bool = false
     ) {
         self.id = id
@@ -90,7 +90,7 @@ public extension JournalEntry {
     }
 
     /// Erstes Bild (Foto oder Zeichnung), z. B. für Vorschau und Berichte.
-    var firstImage: Attachment? {
+    var firstImage: FileAttachment? {
         attachments.first { $0.kind == .photo || $0.kind == .drawing }
     }
 
@@ -99,7 +99,7 @@ public extension JournalEntry {
         text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachments.isEmpty
     }
 
-    mutating func addAttachment(_ attachment: Attachment) {
+    mutating func addAttachment(_ attachment: FileAttachment) {
         guard !attachments.contains(where: { $0.id == attachment.id }) else { return }
         attachments.append(attachment)
     }
@@ -120,7 +120,7 @@ public extension JournalEntry {
     }
 
     /// Vorschaubild des Einsatzes wie ELRDRG: markierter Eintrag, sonst erstes Foto.
-    static func thumbnail(in entries: some Sequence<JournalEntry>) -> Attachment? {
+    static func thumbnail(in entries: some Sequence<JournalEntry>) -> FileAttachment? {
         let active = chronological(entries)
         if let marked = active.first(where: { $0.isMissionThumbnail })?.firstImage { return marked }
         return active.lazy.compactMap { entry in

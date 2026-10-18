@@ -50,7 +50,7 @@ public enum ChangeRecorder {
         let oldFields = try old.map(fields(of:)) ?? [:]
         var changes: [FieldChange] = []
 
-        for key in newFields.keys.union(oldFields.keys).sorted() where !excludedFields.contains(key) {
+        for key in Set(newFields.keys).union(oldFields.keys).sorted() where !excludedFields.contains(key) {
             let newValue = newFields[key] ?? .null
             let oldValue = oldFields[key] ?? .null
             guard newValue != oldValue else { continue }

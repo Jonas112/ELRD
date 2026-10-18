@@ -248,7 +248,9 @@ struct MissionUnitTests {
         #expect(unit.displayName == "Florian 1/83")
         #expect(unit.masterUnitID == master)
         #expect(!unit.isTemporary)
-        #expect(!unit.replacePlaceholder(callsign: "X", type: .rtw, crewCount: nil, masterUnitID: nil))
+        let replacedTwice = unit.replacePlaceholder(callsign: "X", type: .rtw, crewCount: nil, masterUnitID: nil)
+        #expect(!replacedTwice, "Eine reale Einheit ist kein Platzhalter mehr")
+        #expect(unit.displayName == "Florian 1/83")
     }
 
     @Test func renameOnlyAffectsRealUnits() {

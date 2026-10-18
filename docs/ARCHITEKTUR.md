@@ -50,8 +50,8 @@ Ziel: Mehrere Nutzer bearbeiten denselben Einsatz auf mehreren Geräten.
 2. **Partition:** Alle einsatzbezogenen Entitäten tragen `missionID`. Ein Einsatz ist die Einheit für Freigabe und Sync.
 3. **Metadaten je Entität:** `createdAt`, `createdBy`, `updatedAt`, `updatedBy`, `version` (Int, steigt bei jeder Änderung), `deletedAt` (Soft-Delete, nie physisch löschen solange synchronisiert wird).
 4. **Änderungsjournal:** Append-only `ChangeEvent` mit `id`, `missionID`, `entityType`, `entityID`, Operation (insert/update/delete), geänderten Feldern mit neuem Wert, `authorID`, `deviceID`, Hybrid-Logical-Clock-Zeitstempel.
-5. **Konfliktstrategie (Entwurf):** Feldweise „letzter Schreiber gewinnt“ nach HLC-Zeitstempel. Listen (Patienten, Einheiten, Tagebuch) werden über Insert/Delete-Ereignisse zusammengeführt, nicht als Ganzes überschrieben.
-6. **Patientennummern:** Anzeige-Nummer ist nicht der Schlüssel. Vergabe so, dass zwei Geräte offline keine gleiche Nummer erzeugen (Variante wird in Schritt 7 festgelegt, z. B. Gerätekürzel + laufende Nummer, oder Nummernblöcke je Gerät).
+5. **Konfliktstrategie (umgesetzt in `ELRDSync`, Schritt 7):** Je Feld gewinnt die Änderung mit dem größten HLC-Zeitstempel. Listen mit Kennungen (Verletzungen, Anhänge, zugeordnete Einheiten) werden elementweise geführt (`upsertElement`/`removeElement`) und nie als Ganzes überschrieben. `MergeState` ist reihenfolgeunabhängig und idempotent.
+6. **Patienten- und Tagebuchnummern:** `SerialNumber` mit Gerätepräfix („A-12“, „B-3“). Jedes Gerät vergibt nur Nummern mit eigenem Präfix (`DeviceIdentity`), daher keine Kollisionen offline.
 7. **Transport:** Protokoll `SyncTransport` mit zwei späteren Implementierungen denkbar: ELRD-Backend (bevorzugt, DSGVO, Mandantentrennung) oder lokales Netzwerk. Zunächst nur `NoopTransport`.
 
 ## Benutzer & Anmeldung

@@ -29,3 +29,5 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E23 | 2026-10-18 | Kreislauf mit drei Zuständen (`CirculationState`) | Wunsch Jonas: „nicht beurteilt“ von „stabil“ unterscheiden |
 | E24 | 2026-10-18 | Kartengeometrie in geografischen Koordinaten (`GeoBounds`), nicht `MKMapRect` | Plattformunabhängig, für Sync und PDF nutzbar |
 | E25 | 2026-10-18 | Protokolltexte nennen Patienten nur per Nummer | Datenschutz: Protokoll/Logs ohne Namen |
+| E26 | 2026-10-18 | Patienten- und Tagebuchnummern mit Gerätepräfix („A-12“), Standardpräfix „A“ | Entscheidung Jonas: offline auf mehreren Geräten eindeutig, auf Anhängekarten lesbar |
+| E27 | 2026-10-18 | Konfliktlösung: HLC-Zeitstempel, „letzter Schreiber gewinnt“ je Feld; Listen mit Kennungen elementweise | Gleichzeitige Änderungen an verschiedenen Feldern/Listenelementen gehen nicht verloren; Ergebnis unabhängig von der Empfangsreihenfolge |

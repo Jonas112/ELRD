@@ -8,10 +8,11 @@ public struct Patient: VersionedEntity, MissionScoped {
 
     // MARK: Kennzeichnung
 
-    /// Patientennummer im Einsatz (Anzeige, Anhängekarte). Nicht der Schlüssel.
+    /// Patientennummer im Einsatz mit Gerätepräfix, z. B. „A-12“ (Anzeige, Anhängekarte).
+    /// Nicht der Schlüssel.
     /// Doppelte Nummern sind möglich (z. B. Tippfehler) und werden über
     /// `Patient.duplicateNumbers` angezeigt, nicht verhindert.
-    public var number: Int
+    public var number: SerialNumber
     /// Patientennummer der Leitstelle (ILS).
     public var dispatchPatientNumber: String?
 
@@ -53,7 +54,7 @@ public struct Patient: VersionedEntity, MissionScoped {
         id: PatientID = PatientID(),
         missionID: MissionID,
         metadata: EntityMetadata,
-        number: Int,
+        number: SerialNumber,
         triage: Sichtungskategorie = .defaultForNewPatient,
         dispatchPatientNumber: String? = nil,
         firstName: String = "",
@@ -157,9 +158,9 @@ public extension Patient {
         }
     }
 
-    /// Anzeigename für Listen, z. B. „P 12 – Muster, Max“ oder „P 12“.
+    /// Anzeigename für Listen, z. B. „A-12 – Muster, Max“ oder „A-12“.
     var displayName: String {
-        fullName.isEmpty ? "P \(number)" : "P \(number) – \(fullName)"
+        fullName.isEmpty ? number.description : "\(number) – \(fullName)"
     }
 
     /// Alter in vollen Jahren am Stichtag: aus dem Geburtsdatum, sonst die Schätzung.
@@ -288,16 +289,16 @@ public extension Patient {
 // MARK: - Sammlungen
 
 public extension Patient {
-    /// Nächste Patientennummer: höchste vorhandene + 1 (wie ELRDRG).
-    /// Mehrbenutzerfähige Vergabe folgt in Schritt 7.
-    static func nextNumber(existing patients: some Sequence<Patient>) -> Int {
-        (patients.active.map(\.number).max() ?? 0) + 1
+    /// Nächste Patientennummer für das Gerätepräfix (höchste eigene + 1).
+    /// Gelöschte Patienten zählen mit, damit eine Nummer nie zweimal vergeben wird.
+    static func nextNumber(prefix: String, existing patients: some Sequence<Patient>) -> SerialNumber {
+        SerialNumber.next(prefix: prefix, existing: patients.map(\.number))
     }
 
     /// Patientennummern, die mehrfach vergeben sind (nur aktive Patienten).
-    static func duplicateNumbers(in patients: some Sequence<Patient>) -> Set<Int> {
-        var seen = Set<Int>()
-        var duplicates = Set<Int>()
+    static func duplicateNumbers(in patients: some Sequence<Patient>) -> Set<SerialNumber> {
+        var seen = Set<SerialNumber>()
+        var duplicates = Set<SerialNumber>()
         for number in patients.active.map(\.number) where !seen.insert(number).inserted {
             duplicates.insert(number)
         }

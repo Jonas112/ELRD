@@ -1,7 +1,7 @@
 import Foundation
 
 /// Ein Einsatz (eine Lage). Wurzel aller einsatzbezogenen Daten.
-public struct Mission: VersionedEntity {
+public struct Mission: VersionedEntity, MissionScoped {
     public let id: MissionID
     public var metadata: EntityMetadata
 
@@ -66,6 +66,9 @@ public struct Mission: VersionedEntity {
 // MARK: - Fachlogik
 
 public extension Mission {
+    /// Ein Einsatz gehört zu sich selbst (für einheitliche Behandlung in der Synchronisation).
+    var missionID: MissionID { id }
+
     /// Titel für Listen: Einsatzgrund, sonst Einsatzart, sonst „Einsatz <Nummer>“.
     var title: String {
         let trimmedReason = reason.trimmingCharacters(in: .whitespacesAndNewlines)

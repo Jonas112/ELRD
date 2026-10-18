@@ -14,7 +14,7 @@ private enum Sample {
         FileAttachment(kind: kind, byteCount: 1024, sha256: checksum.uppercased(), createdAt: Fixture.start)
     }
 
-    static func entry(number: Int, minutes: Double, text: String = "Lage", attachments: [FileAttachment] = []) -> JournalEntry {
+    static func entry(number: SerialNumber, minutes: Double, text: String = "Lage", attachments: [FileAttachment] = []) -> JournalEntry {
         JournalEntry(
             missionID: missionID,
             metadata: meta(),
@@ -69,8 +69,8 @@ struct JournalEntryTests {
     @Test func numberingCountsDeletedEntries() {
         var deleted = Sample.entry(number: 4, minutes: 0)
         deleted.metadata.markDeleted(by: Fixture.author, at: Fixture.start)
-        #expect(JournalEntry.nextNumber(existing: [Sample.entry(number: 2, minutes: 0), deleted]) == 5)
-        #expect(JournalEntry.nextNumber(existing: []) == 1)
+        #expect(JournalEntry.nextNumber(prefix: "", existing: [Sample.entry(number: 2, minutes: 0), deleted]) == 5)
+        #expect(JournalEntry.nextNumber(prefix: "B", existing: []).description == "B-1")
     }
 
     @Test func chronologicalOrder() {

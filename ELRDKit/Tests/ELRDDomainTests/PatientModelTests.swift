@@ -5,7 +5,7 @@ import Testing
 private extension Fixture {
     static let missionID = MissionID()
 
-    static func patient(number: Int = 1, triage: Sichtungskategorie = .ungesichtet) -> Patient {
+    static func patient(number: SerialNumber = 1, triage: Sichtungskategorie = .ungesichtet) -> Patient {
         Patient(
             missionID: missionID,
             metadata: .new(by: author, at: start),
@@ -41,13 +41,13 @@ struct PatientTests {
         #expect(patient.triage == .ungesichtet)
         #expect(patient.gender == .unklar)
         #expect(patient.status == .waiting)
-        #expect(patient.displayName == "P 1")
+        #expect(patient.displayName == "1")
     }
 
     @Test func names() {
         var patient = Fixture.patient(number: 12)
         patient.lastName = " Muster "
-        #expect(patient.displayName == "P 12 – Muster")
+        #expect(patient.displayName == "12 – Muster")
         patient.firstName = "Max"
         #expect(patient.fullName == "Muster, Max")
         patient.lastName = ""
@@ -211,8 +211,8 @@ struct PatientCollectionTests {
             Fixture.patient(number: 3),
             Fixture.patient(number: 5),
         ]
-        #expect(Patient.nextNumber(existing: patients) == 6)
-        #expect(Patient.nextNumber(existing: []) == 1)
+        #expect(Patient.nextNumber(prefix: "", existing: patients) == 6)
+        #expect(Patient.nextNumber(prefix: "A", existing: patients).description == "A-1")
         #expect(Patient.duplicateNumbers(in: patients) == [3])
     }
 

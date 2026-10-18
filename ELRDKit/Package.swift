@@ -67,6 +67,7 @@ let package = Package(
         ),
 
         .testTarget(name: "ELRDDomainTests", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDSyncTests", dependencies: ["ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
     ],
     swiftLanguageModes: [.v5]
 )

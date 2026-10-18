@@ -6,8 +6,8 @@ public struct JournalEntry: VersionedEntity, MissionScoped {
     public let missionID: MissionID
     public var metadata: EntityMetadata
 
-    /// Laufende Nummer im Tagebuch des Einsatzes.
-    public var number: Int
+    /// Laufende Nummer im Tagebuch mit Gerätepräfix, z. B. „A-7“.
+    public var number: SerialNumber
     /// Zeitpunkt des Ereignisses. Kann vom Erfassungszeitpunkt (`metadata.createdAt`)
     /// abweichen, wenn nachträglich dokumentiert wird.
     public var occurredAt: Date
@@ -21,7 +21,7 @@ public struct JournalEntry: VersionedEntity, MissionScoped {
         id: JournalEntryID = JournalEntryID(),
         missionID: MissionID,
         metadata: EntityMetadata,
-        number: Int,
+        number: SerialNumber,
         occurredAt: Date,
         text: String,
         origin: JournalOrigin = .manual,
@@ -108,10 +108,10 @@ public extension JournalEntry {
         attachments.removeAll { $0.id == id }
     }
 
-    /// Nächste laufende Nummer (höchste + 1, gelöschte zählen mit, damit Nummern
-    /// im Tagebuch nicht doppelt vergeben werden). Mehrbenutzerfähig ab Schritt 7.
-    static func nextNumber(existing entries: some Sequence<JournalEntry>) -> Int {
-        (entries.map(\.number).max() ?? 0) + 1
+    /// Nächste laufende Nummer für das Gerätepräfix (höchste eigene + 1).
+    /// Gelöschte Einträge zählen mit, damit Nummern im Tagebuch nie doppelt vorkommen.
+    static func nextNumber(prefix: String, existing entries: some Sequence<JournalEntry>) -> SerialNumber {
+        SerialNumber.next(prefix: prefix, existing: entries.map(\.number))
     }
 
     /// Chronologisch nach Ereigniszeit, bei Gleichstand nach Nummer.

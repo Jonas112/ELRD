@@ -37,6 +37,7 @@ struct InjuryTests {
 struct PatientTests {
     @Test func defaultsForNewPatient() {
         let patient = Fixture.patient()
+        #expect(patient.circulation == .unbekannt)
         #expect(patient.triage == .ungesichtet)
         #expect(patient.gender == .unklar)
         #expect(patient.status == .waiting)
@@ -104,8 +105,11 @@ struct PatientTests {
         patient.addInjury(Injury(diagnosis: "SHT", region: .kopf))
         patient.traumaRoom = .a
         patient.isIntubated = true
-        patient.isCirculationUnstable = true
-        #expect(patient.medicalSummaryLines == ["SHT Kopf", "Schockraum A", "Intubiert / beatmet", "Kreislauf instabil"])
+        #expect(patient.medicalSummaryLines == ["SHT Kopf", "Schockraum A", "Intubiert / beatmet"], "Unbekannter Kreislauf erscheint nicht")
+        patient.circulation = .instabil
+        #expect(patient.medicalSummaryLines.last == "Kreislauf instabil")
+        patient.circulation = .stabil
+        #expect(patient.medicalSummaryLines.last == "Kreislauf stabil")
     }
 
     @Test func allocationCodeUsesAge() {

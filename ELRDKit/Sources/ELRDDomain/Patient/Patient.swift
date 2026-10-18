@@ -34,7 +34,7 @@ public struct Patient: VersionedEntity, MissionScoped {
     public private(set) var injuries: [Injury]
     public var traumaRoom: TraumaRoom
     public var isIntubated: Bool
-    public var isCirculationUnstable: Bool
+    public var circulation: CirculationState
     /// IVENA-Rückmeldeindikator (dreistellig).
     public var rmiCode: Int?
     public var treatmentPriority: TreatmentPriority
@@ -66,7 +66,7 @@ public struct Patient: VersionedEntity, MissionScoped {
         injuries: [Injury] = [],
         traumaRoom: TraumaRoom = .none,
         isIntubated: Bool = false,
-        isCirculationUnstable: Bool = false,
+        circulation: CirculationState = .unbekannt,
         rmiCode: Int? = nil,
         treatmentPriority: TreatmentPriority = .keineDringlichkeit,
         sectionID: SectionID? = nil,
@@ -91,7 +91,7 @@ public struct Patient: VersionedEntity, MissionScoped {
         self.injuries = []
         self.traumaRoom = traumaRoom
         self.isIntubated = isIntubated
-        self.isCirculationUnstable = isCirculationUnstable
+        self.circulation = circulation
         self.rmiCode = rmiCode
         self.treatmentPriority = treatmentPriority
         self.sectionID = sectionID
@@ -216,7 +216,7 @@ public extension Patient {
         var lines = injuries.map(\.displayText)
         if traumaRoom != .none { lines.append(traumaRoom.displayName) }
         if isIntubated { lines.append("Intubiert / beatmet") }
-        if isCirculationUnstable { lines.append("Kreislauf instabil") }
+        if circulation != .unbekannt { lines.append(circulation.displayName) }
         return lines
     }
 }

@@ -26,6 +26,9 @@ struct EnumCompatibilityTests {
         #expect(TreatmentPriority.allCases.map(\.rawValue) == [0, 1, 2, 3])
         #expect(BodySide.allCases.map(\.rawValue) == [0, 1])
         #expect(BodyRegion.allCases.map(\.rawValue) == Array(0...7))
+        #expect(CirculationState.allCases.map(\.rawValue) == [0, 1, 2])
+        #expect(CirculationState(legacyStable: true) == .stabil)
+        #expect(CirculationState(legacyStable: false) == .unbekannt)
     }
 
     @Test func bodyRegionLegacyText() {

@@ -48,6 +48,11 @@ public enum IDTag {
     public enum Injury {}
     public enum MasterInjury {}
     public enum MasterHospital {}
+    public enum JournalEntry {}
+    public enum Attachment {}
+    public enum Message {}
+    public enum LogEntry {}
+    public enum MapObject {}
 }
 
 public typealias MissionID = EntityID<IDTag.Mission>
@@ -65,3 +70,8 @@ public typealias InjuryID = EntityID<IDTag.Injury>
 public typealias MasterInjuryID = EntityID<IDTag.MasterInjury>
 /// Klinik aus den Stammdaten.
 public typealias MasterHospitalID = EntityID<IDTag.MasterHospital>
+public typealias JournalEntryID = EntityID<IDTag.JournalEntry>
+public typealias AttachmentID = EntityID<IDTag.Attachment>
+public typealias MessageID = EntityID<IDTag.Message>
+public typealias LogEntryID = EntityID<IDTag.LogEntry>
+public typealias MapObjectID = EntityID<IDTag.MapObject>

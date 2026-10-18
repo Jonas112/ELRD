@@ -141,3 +141,37 @@ public enum BodySide: Int, CaseIterable, Codable, Sendable, Identifiable, Displa
         }
     }
 }
+
+/// Kreislaufzustand eines Patienten.
+///
+/// ELRDRG kannte nur das Kennzeichen „Kreislauf instabil“ (Bool). Neu mit drei
+/// Zuständen, damit „nicht beurteilt“ und „stabil“ unterscheidbar sind.
+public enum CirculationState: Int, CaseIterable, Codable, Sendable, Identifiable, DisplayNamed {
+    case unbekannt = 0
+    case stabil = 1
+    case instabil = 2
+
+    public var id: Int { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .unbekannt: "Kreislauf nicht beurteilt"
+        case .stabil: "Kreislauf stabil"
+        case .instabil: "Kreislauf instabil"
+        }
+    }
+
+    public var shortName: String {
+        switch self {
+        case .unbekannt: "–"
+        case .stabil: "stabil"
+        case .instabil: "instabil"
+        }
+    }
+
+    /// Übernimmt den alten ELRDRG-Wert `Victim.stabil`.
+    /// Dort bedeutete `false` sowohl „instabil“ als auch „nicht erfasst“; daher → unbekannt.
+    public init(legacyStable: Bool) {
+        self = legacyStable ? .stabil : .unbekannt
+    }
+}

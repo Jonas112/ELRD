@@ -38,6 +38,8 @@ View ──Aktion──▶ MissionStore (@Observable, @MainActor)
                                       └─▶ Protokollansicht + spätere Synchronisation
 ```
 
+Domänentypen heißen `Mission`, `MissionSection`, `MissionUnit` (nicht `Section`/`Unit`, siehe E16). Kennungen sind typsicher (`EntityID<Tag>`), Zeitpunkte werden Fachmethoden immer als Parameter übergeben.
+
 Regel: **Views schreiben nie direkt in die Persistenz.** Jede Änderung ist ein Command. Dadurch entstehen Protokoll und Sync-Daten automatisch und vollständig.
 
 ## Mehrbenutzerfähigkeit (vorbereitet, noch nicht aktiv)

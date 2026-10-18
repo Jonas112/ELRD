@@ -19,3 +19,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E13 | 2026-10-17 | Tests mit Swift Testing; CI-Build auf GitHub Actions (`macos-26`) nur bei Code-Änderungen | Claude kann ohne Xcode Build-Ergebnisse prüfen; macOS-Minuten sparen |
 | E14 | 2026-10-18 | Enum-Rohwerte (SK 1–6, Einheitentyp 0–11, Geschlecht, Schockraum, Klinikstatus, IVENA-Priorität, Einsatzart-Texte) unverändert aus ELRDRG | Null-Transformation zum ELRD-Backend, späterer Import alter Daten möglich |
 | E15 | 2026-10-18 | SK 2 in Gelb (statt Orange wie in ELRDRG), Farben als `RGBColor` in der Domäne | Übliche Farbkodierung; App und PDF nutzen dieselben Farben |
+| E16 | 2026-10-18 | Domänentypen `MissionSection` und `MissionUnit` statt `Section`/`Unit` | Namenskonflikte mit `SwiftUI.Section` und `Foundation.Unit` |
+| E17 | 2026-10-18 | ILS-Einsatznummer als Text (`dispatchNumber: String?`), km-Stände als Ganzzahl | Leitstellenformate mit Buchstaben/führenden Nullen; ELRDRG speicherte Int32 |
+| E18 | 2026-10-18 | Platzhalter-Nummern fortlaufend je Einsatz über alle Typen; Anzeige „RTW (Platzhalter 3)“ | Verhalten wie ELRDRG („Dummy (3) RTW“), verständlicher benannt |

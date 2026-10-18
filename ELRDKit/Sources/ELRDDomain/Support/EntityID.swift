@@ -45,6 +45,9 @@ public enum IDTag {
     public enum Device {}
     public enum MasterUnit {}
     public enum MasterSection {}
+    public enum Injury {}
+    public enum MasterInjury {}
+    public enum MasterHospital {}
 }
 
 public typealias MissionID = EntityID<IDTag.Mission>
@@ -57,3 +60,8 @@ public typealias DeviceID = EntityID<IDTag.Device>
 public typealias MasterUnitID = EntityID<IDTag.MasterUnit>
 /// Abschnitt aus den Stammdaten.
 public typealias MasterSectionID = EntityID<IDTag.MasterSection>
+public typealias InjuryID = EntityID<IDTag.Injury>
+/// Diagnose aus dem Stammdaten-Katalog.
+public typealias MasterInjuryID = EntityID<IDTag.MasterInjury>
+/// Klinik aus den Stammdaten.
+public typealias MasterHospitalID = EntityID<IDTag.MasterHospital>

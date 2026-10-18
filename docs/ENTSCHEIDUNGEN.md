@@ -22,3 +22,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E16 | 2026-10-18 | Domänentypen `MissionSection` und `MissionUnit` statt `Section`/`Unit` | Namenskonflikte mit `SwiftUI.Section` und `Foundation.Unit` |
 | E17 | 2026-10-18 | ILS-Einsatznummer als Text (`dispatchNumber: String?`), km-Stände als Ganzzahl | Leitstellenformate mit Buchstaben/führenden Nullen; ELRDRG speicherte Int32 |
 | E18 | 2026-10-18 | Platzhalter-Nummern fortlaufend je Einsatz über alle Typen; Anzeige „RTW (Platzhalter 3)“ | Verhalten wie ELRDRG („Dummy (3) RTW“), verständlicher benannt |
+| E19 | 2026-10-18 | Verletzungen eingebettet im Patienten, je Eintrag eigene `InjuryID` | Einfacher Zugriff; Sync kann trotzdem einzelne Einträge zusammenführen |
+| E20 | 2026-10-18 | Zielklinik als Momentaufnahme (`HospitalSnapshot`) statt Verweis | Stammdaten-Änderungen verändern keine alten Einsätze/Berichte |
+| E21 | 2026-10-18 | Patientennummer ist Anzeige, Dubletten werden markiert statt blockiert | Im Einsatz nicht durch Validierung aufhalten; Schlüssel ist die UUID |

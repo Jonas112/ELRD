@@ -75,7 +75,9 @@ jobs:
             done
             exit 1
           fi
-          echo "::notice title=Tests::$(grep -E 'Test run with' test.log | tail -1)"
+          grep -E 'Test run with' test.log | sort -u | while IFS= read -r line; do
+            echo "::notice title=Tests::$line"
+          done
 
       - name: Logs sichern
         if: always()

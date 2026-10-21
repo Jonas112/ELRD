@@ -34,7 +34,7 @@ let package = Package(
         .target(name: "ELRDDomain", swiftSettings: commonSettings),
 
         // SwiftData-Modelle, Mapping, Repositories.
-        .target(name: "ELRDPersistence", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+        .target(name: "ELRDPersistence", dependencies: ["ELRDDomain", "ELRDSync"], swiftSettings: commonSettings),
 
         // Änderungsjournal und Sync-Protokoll.
         .target(name: "ELRDSync", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
@@ -68,6 +68,7 @@ let package = Package(
 
         .testTarget(name: "ELRDDomainTests", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDSyncTests", dependencies: ["ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDPersistenceTests", dependencies: ["ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
     ],
     swiftLanguageModes: [.v5]
 )

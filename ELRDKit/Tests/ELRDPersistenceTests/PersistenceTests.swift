@@ -103,7 +103,8 @@ struct SwiftDataStoreTests {
         )
         let loaded = try context.fetch(descriptor).map { try RecordMapping.decode(Patient.self, from: $0) }
         #expect(Set(loaded.map(\.number.description)) == ["A-1", "A-2"])
-        #expect(loaded.allSatisfy { $0.missionID == mission.id })
+        let allInMission = loaded.allSatisfy { $0.missionID == mission.id }
+        #expect(allInMission)
     }
 
     @Test func dataSurvivesNewContext() throws {
@@ -146,7 +147,8 @@ struct SwiftDataStoreTests {
             sortBy: [SortDescriptor(\.wallTime), SortDescriptor(\.counter)]
         )
         let records = try context.fetch(descriptor)
-        #expect(records.allSatisfy(\.isPendingUpload))
+        let allPending = records.allSatisfy { $0.isPendingUpload }
+        #expect(allPending)
         let loaded = try records.map(RecordMapping.decode)
         #expect(loaded == events, "Sortierung nach HLC stellt die ursprüngliche Reihenfolge her")
     }

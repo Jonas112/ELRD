@@ -90,6 +90,7 @@ Ziel: modernes, ruhiges Layout und **vom Benutzer frei steuerbarer Inhalt**.
 ## Persistenz
 
 - SwiftData als lokaler Speicher, gekapselt hinter Repository-Protokollen. Domain-Typen sind unabhängig von SwiftData.
+- Schema (E28): `EntityRecord` je Entität (JSON-Inhalt + Suchspalten `entityType`, `missionID`, `isSoftDeleted`, `entityVersion`, `updatedAt`) und `ChangeRecord` für das Änderungsjournal. Keine SwiftData-Beziehungen.
 - Damit bleibt ein späterer Wechsel (z. B. zu SQLite/GRDB, falls SwiftData unter iPadOS 17 Probleme macht) auf `ELRDPersistence` begrenzt.
 - Binärdaten (Fotos, Audio, Zeichnungen) als Dateien im App-Container, in der Datenbank nur Referenz + Prüfsumme.
 - Datenschutz: Dateischutz `completeUntilFirstUserAuthentication` für Datenbank und Anhänge.

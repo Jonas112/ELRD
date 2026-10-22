@@ -21,6 +21,7 @@ let package = Package(
                 "ELRDDomain",
                 "ELRDPersistence",
                 "ELRDSync",
+                "ELRDStore",
                 "ELRDAuth",
                 "ELRDEntitlements",
                 "ELRDReports",
@@ -38,6 +39,9 @@ let package = Package(
 
         // Änderungsjournal und Sync-Protokoll.
         .target(name: "ELRDSync", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+
+        // Commands, MissionStore, Vorschaudaten (ohne SwiftUI, testbar).
+        .target(name: "ELRDStore", dependencies: ["ELRDDomain", "ELRDSync", "ELRDPersistence"], swiftSettings: commonSettings),
 
         // Benutzer, Passwort-Hashing, Keychain, AuthProvider.
         .target(name: "ELRDAuth", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
@@ -58,6 +62,7 @@ let package = Package(
                 "ELRDDomain",
                 "ELRDPersistence",
                 "ELRDSync",
+                "ELRDStore",
                 "ELRDAuth",
                 "ELRDEntitlements",
                 "ELRDReports",
@@ -69,6 +74,7 @@ let package = Package(
         .testTarget(name: "ELRDDomainTests", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDSyncTests", dependencies: ["ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDPersistenceTests", dependencies: ["ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDStoreTests", dependencies: ["ELRDStore", "ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
     ],
     swiftLanguageModes: [.v5]
 )

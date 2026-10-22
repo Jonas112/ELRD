@@ -66,7 +66,7 @@ jobs:
             -destination "id=${DEVICE%%|*}" \
             test > ../test.log 2>&1 || true
           cd ..
-          grep -E "^/.*: error: |✘|Test .* failed|recorded an issue" test.log | sort -u | head -30 | while IFS= read -r line; do
+          grep -E "^/.*: error: |✘|recorded an issue" test.log | sort -u | head -30 | while IFS= read -r line; do
             echo "::error title=Test::$line"
           done
           if ! grep -q "TEST SUCCEEDED" test.log; then

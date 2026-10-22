@@ -23,11 +23,7 @@ public struct EntityCollection<Entity: SyncEntity>: Sendable {
     public func get(_ id: UUID) -> Entity? { items[id] }
 
     /// Alle Entitäten einschließlich gelöschter, stabil sortiert nach Anlagezeit.
-    public var all: [Entity] {
-        items.values.sorted {
-            ($0.metadata.createdAt, $0.syncID.uuidString) < ($1.metadata.createdAt, $1.syncID.uuidString)
-        }
-    }
+    public var all: [Entity] { StableOrder.sorted(items.values) }
 
     /// Nur nicht gelöschte Entitäten.
     public var active: [Entity] { all.filter { !$0.isDeleted } }
@@ -76,6 +72,17 @@ public struct EntityCollection<Entity: SyncEntity>: Sendable {
             guard let new = items[id] else { return nil }
             let old = baseline[id]
             return old == new ? nil : (old, new)
+        }
+    }
+}
+
+/// Einheitliche Reihenfolge für Entitäten im Store: nach Anlagezeit, bei
+/// Gleichstand nach Kennung. Gilt für frisch geänderte und neu geladene Stände
+/// gleichermaßen, damit beide vergleichbar sind.
+enum StableOrder {
+    static func sorted<Entity: SyncEntity>(_ entities: some Sequence<Entity>) -> [Entity] {
+        entities.sorted {
+            ($0.metadata.createdAt, $0.syncID.uuidString) < ($1.metadata.createdAt, $1.syncID.uuidString)
         }
     }
 }

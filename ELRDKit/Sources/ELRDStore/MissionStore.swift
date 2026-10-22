@@ -124,13 +124,13 @@ public final class MissionStore {
         }
         return MissionState(
             mission: mission,
-            sections: try repository.entities(MissionSection.self, in: missionID, includeDeleted: true),
-            units: try repository.entities(MissionUnit.self, in: missionID, includeDeleted: true),
-            patients: try repository.entities(Patient.self, in: missionID, includeDeleted: true),
-            journal: try repository.entities(JournalEntry.self, in: missionID, includeDeleted: true),
-            messages: try repository.entities(MissionMessage.self, in: missionID, includeDeleted: true),
-            logEntries: try repository.entities(MissionLogEntry.self, in: missionID, includeDeleted: true),
-            mapObjects: try repository.entities(MapObject.self, in: missionID, includeDeleted: true)
+            sections: StableOrder.sorted(try repository.entities(MissionSection.self, in: missionID, includeDeleted: true)),
+            units: StableOrder.sorted(try repository.entities(MissionUnit.self, in: missionID, includeDeleted: true)),
+            patients: StableOrder.sorted(try repository.entities(Patient.self, in: missionID, includeDeleted: true)),
+            journal: StableOrder.sorted(try repository.entities(JournalEntry.self, in: missionID, includeDeleted: true)),
+            messages: StableOrder.sorted(try repository.entities(MissionMessage.self, in: missionID, includeDeleted: true)),
+            logEntries: StableOrder.sorted(try repository.entities(MissionLogEntry.self, in: missionID, includeDeleted: true)),
+            mapObjects: StableOrder.sorted(try repository.entities(MapObject.self, in: missionID, includeDeleted: true))
         )
     }
 }

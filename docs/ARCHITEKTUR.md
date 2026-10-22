@@ -17,6 +17,7 @@ ELRD (App-Target)            – App-Einstieg, Dependency-Wiring, Assets
    ├─ ELRDDomain             – reine Werttypen, Enums, Regeln. Kein UI, kein SwiftData.
    ├─ ELRDPersistence        – SwiftData-Modelle, Mapping Domain ⇄ Persistenz, Repositories
    ├─ ELRDSync               – Änderungsjournal, Sync-Protokoll (zunächst nur lokal)
+   ├─ ELRDStore              – Commands, MissionDraft, MissionStore, Vorschaudaten
    ├─ ELRDAuth               – Benutzer, Passwort-Hashing, Keychain, AuthProvider
    ├─ ELRDEntitlements       – Freischaltungen/Abo-Status (StoreKit 2 später)
    ├─ ELRDReports            – PDF-Engine und Berichtsvorlagen

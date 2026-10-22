@@ -35,3 +35,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E29 | 2026-10-21 | Dateischutz `completeUntilFirstUserAuthentication` für die Datenbank | DSGVO-Schutz im Ruhezustand, Speichern bleibt bei gesperrtem Gerät möglich |
 | E30 | 2026-10-22 | Schreiben nur über atomare `ChangeSet`s; ein älterer Stand darf keinen neueren überschreiben (`staleWrite`) | Mehrere iPad-Fenster bzw. später mehrere Geräte; keine halb gespeicherten Aktionen |
 | E31 | 2026-10-22 | Repositories laufen auf dem Main Actor | SwiftData-Kontexte sind nicht threadsicher; Datenmengen klein genug für den Main Thread |
+| E32 | 2026-10-22 | Eigenes Modul `ELRDStore` für Commands und `MissionStore` (ohne SwiftUI) | Ablauflogik ohne Oberfläche testbar; `ELRDFeatures` bleibt reine Darstellung |
+| E33 | 2026-10-22 | Protokoll wird von den Commands als lesbarer Eintrag geschrieben, nicht aus dem Änderungsjournal abgeleitet | Verständliche Texte („Patient A-1: SK 2 → SK 1“); Journal bleibt technisch für Sync |
+| E34 | 2026-10-22 | Bei Konflikt durch ein anderes Fenster: neu laden und Aktion einmal wiederholen | Aktionen sind Absichten; Benutzer muss nicht erneut tippen |

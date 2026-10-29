@@ -163,10 +163,14 @@ public struct MissionDraft: Sendable {
         subject: LogSubject? = nil,
         level: LogLevel = .user
     ) {
+        // Protokoll bleibt streng chronologisch: Liegt der letzte Eintrag nicht vor
+        // „jetzt“ (gleiche Millisekunde, zurückgestellte Uhr), 1 ms danach einsortieren.
+        let latest = logEntries.all.map(\.timestamp).max()
+        let timestamp = latest.map { max(context.now, $0.addingTimeInterval(0.001)) } ?? context.now
         let entry = MissionLogEntry(
             missionID: missionID,
             metadata: context.newMetadata(),
-            timestamp: context.now,
+            timestamp: timestamp,
             category: category,
             level: level,
             message: message,

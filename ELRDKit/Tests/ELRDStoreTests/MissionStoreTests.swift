@@ -249,6 +249,25 @@ struct MissionStoreTests {
         #expect(newest > lastBefore)
     }
 
+    @Test func logStaysChronologicalWithinSameMillisecond() throws {
+        let fixture = try StoreFixture()
+        let store = try fixture.newMission()
+        // Uhr steht still: alle Aktionen in derselben Millisekunde.
+        for triage in [Sichtungskategorie.sk1, .sk2, .sk3] {
+            try store.perform(AddPatient(triage: triage))
+        }
+        let messages = store.state.visibleLog.map(\.message)
+        #expect(messages == [
+            "Einsatz \(store.state.mission.displayNumber()) angelegt",
+            "Patient A-1 angelegt – Sichtungskategorie 1",
+            "Patient A-2 angelegt – Sichtungskategorie 2",
+            "Patient A-3 angelegt – Sichtungskategorie 3",
+        ])
+        let timestamps = store.state.visibleLog.map(\.timestamp)
+        #expect(timestamps == timestamps.sorted())
+        #expect(Set(timestamps).count == timestamps.count)
+    }
+
     @Test func previewDataIsComplete() throws {
         let store = try PreviewData.makeStore()
         #expect(store.state.activeSections.count == 3)

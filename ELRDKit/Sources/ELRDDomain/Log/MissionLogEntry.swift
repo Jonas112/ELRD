@@ -106,6 +106,9 @@ public extension MissionLogEntry {
     ) -> [MissionLogEntry] {
         entries.active
             .filter { $0.level <= maximumLevel }
-            .sorted { $0.timestamp < $1.timestamp }
+            .sorted {
+                // Bei gleichem Zeitstempel feste Reihenfolge statt zufälliger.
+                ($0.timestamp, $0.id.rawValue.uuidString) < ($1.timestamp, $1.id.rawValue.uuidString)
+            }
     }
 }

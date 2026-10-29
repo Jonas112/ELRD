@@ -70,8 +70,12 @@ jobs:
             echo "::error title=Test::$line"
           done
           if ! grep -q "TEST SUCCEEDED" test.log; then
-            grep -E "error|xcodebuild: |Unable|not found" test.log | sort -u | head -15 | while IFS= read -r line; do
+            grep -iE "error|fatal|crash|unable|not found|failed" test.log | grep -v "WARNING: Using the first" | sort -u | head -20 | while IFS= read -r line; do
               echo "::error title=Tests::$line"
+            done
+            # Letzte Zeilen für Abstürze ohne klare Fehlermeldung.
+            grep -v '^\s*$' test.log | tail -25 | while IFS= read -r line; do
+              echo "::warning title=Testprotokoll (Ende)::$line"
             done
             exit 1
           fi

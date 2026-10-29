@@ -120,6 +120,8 @@ struct InitialSetupView: View {
             }
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
+            // Fläche neben dem schmalen Formular im selben Grau wie das Formular.
+            .background(Surface.canvas)
             .navigationTitle("Ersteinrichtung")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { focus = .firstName }

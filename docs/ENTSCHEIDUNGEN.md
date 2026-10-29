@@ -49,3 +49,4 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E43 | 2026-10-29 | Freischaltung wird im `MissionStore` geprüft, nicht nur in der Oberfläche | Sperre kann nicht durch eine vergessene Oberflächenprüfung umgangen werden |
 | E44 | 2026-10-29 | Akzentfarbe Blau; Rot, Gelb, Grün nur für Sichtungskategorien | Farbbedeutung im Einsatz eindeutig; rote Auswahl wirkte wie Alarm |
 | E45 | 2026-10-29 | CI erstellt Bildschirmfotos hell/dunkel im Branch `ci-screenshots` | Oberflächen können ohne Xcode-Zugriff geprüft werden |
+| E46 | 2026-10-29 | Startargument `--demo-screen` startet eine Beispielumgebung nur im Speicher (eigene Benutzer, schneller Hasher) | Reproduzierbare CI-Bildschirmfotos ohne Eingaben; echte Daten und Keychain bleiben unberührt |

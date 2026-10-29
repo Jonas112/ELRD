@@ -42,3 +42,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E36 | 2026-10-29 | Schema V1 um `DocumentRecord` erweitert statt V2 | App noch nicht veröffentlicht; ab erster Veröffentlichung nur noch neue Schemaversionen |
 | E37 | 2026-10-29 | Regionspakete in die App eingebettet, Import mit Dublettenprüfung; Kliniken Unterfranken als eigenes Paket statt automatisch für Schweinfurt/Kempten | Nachvollziehbar, was importiert wird; Kempten bekam in ELRDRG unpassend die unterfränkische Liste |
 | E38 | 2026-10-29 | Fahrzeugtypen vollständig zuordnen, Originalbezeichnung behalten | ELRDRG legte HVO, MZF, Kat-KTW, MTW, LKW … als „Sonstiges“ an |
+| E39 | 2026-10-29 | Passwort mind. 6 Zeichen ohne Zeichenklassen-Pflicht; Sperre nach 5 Fehlversuchen (30 s, verdoppelnd bis 15 min) | Schnelle Eingabe im Einsatz; Schutz über Hash, Sperre und iPad-Gerätesperre |
+| E40 | 2026-10-29 | Administratoren immer mit Passwort, Einsatzleiter optional ohne | Gemeinsam genutzte Einsatz-iPads; Verwaltungsrechte bleiben geschützt |
+| E41 | 2026-10-29 | Benutzer werden deaktiviert, nicht gelöscht; der letzte aktive Admin ist geschützt | Namen in Einsätzen/Berichten bleiben erhalten; Gerät kann nicht ohne Admin enden |

@@ -41,7 +41,7 @@ let package = Package(
         .target(name: "ELRDSync", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
 
         // Commands, MissionStore, Vorschaudaten (ohne SwiftUI, testbar).
-        .target(name: "ELRDStore", dependencies: ["ELRDDomain", "ELRDSync", "ELRDPersistence"], swiftSettings: commonSettings),
+        .target(name: "ELRDStore", dependencies: ["ELRDDomain", "ELRDSync", "ELRDPersistence", "ELRDEntitlements"], swiftSettings: commonSettings),
 
         // Benutzer, Passwort-Hashing, Keychain, AuthProvider.
         .target(name: "ELRDAuth", dependencies: ["ELRDDomain", "ELRDPersistence"], swiftSettings: commonSettings),
@@ -81,7 +81,8 @@ let package = Package(
         .testTarget(name: "ELRDPersistenceTests", dependencies: ["ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDStammdatenTests", dependencies: ["ELRDStammdaten", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDAuthTests", dependencies: ["ELRDAuth", "ELRDPersistence", "ELRDDomain"], swiftSettings: commonSettings),
-        .testTarget(name: "ELRDStoreTests", dependencies: ["ELRDStore", "ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDEntitlementsTests", dependencies: ["ELRDEntitlements"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDStoreTests", dependencies: ["ELRDStore", "ELRDPersistence", "ELRDSync", "ELRDDomain", "ELRDEntitlements"], swiftSettings: commonSettings),
     ],
     swiftLanguageModes: [.v5]
 )

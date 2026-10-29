@@ -4,6 +4,7 @@ import Testing
 @testable import ELRDPersistence
 @testable import ELRDStore
 @testable import ELRDSync
+import ELRDEntitlements
 
 /// Steuerbare Uhr für Tests.
 @MainActor
@@ -266,6 +267,33 @@ struct MissionStoreTests {
         let timestamps = store.state.visibleLog.map(\.timestamp)
         #expect(timestamps == timestamps.sorted())
         #expect(Set(timestamps).count == timestamps.count)
+    }
+
+    @Test func expiredSubscriptionBlocksEditingButNotViewing() throws {
+        let repository = InMemoryRepository()
+        let entitlements = StaticEntitlements()
+        let session = SessionIdentity(userID: nil, displayName: "Test", device: DeviceIdentity(deviceID: DeviceID(), numberPrefix: "A")!)
+        let clock = try DeviceClock(deviceID: session.device.deviceID, repository: repository)
+        let store = try MissionStore.create(NewMissionRequest(), repository: repository, session: session, clock: clock, entitlements: entitlements)
+        try store.perform(AddPatient())
+
+        entitlements.state = .expired(since: nil)
+        let before = store.state
+        #expect(throws: FeatureLockedError(feature: .missionEditing)) { try store.perform(AddPatient()) }
+        #expect(throws: FeatureLockedError(feature: .missionEditing)) {
+            try MissionStore.create(NewMissionRequest(), repository: repository, session: session, clock: clock, entitlements: entitlements)
+        }
+        #expect(store.state == before)
+
+        // Vorhandene Einsätze bleiben lesbar und exportierbar.
+        try store.reload()
+        #expect(store.state.activePatients.count == 1)
+        #expect(store.isEnabled(.missionViewing))
+        #expect(store.isEnabled(.reportExport))
+
+        entitlements.state = .development
+        try store.perform(AddPatient())
+        #expect(store.state.activePatients.count == 2)
     }
 
     @Test func previewDataIsComplete() throws {

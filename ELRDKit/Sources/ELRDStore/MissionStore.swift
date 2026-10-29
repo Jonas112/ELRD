@@ -3,6 +3,7 @@ import Observation
 import ELRDDomain
 import ELRDSync
 import ELRDPersistence
+import ELRDEntitlements
 
 /// Eine Aktion im Einsatz (Patient anlegen, Sichtung ändern, …).
 ///
@@ -14,11 +15,14 @@ public protocol MissionCommand {
     associatedtype Output
     /// Ob die Aktion auch bei beendetem Einsatz erlaubt ist (z. B. Wiederöffnen).
     static var allowedOnClosedMission: Bool { get }
+    /// Freischaltung, die die Aktion braucht (Standard: Einsätze bearbeiten).
+    static var requiredFeature: Feature { get }
     func execute(_ draft: inout MissionDraft) throws -> Output
 }
 
 public extension MissionCommand {
     static var allowedOnClosedMission: Bool { false }
+    static var requiredFeature: Feature { .missionEditing }
 }
 
 /// Uhr des Geräts für das Änderungsjournal. Eine Instanz pro App, geteilt von
@@ -43,6 +47,7 @@ public final class MissionStore {
     @ObservationIgnored private let session: SessionIdentity
     @ObservationIgnored private let deviceClock: DeviceClock
     @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let entitlements: any EntitlementProvider
 
     /// Lädt einen vorhandenen Einsatz.
     public init(
@@ -50,9 +55,11 @@ public final class MissionStore {
         repository: any EntityRepository,
         session: SessionIdentity,
         clock: DeviceClock,
+        entitlements: (any EntitlementProvider)? = nil,
         now: @escaping () -> Date = Date.init
     ) throws {
         self.missionID = missionID
+        self.entitlements = entitlements ?? StaticEntitlements.development()
         self.repository = repository
         self.session = session
         self.deviceClock = clock
@@ -66,8 +73,11 @@ public final class MissionStore {
         repository: any EntityRepository,
         session: SessionIdentity,
         clock: DeviceClock,
+        entitlements: (any EntitlementProvider)? = nil,
         now: @escaping () -> Date = Date.init
     ) throws -> MissionStore {
+        let entitlements = entitlements ?? StaticEntitlements.development()
+        guard entitlements.isEnabled(.missionEditing) else { throw FeatureLockedError(feature: .missionEditing) }
         let context = CommandContext(session: session, now: now())
         let existing = try repository.missions(includeDeleted: true)
         var draft = MissionDraft(newMissionID: MissionID(), context: context)
@@ -77,7 +87,14 @@ public final class MissionStore {
         let changeSet = try draft.makeChangeSet(clock: &hlc)
         try repository.apply(changeSet)
         clock.clock = hlc
-        return try MissionStore(missionID: draft.missionID, repository: repository, session: session, clock: clock, now: now)
+        return try MissionStore(
+            missionID: draft.missionID,
+            repository: repository,
+            session: session,
+            clock: clock,
+            entitlements: entitlements,
+            now: now
+        )
     }
 
     /// Führt eine Aktion aus und speichert das Ergebnis.
@@ -98,12 +115,21 @@ public final class MissionStore {
         state = try Self.load(missionID, from: repository)
     }
 
+    /// Ob eine Funktion gerade verfügbar ist (für die Oberfläche).
+    public func isEnabled(_ feature: Feature) -> Bool {
+        entitlements.isEnabled(feature)
+    }
+
     /// Änderungsjournal dieses Einsatzes (für Protokoll-Details und Sync).
     public func changeEvents() throws -> [ChangeEvent] {
         try repository.changeEvents(in: missionID)
     }
 
     private func performOnce<Command: MissionCommand>(_ command: Command) throws -> Command.Output {
+        // Freischaltung zentral prüfen – nicht nur durch Ausblenden in der Oberfläche.
+        guard entitlements.isEnabled(Command.requiredFeature) else {
+            throw FeatureLockedError(feature: Command.requiredFeature)
+        }
         if state.mission.isClosed && !Command.allowedOnClosedMission {
             throw CommandError.missionClosed
         }

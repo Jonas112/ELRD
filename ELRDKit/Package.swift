@@ -56,7 +56,7 @@ let package = Package(
         .target(
             name: "ELRDStammdaten",
             dependencies: ["ELRDDomain"],
-            resources: [.copy("Resources")],
+            resources: [.copy("Daten")],
             swiftSettings: commonSettings
         ),
 

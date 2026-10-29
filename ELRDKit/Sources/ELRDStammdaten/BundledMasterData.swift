@@ -82,7 +82,9 @@ public enum BundledMasterData {
     }
 
     static func text(path: String) throws -> String {
-        guard let base = Bundle.module.resourceURL?.appendingPathComponent("Resources", isDirectory: true) else {
+        // Ordner heißt bewusst nicht „Resources“: Ein solcher Ordner in einem iOS-Bundle
+        // bringt die Code-Signatur durcheinander.
+        guard let base = Bundle.module.resourceURL?.appendingPathComponent("Daten", isDirectory: true) else {
             throw BundledDataError.missingResource(path)
         }
         let url = base.appendingPathComponent(path)

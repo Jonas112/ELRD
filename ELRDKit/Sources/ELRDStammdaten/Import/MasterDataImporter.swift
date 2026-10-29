@@ -81,8 +81,13 @@ public enum MasterDataImporter {
                 result.issues.append(ImportIssue(line: row.line, message: "Klinikname fehlt"))
                 continue
             }
-            let latitude = columns.value("lat", in: row).flatMap(parseDecimal)
-            let longitude = columns.value("lng", in: row).flatMap(parseDecimal)
+            let latitudeText = columns.value("lat", in: row)
+            let longitudeText = columns.value("lng", in: row)
+            let latitude = latitudeText.flatMap(parseDecimal)
+            let longitude = longitudeText.flatMap(parseDecimal)
+            if (latitudeText != nil && latitude == nil) || (longitudeText != nil && longitude == nil) {
+                result.issues.append(ImportIssue(line: row.line, message: "Koordinaten bei „\(name)“ nicht lesbar – ohne Position übernommen"))
+            }
             var coordinate: GeoCoordinate?
             if let latitude, let longitude {
                 coordinate = GeoCoordinate(latitude: latitude, longitude: longitude)

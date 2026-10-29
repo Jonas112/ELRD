@@ -69,11 +69,12 @@ struct MasterDataImporterTests {
     }
 
     @Test func invalidRowsAreReportedNotFatal() {
-        let csv = "Anzeigename;Straße + Hausnummer;Stadt;Latitude;Longitude\n;Weg 1;Ort;;\nKlinik B;Weg 2;Ort;95;10"
+        let csv = "Anzeigename;Straße + Hausnummer;Stadt;Latitude;Longitude\n;Weg 1;Ort;;\nKlinik B;Weg 2;Ort;95;10\nKlinik C;Weg 3;Ort;47.88;1.061.145"
         let result = MasterDataImporter.hospitals(fromCSV: csv, origin: .manual)
-        #expect(result.items.map(\.name) == ["Klinik B"])
-        #expect(result.items.first?.coordinate == nil)
-        #expect(result.issues.map(\.line) == [2, 3])
+        #expect(result.items.map(\.name) == ["Klinik B", "Klinik C"])
+        let noneHasPosition = result.items.allSatisfy { $0.coordinate == nil }
+        #expect(noneHasPosition)
+        #expect(result.issues.map(\.line) == [2, 3, 4])
     }
 
     @Test func registrationEmailColumn() {
@@ -98,6 +99,18 @@ struct BundledMasterDataTests {
         #expect(issues.isEmpty, "\(issues)")
         let allFromRegion = package.units.allSatisfy { $0.origin == .region(regionID) }
         #expect(allFromRegion)
+    }
+
+    @Test func allBundledHospitalsHavePlausiblePositions() throws {
+        for region in BundledMasterData.regions where region.hasHospitals {
+            let hospitals = try BundledMasterData.package(for: region).package.hospitals
+            for hospital in hospitals {
+                let coordinate = try #require(hospital.coordinate, "\(hospital.name) ohne Position")
+                // Alle mitgelieferten Kliniken liegen in Deutschland.
+                #expect((47.0...55.5).contains(coordinate.latitude), "\(hospital.name)")
+                #expect((5.5...15.5).contains(coordinate.longitude), "\(hospital.name)")
+            }
+        }
     }
 
     @Test func aschaffenburgHospitalsHaveCorrectCity() throws {

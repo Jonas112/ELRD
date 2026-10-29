@@ -45,3 +45,5 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E39 | 2026-10-29 | Passwort mind. 6 Zeichen ohne Zeichenklassen-Pflicht; Sperre nach 5 Fehlversuchen (30 s, verdoppelnd bis 15 min) | Schnelle Eingabe im Einsatz; Schutz über Hash, Sperre und iPad-Gerätesperre |
 | E40 | 2026-10-29 | Administratoren immer mit Passwort, Einsatzleiter optional ohne | Gemeinsam genutzte Einsatz-iPads; Verwaltungsrechte bleiben geschützt |
 | E41 | 2026-10-29 | Benutzer werden deaktiviert, nicht gelöscht; der letzte aktive Admin ist geschützt | Namen in Einsätzen/Berichten bleiben erhalten; Gerät kann nicht ohne Admin enden |
+| E42 | 2026-10-29 | Ohne Abo: Einsätze ansehen und exportieren bleibt möglich, Anlegen/Bearbeiten gesperrt (Vorschlag, endgültig in Schritt 51) | Zugriff auf eigene Daten und Dokumentationspflicht; DSGVO |
+| E43 | 2026-10-29 | Freischaltung wird im `MissionStore` geprüft, nicht nur in der Oberfläche | Sperre kann nicht durch eine vergessene Oberflächenprüfung umgangen werden |

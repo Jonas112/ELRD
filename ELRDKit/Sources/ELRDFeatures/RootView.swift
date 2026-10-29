@@ -1,41 +1,28 @@
 import SwiftUI
-import ELRDDomain
-import ELRDPersistence
-import ELRDSync
-import ELRDAuth
-import ELRDEntitlements
-import ELRDReports
-import ELRDStammdaten
+import ELRDStore
 
 /// Einstiegsansicht der App.
 ///
-/// Platzhalter für Schritt 2: zeigt, dass alle Module gebaut und gelinkt werden.
-/// Der eigentliche App-Rahmen mit adaptiver Navigation folgt in Schritt 14.
+/// Bis Anmeldung und Einsatzliste stehen (Schritte 15–16), öffnet die App einen
+/// Beispieleinsatz im Arbeitsspeicher. Es wird nichts gespeichert.
 public struct RootView: View {
-    public init() {}
+    @State private var store: MissionStore?
 
-    public var body: some View {
-        NavigationStack {
-            List {
-                Section("Module") {
-                    ForEach(Self.moduleNames, id: \.self) { name in
-                        Label(name, systemImage: "shippingbox")
-                    }
-                }
-            }
-            .navigationTitle("ELRD")
-        }
+    public init() {
+        _store = State(initialValue: try? PreviewData.makeStore())
     }
 
-    static let moduleNames: [String] = [
-        ELRDDomainModule.name,
-        ELRDPersistenceModule.name,
-        ELRDSyncModule.name,
-        ELRDAuthModule.name,
-        ELRDEntitlementsModule.name,
-        ELRDReportsModule.name,
-        ELRDStammdatenModule.name,
-    ]
+    public var body: some View {
+        if let store {
+            MissionWorkspaceView(store: store)
+        } else {
+            ContentUnavailableView(
+                "Beispieleinsatz nicht verfügbar",
+                systemImage: "exclamationmark.triangle",
+                description: Text("Die Beispieldaten konnten nicht erzeugt werden.")
+            )
+        }
+    }
 }
 
 #Preview {

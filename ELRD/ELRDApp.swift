@@ -7,5 +7,8 @@ struct ELRDApp: App {
         WindowGroup {
             RootView()
         }
+        .commands {
+            WorkspaceCommands()
+        }
     }
 }

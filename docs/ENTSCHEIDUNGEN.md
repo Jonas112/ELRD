@@ -38,3 +38,7 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E32 | 2026-10-22 | Eigenes Modul `ELRDStore` für Commands und `MissionStore` (ohne SwiftUI) | Ablauflogik ohne Oberfläche testbar; `ELRDFeatures` bleibt reine Darstellung |
 | E33 | 2026-10-22 | Protokoll wird von den Commands als lesbarer Eintrag geschrieben, nicht aus dem Änderungsjournal abgeleitet | Verständliche Texte („Patient A-1: SK 2 → SK 1“); Journal bleibt technisch für Sync |
 | E34 | 2026-10-22 | Bei Konflikt durch ein anderes Fenster: neu laden und Aktion einmal wiederholen | Aktionen sind Absichten; Benutzer muss nicht erneut tippen |
+| E35 | 2026-10-29 | Stammdaten als ein Dokument (`MasterDataSet`) mit Revision, ohne Metadaten je Eintrag | Ändern sich selten, werden als Ganzes importiert und später mit dem Backend abgeglichen (dort ebenfalls ganz oder gar nicht) |
+| E36 | 2026-10-29 | Schema V1 um `DocumentRecord` erweitert statt V2 | App noch nicht veröffentlicht; ab erster Veröffentlichung nur noch neue Schemaversionen |
+| E37 | 2026-10-29 | Regionspakete in die App eingebettet, Import mit Dublettenprüfung; Kliniken Unterfranken als eigenes Paket statt automatisch für Schweinfurt/Kempten | Nachvollziehbar, was importiert wird; Kempten bekam in ELRDRG unpassend die unterfränkische Liste |
+| E38 | 2026-10-29 | Fahrzeugtypen vollständig zuordnen, Originalbezeichnung behalten | ELRDRG legte HVO, MZF, Kat-KTW, MTW, LKW … als „Sonstiges“ an |

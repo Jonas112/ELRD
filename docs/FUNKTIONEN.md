@@ -92,7 +92,7 @@ Status: ✅ übernehmen · 🔁 übernehmen und neu gedacht · ⏳ später · �
 | Allgemeine Schalter (ILS-Mail, Abschnitts-Automatik, Anzeige, Audio beim Start) | `GeneralSettingsVC` | 47 | ✅ |
 | Fahrzeugbilder (RTW/KTW/NEF/RTH) und Banner für Berichte | `IconSettingVC`, `Settings.image*` | 47 | ✅ |
 | Stammdaten CRUD: Einheiten, Kliniken, Diagnosen, Abschnitte, Textvorlagen, Benutzer | `StammdatenDetailVC` u. a. | 48 | ✅ |
-| Regionsimport per CSV (Rhön-Grabfeld, Aschaffenburg, Coburg, Dachau, Kempten, Schweinfurt, Allgemein) | `Stammdaten/*` | 11 | ✅ |
+| Regionsimport per CSV (Rhön-Grabfeld, Aschaffenburg, Coburg, Dachau, Kempten, Schweinfurt, Allgemein) | `Stammdaten/*` | 11 | ✅ umgesetzt, Daten korrigiert |
 | IVENA-Einstellungen | `IVENA_Einstellungen_SWUI` | 49 | ✅ |
 | Lokale Benutzer mit Passwort, Admin, Anmelden/Abmelden | `LoginHandler`, `User` | 12, 15 | 🔁 Passwort gehasht + Keychain |
 | Onboarding | `ModernOnboarding*` | 50 | ✅ |

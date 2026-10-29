@@ -24,9 +24,11 @@ struct WorkspaceTests {
         #expect(badges.badge(for: .map) == 0)
     }
 
-    @Test(arguments: [
-        (0.0, "0:00 h"), (59.0, "0:00 h"), (45 * 60.0, "0:45 h"), (125 * 60.0, "2:05 h"), (26 * 3600.0 + 5 * 60, "1 T 2:05 h"),
-    ])
+    static let elapsedCases: [(seconds: Double, expected: String)] = [
+        (0, "0:00 h"), (59, "0:00 h"), (2_700, "0:45 h"), (7_500, "2:05 h"), (93_900, "1 T 2:05 h"),
+    ]
+
+    @Test(arguments: WorkspaceTests.elapsedCases)
     func elapsedTime(seconds: Double, expected: String) {
         let start = Date(timeIntervalSince1970: 0)
         #expect(ElapsedTimeFormat.string(from: start, to: start.addingTimeInterval(seconds)) == expected)

@@ -9,17 +9,19 @@ import ELRDStore
 /// Manager klein) wird daraus automatisch eine Stapel-Navigation.
 public struct MissionWorkspaceView: View {
     let store: MissionStore
+    let account: AccountMenuModel?
 
     @State private var selection: WorkspaceSection = .overview
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
-    public init(store: MissionStore) {
+    public init(store: MissionStore, account: AccountMenuModel? = nil) {
         self.store = store
+        self.account = account
     }
 
     public var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            WorkspaceSidebar(state: store.state, selection: $selection)
+            WorkspaceSidebar(state: store.state, selection: $selection, account: account)
                 .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
         } detail: {
             NavigationStack {
@@ -35,6 +37,7 @@ public struct MissionWorkspaceView: View {
 struct WorkspaceSidebar: View {
     let state: MissionState
     @Binding var selection: WorkspaceSection
+    var account: AccountMenuModel? = nil
 
     var body: some View {
         let badges = WorkspaceBadges(state: state)
@@ -58,6 +61,11 @@ struct WorkspaceSidebar: View {
         .listStyle(.sidebar)
         .navigationTitle(state.mission.displayNumber())
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if let account { AccountMenuButton(account: account) }
+            }
+        }
     }
 }
 

@@ -105,10 +105,12 @@ jobs:
           mkdir -p shots
           for mode in light dark; do
             xcrun simctl ui "$DEVICE_ID" appearance $mode
-            xcrun simctl terminate "$DEVICE_ID" ELRD.App || true
-            xcrun simctl launch "$DEVICE_ID" ELRD.App
-            sleep 6
-            xcrun simctl io "$DEVICE_ID" screenshot "shots/ipad-$mode.png"
+            for screen in setup login workspace; do
+              xcrun simctl terminate "$DEVICE_ID" ELRD.App || true
+              xcrun simctl launch "$DEVICE_ID" ELRD.App --demo-screen $screen
+              sleep 5
+              xcrun simctl io "$DEVICE_ID" screenshot "shots/$screen-$mode.png"
+            done
           done
           git config user.name "ELRD CI"
           git config user.email "ci@users.noreply.github.com"

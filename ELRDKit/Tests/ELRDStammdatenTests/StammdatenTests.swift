@@ -106,6 +106,8 @@ struct BundledMasterDataTests {
             let hospitals = try BundledMasterData.package(for: region).package.hospitals
             for hospital in hospitals {
                 let coordinate = try #require(hospital.coordinate, "\(hospital.name) ohne Position")
+                // Straße und Ort waren in Teilen der ELRDRG-Listen vertauscht.
+                #expect(hospital.address.contains { $0.isNumber }, "\(hospital.name): Adresse „\(hospital.address)“ ohne Hausnummer")
                 // Alle mitgelieferten Kliniken liegen in Deutschland.
                 #expect((47.0...55.5).contains(coordinate.latitude), "\(hospital.name)")
                 #expect((5.5...15.5).contains(coordinate.longitude), "\(hospital.name)")

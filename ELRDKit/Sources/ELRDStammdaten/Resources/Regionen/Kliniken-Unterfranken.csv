@@ -1,0 +1,61 @@
+Anzeigename;Straße + Hausnummer;Stadt;Latitude;Longitude;Telefonnummer;E-Mail Adresse
+Klinikum Coburg;Ketschendorfer Str. 33 ;96450 Coburg;50.24751;10.97284;09561220;
+Klinikum Lichtenfels;Professor-Arneth-Str. 2 ;96215 Lichtenfels;50.13837;11.08056;09571120;
+Klinikum Kronach ;Friesener Str. 41;96317 Kronach;50.24380;11.33188;09261590;
+KHS Sonneberg;Neustadter Str. 61;96515 Sonneberg;50.35441;11.16395;036758210;
+KHS Neuhaus/Rennweg;Schöne Aussicht 39;98724 Neuhaus;50.51124;11.13079;036797730;
+KHS Rudolstadt;Hugo-Trinckler Str. 2-4;07407 Rudolstadt;50.70728;11.31604;036724560;
+KHS Saalfeld;Rainweg 68;07318 Saalfeld;50.64399;11.34426;03671540;
+Klinikum Hildburghausen;Schleusinger Str. 17;98646 Hildburghausen ;50.42877;10.72918;036857730;
+Nervenklinik Hildburghausen;Eisfelder Str. 41;98646 Hildburghausen ;50.42519;10.74440;036857760;
+Bezirksklinikum Obermain;Kutzenberg 29c;96250 Ebensfeld;50.04918;10.97105;09547810;
+Klinikum Bayreuth;Preuschwitzerstr. 101;95445 Bayreuth;49.94309;11.53484;092140000;
+Hohe Warte Bayreuth;Hohe Warte 8;95445 Bayreuth;49.96784;11.58486;092140001;
+Klinikum Kulmbach;Albert-Schweitzer-Str. 10;95326 Kulmbach;50.11817;11.46653;09221980;
+KHS Stadtsteinach;Kronacher Str. 22;96346 Stadtsteinach;50.16621;11.50122;09225880;
+Klinikum Bamberg;Buger Str. 80;96049 Bamberg;49.86776;10.89088;09515030;
+NK Bamberg ;St. Getreu Str. 18;96049 Bamberg;49.89299;10.87227;09515030;
+BZK Bayreuth;Nordring 2;95445 Bayreuth;49.95519;11.56739;09212830;
+Uniklinikum Erlangen;Schloßplatz 4;91054 Erlangen;49.60073;11.01077;09131850;
+Klinikum der Friedr. Schiller Universität Jena;Erlanger Allee 101;07747 Jena;50.88613;11.61905;036419323001;
+Klinik für Innere/ Unfallmedizin Jena;Am Klinikum 1;07747 Jena;50.88613;11.61905;036419300;
+Uniklinikum Jena;Bachstr. 18 ;07747 Jena;50.92740;11.58222;036419300;
+KHS Ebern;Coburger Str. 21;96106 Ebern;50.09685;10.79750;095316280;
+KHS Hassfurt;Hofheimer Str. 69;97437 Hassfurt;50.03980;10.51423;09521280;
+Klinikum Nürnberg Süd;Breslauer Str. 201;90471 Nürnberg;49.41205;11.14802;09113980;
+Klinikum Nürnberg Nord;Prof- Ernst-Nathan-Str. 1;90419 Nürnberg ;49.46237;11.06023;09113980;
+Klinikum Suhl;Albert-Schweitzer-Str. 2;98527 Suhl;50.60161;10.71088;03681359;
+UNI Würzburg;Josef-Schneider-Str. 2;97080 Würzburg;49.80708;9.95694;09312010;info@uni-wuerzburg.de
+LEO Schweinfurt;Gustav-Adolf-Str. 8;97422 Schweinfurt;50.05141;10.24366;097217200;
+KHS St. Josef Schweinfurt;Ludwigstr. 1;97421 Schweinfurt;50.04368;10.22578;09721570;
+Sana Klinikum Hof;Eppenreuther Str. 8;95032 Hof;50.30258;11.91470;09281980;
+Klinikum Meiningen;Bergstr. 3;98617 Meiningen;50.55762;10.39686;03693900;
+Geomed Gerolzhofen;Dingolshäuser Str. 5;97447 Gerolzhofen;49.90032;10.35569;093826010;
+KHS St. Elisabeth Bad Kissingen;Kissinger Str. 150;97688 Bad Kissingen ;50.18976;10.08355;09718050;
+Rhön-Klinikum Campus NES ;Am Campus 1;97616 Bad Neustadt;50.32223;10.23610;097716624001;
+KHS Hammelburg;Ofenthaler Weg 20;97762 Hammelburg;50.11971;989813;097329000;
+Klinikum Fulda;Pacelliallee 4;36043 Fulda;50.54713;9.70544;0661840;
+BGU Frankfurt ;Friedberger Landstraße 430;60389 Frankfurt;50.14526;8.70954;0694750;info@bgu-frankfurt.de
+Klinikum Aschaffenburg;Aschaffenburg;Am Hasenkopf 1;49.97752;9.18761;06021/320;info@klinikum-ab-alz.de
+KH Alzenau;Alzenau;Schloßhof 1;50.07070;9.07681;06023/506135;info_alz@klinikum-ab-alz.de
+KH Erlenbach;Erlenbach;Krankenhausstraße 45;49.81200;9.16532;09372/7000;Info.Erlenbach@helios-gesundheit.de
+Uni Frankfurt;Frankfurt;Theodor-Stern-Kai 7;50.13029;8.66831;069/7980;mailadmin@rz.uni-frankfurt.de
+KH Seligenstadt;Seligenstadt;Dudenhöfer Str. 9;50.04125;8.96493;06182/83 - 0;seligenstadt@asklepios.com
+Klinikum Sana Offenbach;Offenbach;Sterkenburgring 66;50.09547;8.75720;069/84050;info-sof@sana.de
+Kettler Offenbach;Offenbach;Markwaldstraße 11;50.09569;8.75476;069/ 8505-0;info@ketteler-krankenhaus.de
+Klinikum Lohr;Lohr;Graf von Rieneck Straße 5;49.99653;9.57129;09352/5050;info@klinikum-msp.de
+Klinikum Hanau;Hanau;Leimenstraße 20;50.13400;8.92310;06181/2960;kontakt@klinikum-hanau.de
+St. Vinzenz Hanau;Hanau;Am Frankfurter Tor 25;50.13556;8.91256;06181/2720;info@vinzenz-hanau.de
+KH Gelnhausen;Gelnhausen;Herzbachweg 14;50.20691;9.18086;06051/870;info@mkkliniken.de
+KH Groß- Umstadt;Groß Umstadt;Krankenhausstraße 11;49.86723;8.93653;06078/790;info@kreiskliniken-dadi.de
+Klinikum Kempten;Kempten;Robert-Weixler-Straße 50;47.73258;10.30160;0831/5301111;
+Bezirkskrankenhaus Kempten;Kempten;Robert-Weixler-Straße 46;47.73182;10.30289;;
+Klinikum Kaufbeuren;Kaufbeuren;Dr.-Gutermann-Straße 2;47.88766;1.061.145;;
+Kliniken Ostallgäu-St. Josef Buchloe;Buchloe;Peter-Dörfler-Straße 7;48.03378;10.72346;;
+Klinik Immenstadt;Immenstadt;Im Stillen 4 ½;47.56230;10.22791;;
+Klinik Sonthofen;Sonthofen;Prinz-Luitpold-Straße 1;47.50862;10.27755;;
+Krankenhaus Oberstdorf;Oberstdorf;Trettachstraße 16;47.41078;10.28204;;
+St. Vinzenz Klinik Pfronten;Pfronten;Kirchenweg 15;47.58509;10.55762;;
+Klinik Füssen;Füssen;Stadtbleiche 1;47.56678;10.70473;;
+Klinikum Memmingen;Memmingen;Bismarckstraße 23;47.98270;10.16885;;
+Klinik Ottobeuren;Ottobeuren;Memminger Str. 31;47.94380;10.29298;;

@@ -10,6 +10,7 @@ import ELRDSync
 public final class InMemoryRepository: EntityRepository {
     private var snapshots: [UUID: EntitySnapshot] = [:]
     private var events: [UUID: ChangeEvent] = [:]
+    var documents: [DocumentKey: Data] = [:]
 
     /// Für Tests: lässt das nächste `apply` nach dem Prüfen fehlschlagen.
     public var failNextApply = false

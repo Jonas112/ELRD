@@ -53,7 +53,12 @@ let package = Package(
         .target(name: "ELRDReports", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
 
         // Stammdatenmodell und CSV-Regionsimport.
-        .target(name: "ELRDStammdaten", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
+        .target(
+            name: "ELRDStammdaten",
+            dependencies: ["ELRDDomain"],
+            resources: [.copy("Resources")],
+            swiftSettings: commonSettings
+        ),
 
         // SwiftUI-Oberflächen und Designsystem.
         .target(
@@ -74,6 +79,7 @@ let package = Package(
         .testTarget(name: "ELRDDomainTests", dependencies: ["ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDSyncTests", dependencies: ["ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDPersistenceTests", dependencies: ["ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDStammdatenTests", dependencies: ["ELRDStammdaten", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDStoreTests", dependencies: ["ELRDStore", "ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
     ],
     swiftLanguageModes: [.v5]

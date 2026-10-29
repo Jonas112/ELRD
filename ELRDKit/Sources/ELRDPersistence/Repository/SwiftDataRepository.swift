@@ -7,6 +7,8 @@ import ELRDSync
 @MainActor
 public final class SwiftDataRepository: EntityRepository {
     private let context: ModelContext
+    /// Für Erweiterungen in diesem Modul (Dokumente).
+    var modelContext: ModelContext { context }
 
     public init(container: ModelContainer) {
         context = ModelContext(container)

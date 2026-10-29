@@ -1,3 +1,5 @@
+import Foundation
+
 /// Behandlungsdringlichkeit nach IVENA. Rohwerte wie ELRDRG (`Victim.ivena_behandlungsPRIO`).
 public enum TreatmentPriority: Int, CaseIterable, Codable, Sendable, Identifiable, DisplayNamed {
     case keineDringlichkeit = 0
@@ -29,17 +31,57 @@ public struct RMI: Hashable, Codable, Sendable, Identifiable {
     public let title: String
     /// Kategorie im Katalog, z. B. „Verletzungen/Unfälle - Mehrfach“.
     public let category: String
+    /// Hinweis auf passende Sichtungskategorien laut Katalog, z. B. „SK 1+2“.
+    public let triageHint: String?
 
     public var id: Int { code }
 
-    public init(code: Int, title: String, category: String) {
+    public init(code: Int, title: String, category: String, triageHint: String? = nil) {
         self.code = code
         self.title = title
         self.category = category
+        self.triageHint = triageHint
     }
 
     /// RMIs sind dreistellig (100…999).
     public var isValid: Bool { (100...999).contains(code) }
+
+    /// Anzeige, z. B. „361 – Polytrauma“.
+    public var displayName: String { "\(code) – \(title)" }
+}
+
+/// IVENA-Katalog einer Leitstelle bzw. Region.
+public struct RMICatalog: Identifiable, Hashable, Sendable {
+    public let id: String
+    public let name: String
+    public let entries: [RMI]
+
+    public init(id: String, name: String, entries: [RMI]) {
+        self.id = id
+        self.name = name
+        self.entries = entries
+    }
+
+    /// Kategorien in Katalogreihenfolge.
+    public var categories: [String] {
+        var seen = Set<String>()
+        return entries.map(\.category).filter { seen.insert($0).inserted }
+    }
+
+    public func entry(code: Int) -> RMI? {
+        entries.first { $0.code == code }
+    }
+
+    /// Suche in Nummer, Titel und Kategorie (Groß/klein egal).
+    public func search(_ text: String) -> [RMI] {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return entries }
+        return entries.filter {
+            String($0.code).hasPrefix(query)
+                || $0.title.lowercased().contains(query)
+                || $0.category.lowercased().contains(query)
+        }
+    }
 }
 
 /// Patientenzuweisungscode (PZC) für IVENA: RMI (3) – Alter (2) – Dringlichkeit (1),

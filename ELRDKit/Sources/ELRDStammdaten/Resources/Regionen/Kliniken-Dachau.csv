@@ -1,0 +1,33 @@
+Anzeigename;Straße + Hausnummer;Stadt;Latitude;Longitude;Telefonnummer;E-Mail Adresse;E-Mail Adresse Anmeldung
+Klinikum Dachau;Krankanhausstraße 15;85221 Dachau;48.26541;11.42770;08131/76-67300;info.dachau@helios-kliniken.de;
+Klinik Markt Indersdorf;Maroldstraße 45;85229 Markt Indersdorf;48.35596;11.38985;08136/9392888;Info.Indersdorf@helios-gesundheit.de;
+Klinikum Fürstenfeldbruck;Dachauerstraße 33;82256 Fürstenfeldbruck;48.18055;11.25931;08141/99-4040;gl@klinikum-ffb.de;
+Klinikum Landsberg;Bgm.-Dr.-Hartmann-Straße 50;86899 Landsberg am Lech;48.04873;10.85558;08191/3331667;info@klinikum-landsberg.de;
+Klinikum Herrsching / Schindlbeck;Seestraße 43;82211 Herrsching;47.99458;11.17028;08152/29700;info@klinikum-landsberg.de;
+Klinikum Starnberg;Oßwaldstraße 1;82319 Starnberg;48.00717;11.33500;08151/18-0;info@klinikum-starnberg.de;
+Klinikum Seefeld;Hauptstraße 23;82229 Seefeld;48.03425;11.21339;08152/795-0;info@klinikum-seefeld.de;
+Klinik Tutzing;Bahnhofstraße 5;82327 Tutzing;47.90723;11.27717;08158/23373;ambulanz-bkt@artemed.de;
+Klinik Aichach;Krankenhausstraße 11b;86551 Aichach;48.46251;11.13966;08251/9090;kontakt@klipa.de;
+Klinikum Friedberg;Herrgottsruhstraße 3;86316 Friedberg;48.35629;10.98566;0821/60040;kontakt@klipa.de;
+Uniklinik Augsburg;Stenglinstraße 2;86156 Augsburg;48.38532;10.83770;0821/400-01;info@uk-augsburg.de;
+Klinik Schrobenhausen;Högenauer Weg 5;86529 Schrobenhausen;48.57307;11.26464;08252/94-6111;aufnahme@kkh-sob.de;
+Klinik Josefinum - Augsburg;Kapellenstraße 30;86154 Augsburg;48.38566;10.87480;0821/24120;info@josefinum.de;
+Klinikum Ingolstadt;Krumenauerstraße 25;85049 Ingolstadt;48.77011;11.37630;0841/880-2750;notaufnahme@klinikum-ingolstadt.de;
+Klinikum Pfaffenhofen;Krankenhausstraße 70;85276 Pfaffenhofen a.d.Ilm;48.51847;11.49953;08441/790;pf.ambulanz@klinikallianz.com;pf.ambulanz@klinikallianz.com
+Klinikum Erding;Bajuwarenstraße 5;85435 Erding;48.29460;11.89642;08122/595556;info@klinikum-erding.de;
+Klinikum Freising;Alois-Steinecker-Straße 18;85354 Freising;48.40532;11.74501;08161/243000;info@klinikum-freising.de;
+BG-Uniklinik Murnau;Professoer-Küntscher-Straße 8;82418 Murnau;47.67202;11.21649;08841/482662;info@bgu-murnau.de;
+Klinik Augustinum;Wolkerweg 16;81375 München;48.12245;11.48798;089/70975001;info@med.augustinum.de;
+Klinik Barmherzige Brüder;Romanstr. 93;80639 München;48.15590;11.51057;089/1797-2440;info@barmherzige-muenchen.de;
+Klinikum Bogenhausen;Englschalkinger Straße 77;81925 München;48.15544;11.62483;089/9270-3467;info.kb@klinikum-muenchen.de;
+Klinikum Dritter Orden;Menzinger Straße 444;80638 München;48.16552;11.50461;089/1795-0;info@dritter-orden.de;
+Klinikum Großhadern;Marchionistraße 15;81377 München;48.11253;11.46942;089/44007-3490;;
+Klinik Harlaching;Sanatoriumsplatz 2;81545 München;48.08564;11.55770;089/6210-6660;info.kh@klinikum-muenchen.de;
+Klinikum Neuperlach;Oskar-Maria-Graf-Ring 51;81737 München;48.09440;11.65683;089/6794-19-2551;;
+Klinikum Pasing - München West;Steinerweg 5;81241 Müchen;48.14415;11.45351;089/8892-20711;gf@kliniken-pasing-perlach.de;
+Klinik München Perlach;Schmidbauerstraße 44;81737 München;48.10206;11.62964;089/67802-4501;gf@kliniken-pasing-perlach.de;
+Klinikum Rechts der Isar;Ismaningerstraße 22;81675 München;48.13756;11.60083;089/4140-0;trauma@mri.tum.de;
+Rotkreuzklinikum München - RK1;Nymphenburger Straße 163;80634 München;48.15404;11.53158;089/1303-4800;rotkreuzklinikum-muenchen@swmbrk.de;
+Klinikum Schwabing;Kölner Platz 1;80804 München;48.17208;11.57846;089/3068-2600;;
+Klinik Uro Planegg;Germeringerstraße 32;82152 Planegg;48.10885;11.41527;089/85693-2519;plaverwaltung@ukmp.de;
+;;;;;;;

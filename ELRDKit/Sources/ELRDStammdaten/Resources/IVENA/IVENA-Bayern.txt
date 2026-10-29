@@ -1,0 +1,188 @@
+# IVENA Bayern (aus ELRDRG IVENABayern.swift). Format: RMI<TAB>Titel<TAB>Kategorie
+131	Reanimation laufend	Reanimation
+132	Reanimation ROSC	Reanimation
+133	Reanimation Trauma	Reanimation
+134	Reanimation Hypothermie	Reanimation
+140	vvECMO Zuverlegung	ECMO
+141	vvECMO Abholung	ECMO
+142	vaECMO Zuverlegung	ECMO
+143	vaECMO Abholung	ECMO
+144	eCPR Zuverlegung	ECMO
+145	eCPR Abholung	ECMO
+211	Polytrauma mit SHT	Verletzungen/Unfälle - Mehrfach
+212	Polytrauma ohne SHT	Verletzungen/Unfälle - Mehrfach
+213	Schockraumindikation nach Unfallhergang	Verletzungen/Unfälle - Mehrfach
+214	Mehrfachverletzung sonstige	Verletzungen/Unfälle - Mehrfach
+215	Mehrfachverletzung mit Augen	Verletzungen/Unfälle - Mehrfach
+219	oberflächliche Verletzung (bel. Lokalisation),	Verletzungen/Unfälle - Mehrfach
+221	SHT offen	Verletzungen/Unfälle - Gesicht/Kopf
+222	SHT geschlossen	Verletzungen/Unfälle - Gesicht/Kopf
+223	Gesichtsverletzung	Verletzungen/Unfälle - Gesicht/Kopf
+224	Kopfverletzung	Verletzungen/Unfälle - Gesicht/Kopf
+225	Augenverletzung	Verletzungen/Unfälle - Gesicht/Kopf
+231	Thorax penetrierend	Verletzungen/Unfälle - Thorax
+232	Thorax geschlossen / stumpf	Verletzungen/Unfälle - Thorax
+233	Pneumothorax (traumatisch),	Verletzungen/Unfälle - Gesicht/Kopf
+241	Abdomen penetrierend	Erkrankungen - Abdomen
+242	Abdomen geschlossen / stumpf	Erkrankungen - Abdomen
+243	Akutes Abdomen (nicht traumatisch),	Erkrankungen - Abdomen
+251	Verl. der Wirbelsäule mit neurologischen Ausfällen	Verletzungen/Unfälle - Wirbelsäule
+252	Verl. der Wirbelsäule ohne neurologische Ausfälle	Verletzungen/Unfälle - Wirbelsäule
+253	Rückenschmerzen, akut mit neurolog. Symptomatik	Verletzungen/Unfälle - Wirbelsäule
+254	Rückenschmerzen, nicht traumatisch ohne neurologische Ausfälle	Verletzungen/Unfälle - Wirbelsäule
+255	Lähmung / Querschnitt akut (nicht Stroke),	Verletzungen/Unfälle - Wirbelsäule
+261	Becken offen	Verletzungen/Unfälle - Becken
+262	Becken geschlossen	Verletzungen/Unfälle - Becken
+263	Urogenitaltrauma (isoliert),	Verletzungen/Unfälle - Becken
+271	Extremitäten offen	Verletzungen/Unfälle - Extremitäten/Prellungen/Luxationen
+272	Extremitäten geschlossen	Verletzungen/Unfälle - Extremitäten/Prellungen/Luxationen
+273	Hüft - / Schenkelhalsfraktur	Verletzungen/Unfälle - Extremitäten/Prellungen/Luxationen
+274	Verl. der Extremitäten mit Gefäß-/Nervenverl.	Verletzungen/Unfälle - Extremitäten/Prellungen/Luxationen
+275	Handverletzung	Verletzungen/Unfälle - Hand
+276	Finger Amputation	Verletzungen/Unfälle - Hand
+277	Hand - / Extremitäten Amputation	Verletzungen/Unfälle - Hand
+281	Verbrennung / Verbrühung	Verletzungen/Unfälle - physikalisch/chemisch
+282	Verätzung	Verletzungen/Unfälle - physikalisch/chemisch
+283	Hochspannungstrauma	Verletzungen/Unfälle - physikalisch/chemisch
+284	Barotrauma / Tauchunfall / Dekompressionskrankheit	Verletzungen/Unfälle - physikalisch/chemisch
+285	Strahlentrauma	Verletzungen/Unfälle - physikalisch/chemisch
+286	Hitzeerschöpfung/Hitzeschlag	Verletzungen/Unfälle - physikalisch/chemisch
+287	Unterkühlung / Erfrierung	Verletzungen/Unfälle - physikalisch/chemisch
+288	(Beinahe - ),Ertrinken / Badeunfall	Verletzungen/Unfälle - physikalisch/chemisch
+291	Aortenaneurysma	Verletzungen/Unfälle - Gefäß
+292	Extrimitätenischaemie (akut),	Verletzungen/Unfälle - Gefäß
+293	Aorta ascendens Dissektion (bestätigt),	Verletzungen/Unfälle - Gefäß
+299	Gefäßchirurgischer Notfall, sonstiger	Verletzungen/Unfälle - Gefäß
+311	Atemnot (unklar),/ Atembeschwerden / ARI	Erkrankungen - Atmung/Lunge
+312	Obstruktion (Asthma / COPD),	Erkrankungen - Atmung/Lunge
+313	Hämoptoe / Hämoptysen	Erkrankungen - Atmung/Lunge
+314	(Bolus - ),Aspiration	Erkrankungen - Atmung/Lunge
+315	Bronchitis / Pneumonie	Erkrankungen - Atmung/Lunge
+316	Hyperventilation	Erkrankungen - Atmung/Lunge
+317	Lungenödem (nicht kardial),	Erkrankungen - Atmung/Lunge
+318	Spontanpneumothorax	Erkrankungen - Atmung/Lunge
+319	Pneumologischer Notfall, sonstiger	Erkrankungen - Atmung/Lunge
+321	Anaphylaxie / Unverträglichkeitsreaktion	Erkrankungen - Sonstige
+322	Synkope / Kollaps	Erkrankungen - Sonstige
+323	Hypotonie	Erkrankungen - Sonstige
+324	Thrombose	Erkrankungen - Sonstige
+325	unklares Fieber	Erkrankungen - Sonstige
+236	Exsikkose	Erkrankungen - Sonstige
+329	Internistischer Notfall, sonstiger	Erkrankungen - Sonstige
+331	unklarer Brust - / Thoraxschmerz	Erkrankungen - Brustschmerz
+332	STEMI / OMI	Erkrankungen - Brustschmerz
+333	NSTEMI, instabile AP	Erkrankungen - Brustschmerz
+341	Arrhythmie	Erkrankungen - Herz-Kreislauf
+342	Bradykardie	Erkrankungen - Herz-Kreislauf
+343	Tachykardie	Erkrankungen - Herz-Kreislauf
+344	Elektrounfall (Schwachstrom),	Erkrankungen - Herz-Kreislauf
+345	Hypertensiver Notfall / Krise	Erkrankungen - Herz-Kreislauf
+346	Kardiogener Schock	Erkrankungen - Herz-Kreislauf
+347	Herzinsuffizienz	Erkrankungen - Herz-Kreislauf
+348	Lungenembolie	Erkrankungen - Herz-Kreislauf
+349	Kardiologischer Notfall, sonstiger	Erkrankungen - Herz-Kreislauf
+351	GI-Blutung	Erkrankungen - Abdomen
+353	Bauchschmerzen	Erkrankungen - Abdomen
+354	Gastroenteritis	Erkrankungen - Abdomen
+359	Gastroenterologischer Notfall, sonstiger	Erkrankungen - Abdomen
+360	Rauchgas / Reizgas (nicht CO),	Erkrankungen - Intoxikationen
+361	Alkohol	Erkrankungen - Intoxikationen
+362	Drogen / Rauschgift	Erkrankungen - Intoxikationen
+363	sonstige Intoxikation	Erkrankungen - Intoxikationen
+364	Lebensmittel	Erkrankungen - Intoxikationen
+365	Medikamente	Erkrankungen - Intoxikationen
+366	Pflanzenschutzmittel	Erkrankungen - Intoxikationen
+367	tierische Gifte	Erkrankungen - Intoxikationen
+368	Giftpflanzen	Erkrankungen - Intoxikationen
+369	inhalative Intoxikation, sonstige	Erkrankungen - Intoxikationen
+370	Kohlenmonoxid - Vergiftung	Erkrankungen - Intoxikationen
+371	Meningitis / Enzephalitis	Erkrankungen - spezielle Infektionen
+372	TBC	Erkrankungen - spezielle Infektionen
+373	Sepsis (Infekt qSOFA mind. 2	Erkrankungen - spezielle Infektionen
+374	Septischer Schock	Erkrankungen - spezielle Infektionen
+375	hochkontagiäse Erkrankung (Sonder-ISO),	Erkrankungen - spezielle Infektionen
+376	Covid-19-SARS - CoV2 (bestätigt),- aktuelle Infektionskrankheit	Erkrankungen - spezielle Infektionen
+377	Covid-19-SARS - CoV 2 (nicht bestätigt - aktuelle Infektionskrankheit	Erkrankungen - spezielle Infektionen
+378	SARS-CoV 2 zur Quarantäne - aktuelle Infektionskrankheit zur Quarantäne	Erkrankungen - spezielle Infektionen
+379	Infektiologischer Notfall, sonstiger	Erkrankungen - spezielle Infektionen
+391	Aktuter endokrinologischer Notfall	Erkrankungen - Sonstige
+392	Hyperglykämie	Erkrankungen - Sonstige
+393	Hypoglykämie	Erkrankungen - Sonstige
+411	anhaltender epileptischer Anfall	Neurologie
+412	Epileptischer Anfall (stattgehabt),	Neurologie
+413	Kopf- / Gesichtsschmerz (bei SK1 NC),	Neurologie
+414	Vigilanzminderung / Koma (ohne Trauma),	Neurologie
+415	Schwindel	Neurologie
+419	Neurologischer Notfall, sonstiger	Neurologie
+421	Schlaganfall / Blutung: <24h oder unklar	Neurologie
+423	Schlaganfall / Blutung: >24h	Neurologie
+425	diagnostizierter Celebraler Gefäßverschluss zur Thrombektomie	Neurologie
+431	Suizid, angedroht	Psychatrie
+432	Einweisung, psychatrische	Psychatrie
+433	Einweisung (nach LandesPsychKG),	Psychatrie
+434	Einweisung (nach LandesPsychKG),mit Fixierung	Psychatrie
+435	Aktue Verwirrtheit / Delir	Psychatrie
+511	pädiatrisch - Atemnot	Pädiatrisch
+512	schwerer Husten (Pseudokrupp),	Pädiatrisch
+513	pädiatrisch - Fieberkrampf	Pädiatrisch
+519	Pädiatrischer Notfall, sonstiger	Pädiatrisch
+521	< 16 SSW	präklinische Geburt
+522	16+0 SSW bis 21+6 SSW	präklinische Geburt
+523	22+0 SSW bis 28+6 SSW	präklinische Geburt
+524	29+0 SSW bis 31+6 SSW	präklinische Geburt
+525	32+0 SSW bis 35+6 SSW und jede Wachstumsströung des Feten	präklinische Geburt
+526	ab 36+0 SSW	präklinische Geburt
+527	ab 36+0 SSW bei Diabetes	präklinische Geburt
+528	Drillinge bis 32+6 SSW, alle über 3 Mehrlinge	präklinische Geburt
+529	Drillinge ab 33+0 SSW	präklinische Geburt
+530	akute fetale Gefährdung ggf. in unggeigneter Klinik	einsetzende Geburt
+531	< 16 SSW	einsetzende Geburt
+532	16+0 SSW bis 21+6 SSW	einsetzende Geburt
+533	22+0 SSW bis 28+6 SSW	einsetzende Geburt
+534	29+0 SSW bis 31+6 SSW	einsetzende Geburt
+535	32+0 SSW bis 35+6 SSW und jede Wachstumsstörung des Feten	einsetzende Geburt
+536	ab 36+0 SSW	einsetzende Geburt
+537	ab 36+0 SSW bei Diabetes	einsetzende Geburt
+538	Drillinge bis 32+6 SSW, alle über 3 Mehrlinge	einsetzende Geburt
+539	Drillinge ab 33+0 SSW	einsetzende Geburt
+540	aktue fetale Gefährdung, Erstversorgung ggf. in ungeeigneter Klinik	Schwangerschaft / Geburtshilfe
+541	< 16 SSW	Schwangerschaft / Geburtshilfe
+542	16+0 SSW bis 21+6 SSW	Schwangerschaft / Geburtshilfe
+543	22+0 SSW bis 28+6 SSW	Schwangerschaft / Geburtshilfe
+544	29+0 SSW bis 31+6 SSW	Schwangerschaft / Geburtshilfe
+545	32+0 SSW bis 35+6 SSW und jede Wachstumsstörung des Feten	Schwangerschaft / Geburtshilfe
+546	ab 36+0 SSW	Schwangerschaft / Geburtshilfe
+547	ab 36+0 SSW bei Diabetes	Schwangerschaft / Geburtshilfe
+548	Drillinge bis 32+6 SSW, alle über 3 Mehrlinge	Schwangerschaft / Geburtshilfe
+549	Drillinge bis ab 33+0 SSW	Schwangerschaft / Geburtshilfe
+551	vaginale Blutung	spezielle Erkrankungen / Verletzungen
+552	Unterbauchschmerzen	spezielle Erkrankungen / Verletzungen
+553	Sexualdelikt	spezielle Erkrankungen / Verletzungen
+559	Gynäkologischer Notfall, sonstiger	spezielle Erkrankungen / Verletzungen
+601	Transport zu definierten Leistungen	Sonstige Einsätze und Transporte
+602	Transport zu geplanter Dialyse	Sonstige Einsätze und Transporte
+603	Transport zu geplantem Herzkatheter	Sonstige Einsätze und Transporte
+604	Transport zu geplantem CT	Sonstige Einsätze und Transporte
+605	Transport zu geplantem MRT	Sonstige Einsätze und Transporte
+701	Haut - und Geschlechtskrankheiten	Haut- und Geschlechtskrankheiten
+711	Nieren - Harnleiterkolik	Urologie
+712	Hodenschmerz	Urologie
+713	Harnverhalt (akut),	Urologie
+714	Hämaturie	Urologie
+715	Katheterwechsel(transurethral),	Urologie
+716	Katheterwechsel (suprapubisch),	Urologie
+717	Katheterverlust / - verstopfung	Urologie
+718	Harndwegsinfekt	Urologie
+719	Urologischer Notfall, sonstiger	Urologie
+721	akute Augenerkrankung	Augenheilkunde
+729	Augennotfall, sonstiger	Augenheilkunde
+731	Nasenbluten (Epistaxis),unstillbar	sonstige HNO Notfälle
+732	(nach),Blutung, HNO, akut	sonstige HNO Notfälle
+733	Tracheostoma - Komplikation	sonstige HNO Notfälle
+739	HNO Notfall Sonstiger	sonstige HNO Notfälle
+749	Mund - Kiefer - Gesicht - Notfall, sonstiger	Mund - Kiefer - Gesicht
+751	Geriatrische Einweisung	Geriatrie
+779	sonstige Notfallsituation	Notfallsituation unbestimmt
+801	Schmerz / Schwellung Bewegungsapparat (nicht traumatisch),	Allgemeinmedizin
+802	Schwellung / Abszeß, sonstige Lokalisation	Allgemeinmedizin
+809	Allgemeinmedizin, sonstiger Notfall	Allgemeinmedizin

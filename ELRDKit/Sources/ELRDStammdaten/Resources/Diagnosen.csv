@@ -1,0 +1,60 @@
+Körperregion;Diagnose
+Arm;Oberarm#
+Arm;Oberarm# offen
+Arm;Oberarm Amputation
+Arm;Schulterluxation
+Arm;Ellenbogenluxation
+Oberschenkel;Oberschenkel#
+Oberschenkel;Oberschenkel# offen
+Oberschenkel;Oberschenkel Amputation
+Oberschenkel;Becken#
+Oberschenkel;Becken# offen
+Unterschenkel;Unterschenkel#
+Unterschenkel;Unterschenkel# offen
+Unterschenkel;Unterschenkel Amputation
+Unterschenkel;Patella#
+Unterschenkel;Patellaluxation
+Unterschenkel;OSG#
+Unterschenkel;OSG# offen
+Unterschenkel;Fuß Amputation
+Hand;Handgelenk#
+Hand;Handgelenk# offen
+Hand;Hand#
+Hand;Hand# offen
+Hand;Hand Amputation
+Abdomen;stumpfes Abdominaltrauma
+Abdomen;Abdominaltrauma offen
+Abdomen;penetrierendes Abdominaltrauma
+Abdomen;Abwehrspannung Abdomen
+Abdomen;Prellmarke Abdomen
+Thorax;stumpfes Thoraxtrauma
+Thorax;penetrierendes Thoraxtrauma
+Thorax;Thoraxtrauma offen
+Thorax;Sternumprellung
+Thorax;Sternum#
+Thorax;Rippen#
+Thorax;Rippenserien#
+Thorax;Pneumothorax
+Thorax;Spannungspneumothorax
+Thorax;Spannungspneumothorax entlastet
+Thorax;Hämatothorax
+Kopf;Commotio
+Kopf;SHT I
+Kopf;SHT I offen
+Kopf;SHT II
+Kopf;SHT II offen
+Kopf;SHT III
+Kopf;SHT III offen
+Kopf;Mittelgesichts#
+Kopf;wach ansprechbar
+Kopf;Bewusstlos
+Kopf;spontanatmend
+Kopf;intubiert beatmet
+Wirbelsäule;HWS Distorsion
+Wirbelsäule;HWS Trauma
+Wirbelsäule;HWS Trauma mit Sensibilitätsstörungen
+Wirbelsäule;BWS Trauma
+Wirbelsäule;BWS Trauma mit Sensibilitätsstörungen
+Wirbelsäule;LWS Trauma
+Wirbelsäule;LWS Trauma mit Sensibilitätsstörungen
+Wirbelsäule;Querschnittsymptomatik

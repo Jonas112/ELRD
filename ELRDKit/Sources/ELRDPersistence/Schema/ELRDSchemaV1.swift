@@ -4,7 +4,7 @@ import SwiftData
 /// ELRDPersistence – lokale Speicherung mit SwiftData.
 ///
 /// Aufbau (Entscheidung E28): Statt einer Tabelle je Entität mit Beziehungen gibt es
-/// zwei flache Tabellen. `EntityRecord` hält jede Entität als JSON plus einige
+/// flache Tabellen ohne Beziehungen. `EntityRecord` hält jede Entität als JSON plus einige
 /// Spalten zum Suchen; `ChangeRecord` ist das Änderungsjournal. Kein anderes Modul
 /// greift direkt auf SwiftData zu.
 public enum ELRDPersistenceModule {
@@ -22,7 +22,7 @@ public enum ELRDSchemaV1: VersionedSchema {
     public static let versionIdentifier = Schema.Version(1, 0, 0)
 
     public static var models: [any PersistentModel.Type] {
-        [EntityRecord.self, ChangeRecord.self]
+        [EntityRecord.self, ChangeRecord.self, DocumentRecord.self]
     }
 
     /// Eine gespeicherte Entität (Einsatz, Patient, Einheit, …).
@@ -103,11 +103,27 @@ public enum ELRDSchemaV1: VersionedSchema {
             self.payload = payload
         }
     }
+
+    /// Einzelnes Dokument unter festem Schlüssel (Stammdaten, Einstellungen).
+    /// Ergänzt am 2026-10-29 vor der ersten Veröffentlichung, daher noch in V1 (E36).
+    @Model
+    public final class DocumentRecord {
+        @Attribute(.unique) public var key: String
+        public var updatedAt: Date
+        public var payload: Data
+
+        public init(key: String, updatedAt: Date, payload: Data) {
+            self.key = key
+            self.updatedAt = updatedAt
+            self.payload = payload
+        }
+    }
 }
 
 /// Aktuelle Modelltypen. Code außerhalb dieses Ordners nutzt nur diese Namen.
 public typealias EntityRecord = ELRDSchemaV1.EntityRecord
 public typealias ChangeRecord = ELRDSchemaV1.ChangeRecord
+public typealias DocumentRecord = ELRDSchemaV1.DocumentRecord
 
 /// Migrationsplan. Neue Schemaversionen werden hier angehängt.
 public enum ELRDMigrationPlan: SchemaMigrationPlan {

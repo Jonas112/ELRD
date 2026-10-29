@@ -47,6 +47,12 @@ struct WorkspaceTests {
         #expect(TriageSummaryView(counts: [:], showsEmpty: true).visibleCategories.count == 6)
     }
 
+    @Test func extremeTriageColorsGetOutline() {
+        #expect(TriageBadge.needsOutline(.verstorben))
+        #expect(TriageBadge.needsOutline(.unverletzt))
+        #expect(!TriageBadge.needsOutline(.sk1))
+    }
+
     @Test func viewsCanBeBuilt() throws {
         // Grobe Rauchprobe: Körper der Ansichten lassen sich erzeugen.
         let store = try PreviewData.makeStore()

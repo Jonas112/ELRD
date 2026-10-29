@@ -31,6 +31,10 @@ public struct TriageBadge: View {
         self.size = size
     }
 
+    static func needsOutline(_ category: Sichtungskategorie) -> Bool {
+        category == .unverletzt || category == .verstorben
+    }
+
     public var body: some View {
         Text(category.shortName)
             .font(size.font)
@@ -39,9 +43,10 @@ public struct TriageBadge: View {
             .padding(size.padding)
             .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
             .overlay {
-                // Helle Kennfarben (unverletzt) brauchen auf hellem Grund einen Rand.
+                // Sehr helle (unverletzt) und sehr dunkle (verstorben) Kennfarben verschwinden
+                // sonst im hellen bzw. dunklen Modus – daher immer mit Rand.
                 RoundedRectangle(cornerRadius: Radius.chip, style: .continuous)
-                    .strokeBorder(Surface.separator, lineWidth: category == .unverletzt ? 1 : 0)
+                    .strokeBorder(Color.primary.opacity(0.35), lineWidth: Self.needsOutline(category) ? 1 : 0)
             }
             .accessibilityLabel(category.displayName)
     }

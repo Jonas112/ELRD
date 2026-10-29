@@ -47,3 +47,5 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E41 | 2026-10-29 | Benutzer werden deaktiviert, nicht gelöscht; der letzte aktive Admin ist geschützt | Namen in Einsätzen/Berichten bleiben erhalten; Gerät kann nicht ohne Admin enden |
 | E42 | 2026-10-29 | Ohne Abo: Einsätze ansehen und exportieren bleibt möglich, Anlegen/Bearbeiten gesperrt (Vorschlag, endgültig in Schritt 51) | Zugriff auf eigene Daten und Dokumentationspflicht; DSGVO |
 | E43 | 2026-10-29 | Freischaltung wird im `MissionStore` geprüft, nicht nur in der Oberfläche | Sperre kann nicht durch eine vergessene Oberflächenprüfung umgangen werden |
+| E44 | 2026-10-29 | Akzentfarbe Blau; Rot, Gelb, Grün nur für Sichtungskategorien | Farbbedeutung im Einsatz eindeutig; rote Auswahl wirkte wie Alarm |
+| E45 | 2026-10-29 | CI erstellt Bildschirmfotos hell/dunkel im Branch `ci-screenshots` | Oberflächen können ohne Xcode-Zugriff geprüft werden |

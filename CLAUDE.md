@@ -10,6 +10,7 @@ Neubau der iPad-App ELRDRG (Einsatzleiter Rettungsdienst) in SwiftUI. Altes Proj
 ## Arbeitsweise
 - Ein Schritt pro Sitzung, klein halten. Am Ende: Status und Übergabenotiz in `FORTSCHRITT.md`, dann commit und push auf `main`.
 - In der Cloud-Umgebung gibt es kein Xcode. Nach jedem Push den CI-Lauf prüfen: `gh run list -R Jonas112/ELRD`, `gh run watch <id> --exit-status`, `gh run view <id>` (Fehler stehen als Annotationen). Erst bei grünem Build ist ein Schritt fertig.
+- Oberflächen nach jedem Push per Bildschirmfoto prüfen: `git clone --depth 1 -b ci-screenshots https://github.com/Jonas112/elrd <scratchpad>/shots` (hell und dunkel).
 - Kommunikation, Kommentare und Dokumentation auf Deutsch. Bezeichner im Code auf Englisch, Fachbegriffe (Sichtungskategorie, Alarmstichwort) dürfen deutsch bleiben, wenn sie keine gute Übersetzung haben.
 
 ## Regeln im Code

@@ -50,7 +50,8 @@ struct MissionListView: View {
         }
         .onAppear { model.filter.showsAllYears = showsAllYears }
         .onChange(of: showsAllYears) { _, value in model.filter.showsAllYears = value }
-        .sheet(isPresented: $showsNewMission) {
+        // Bildschirmfüllend: große Ziele, nichts muss gescrollt werden.
+        .fullScreenCover(isPresented: $showsNewMission) {
             NewMissionView(commanderName: model.session.displayName) { form in
                 let store = try model.create(form)
                 showsNewMission = false

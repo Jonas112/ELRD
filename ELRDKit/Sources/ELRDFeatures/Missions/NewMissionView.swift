@@ -7,6 +7,9 @@ struct NewMissionView: View {
     let commanderName: String
     let start: (NewMissionForm) throws -> Void
 
+    /// Lesbare Breite auf großen iPads; auf dem iPad mini füllt das Formular die Breite.
+    static let contentWidth: CGFloat = 760
+
     @Environment(\.dismiss) private var dismiss
     @State private var form = NewMissionForm()
     @State private var errorMessage: String?
@@ -23,6 +26,8 @@ struct NewMissionView: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(Spacing.xl)
+                .frame(maxWidth: Self.contentWidth)
+                .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Surface.canvas)
@@ -133,6 +138,8 @@ struct NewMissionView: View {
             .buttonStyle(.plain)
             .keyboardShortcut(.return, modifiers: .command)
         }
+        .frame(maxWidth: Self.contentWidth)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.xl)
         .padding(.top, Spacing.m)
         .padding(.bottom, Spacing.l)

@@ -107,7 +107,7 @@ jobs:
             xcrun simctl ui "$DEVICE_ID" appearance $mode
             for screen in setup login missions newMission workspace; do
               xcrun simctl terminate "$DEVICE_ID" ELRD.App || true
-              xcrun simctl launch "$DEVICE_ID" ELRD.App --demo-screen $screen
+              xcrun simctl launch "$DEVICE_ID" ELRD.App --demo-screen $screen -AppleLanguages "(de)" -AppleLocale de_DE
               sleep 5
               xcrun simctl io "$DEVICE_ID" screenshot "shots/$screen-$mode.png"
             done

@@ -45,7 +45,7 @@ struct MissionListView: View {
             .navigationTitle("Einsätze")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { AccountMenuButton(account: account) }
+                ToolbarItem(placement: .topBarTrailing) { AccountAvatarMenu(account: account, size: TouchTarget.minimum) }
             }
         }
         .onAppear { model.filter.showsAllYears = showsAllYears }

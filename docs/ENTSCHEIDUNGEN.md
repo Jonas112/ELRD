@@ -58,3 +58,8 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E52 | 2026-11-04 | „Neuer Einsatz“ fragt nur Stichwort, Einsatzart, Ort, Meldebild, ILS-Nr.; Beginn = jetzt, Einsatzleiter = angemeldeter Benutzer; Stichwort-Platzhalter im selben Speichervorgang | Weniger ist mehr; Einsatz in Sekunden angelegt, alles Weitere später |
 | E53 | 2026-11-04 | Einsätze werden weich gelöscht (mit Bestätigung, nur im Kontextmenü); Jahresnummern bleiben vergeben | Seltene, folgenreiche Aktion bewusst versteckt; Sync und Nachvollziehbarkeit |
 | E54 | 2026-11-04 | Gefüllte Hauptknöpfe nutzen `ActionFill.primary` (#1F5FAD hell / #2F6FD6 dunkel), nicht die Akzentfarbe | Weiße Schrift auf #5C9DFF wäre zu kontrastarm |
+| E55 | 2026-11-04 | Fünf Bereiche (Lage, Patienten, Einheiten, Karte, Tagebuch); Nachrichten als Glocke, Protokoll als Filter im Tagebuch | Weniger ist mehr; jeder Bereich mit einem Tipp erreichbar |
+| E56 | 2026-11-04 | Schmale Symbolleiste links statt Seitenleiste; unter 800 pt Breite (iPad mini hoch, schmale Fenster) Leiste unten | Platz für Inhalt auf dem iPad mini; unten liegt sie am Daumen |
+| E57 | 2026-11-04 | Feste Lageleiste in allen Bereichen: Laufzeit, SK-Zähler, „+ Patient“ mit Schnellanlage und Rückgängig statt Rückfrage | Neuer Patient ist überall zwei Tipps entfernt; Fehlgriffe ohne Dialog korrigierbar |
+| E58 | 2026-11-04 | Lage zeigt „offene Punkte“ (dringendste zuerst, je mit Knopf) statt reiner Zahlen | Unter Stress sieht man sofort, was zu tun ist |
+| E59 | 2026-11-04 | SK 3 #2E7D32 statt #388E3C; Klinik-Anmeldestatus ohne Rot (offen grau) | Kontrast weißer Schrift; Rot nur für SK 1 (E44) |

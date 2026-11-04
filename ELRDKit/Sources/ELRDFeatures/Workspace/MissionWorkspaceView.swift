@@ -212,9 +212,10 @@ struct SituationBar: View {
         let state = mission.isClosed
             ? "beendet"
             : "läuft \(ElapsedTimeFormat.string(from: mission.startedAt, to: now))"
+        // Laufzeit zuerst: wird es eng, kürzt sich der Ort, nicht die Zeit.
         let parts = layout == .rail
-            ? [mission.displayNumber(), mission.location, state]
-            : [mission.displayNumber(), state]
+            ? [state, mission.displayNumber(), mission.location]
+            : [state, mission.displayNumber()]
         return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 

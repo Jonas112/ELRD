@@ -105,6 +105,9 @@ public struct MissionWorkspaceView: View {
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            // Der Stack bringt sonst seinen eigenen (im hellen Modus weißen) Hintergrund mit.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Surface.canvas)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

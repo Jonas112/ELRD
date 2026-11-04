@@ -10,18 +10,20 @@ import ELRDStore
 public struct MissionWorkspaceView: View {
     let store: MissionStore
     let account: AccountMenuModel?
+    let onClose: (() -> Void)?
 
     @State private var selection: WorkspaceSection = .overview
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
-    public init(store: MissionStore, account: AccountMenuModel? = nil) {
+    public init(store: MissionStore, account: AccountMenuModel? = nil, onClose: (() -> Void)? = nil) {
         self.store = store
         self.account = account
+        self.onClose = onClose
     }
 
     public var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            WorkspaceSidebar(state: store.state, selection: $selection, account: account)
+            WorkspaceSidebar(state: store.state, selection: $selection, account: account, onClose: onClose)
                 .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
         } detail: {
             NavigationStack {
@@ -38,6 +40,7 @@ struct WorkspaceSidebar: View {
     let state: MissionState
     @Binding var selection: WorkspaceSection
     var account: AccountMenuModel? = nil
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         let badges = WorkspaceBadges(state: state)
@@ -63,6 +66,16 @@ struct WorkspaceSidebar: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
+                if let onClose {
+                    Button(action: onClose) {
+                        Label("Einsätze", systemImage: "chevron.left")
+                            .labelStyle(.titleAndIcon)
+                            .frame(minHeight: TouchTarget.minimum)
+                    }
+                    .accessibilityHint("Zurück zur Einsatzliste")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 if let account { AccountMenuButton(account: account) }
             }
         }

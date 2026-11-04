@@ -11,6 +11,8 @@ public struct NewMissionRequest: Sendable {
     public var sectionNames: [String]
     /// Name des Initialabschnitts (muss in `sectionNames` vorkommen).
     public var initialSectionName: String?
+    /// Alarmstichwort der Erstalarmierung; legt Platzhalter-Einheiten an.
+    public var alarmstichwort: Alarmstichwort?
 
     public init(
         reason: String = "",
@@ -18,7 +20,8 @@ public struct NewMissionRequest: Sendable {
         location: String = "",
         dispatchNumber: String? = nil,
         sectionNames: [String] = [],
-        initialSectionName: String? = nil
+        initialSectionName: String? = nil,
+        alarmstichwort: Alarmstichwort? = nil
     ) {
         self.reason = reason
         self.type = type
@@ -26,8 +29,10 @@ public struct NewMissionRequest: Sendable {
         self.dispatchNumber = dispatchNumber
         self.sectionNames = sectionNames
         self.initialSectionName = initialSectionName
+        self.alarmstichwort = alarmstichwort
     }
 
+    @MainActor
     func build(into draft: inout MissionDraft, existingMissions: [Mission]) throws {
         let context = draft.context
         let mission = Mission(
@@ -54,6 +59,25 @@ public struct NewMissionRequest: Sendable {
             )
             try draft.insert(section)
         }
+
+        // Stichwort im selben Speichervorgang: Einsatz und Platzhalter entstehen zusammen.
+        if let alarmstichwort {
+            _ = try AddAlarmstichwort(alarmstichwort).execute(&draft)
+        }
+    }
+}
+
+/// Löscht einen Einsatz (weich: er verschwindet aus der Liste, bleibt aber für
+/// Synchronisation und Wiederherstellung erhalten). Auch für beendete Einsätze.
+public struct DeleteMission: MissionCommand {
+    public static var allowedOnClosedMission: Bool { true }
+    public init() {}
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let missionID = draft.missionID
+        let number = draft.mission.displayNumber()
+        try draft.delete(Mission.self, id: missionID)
+        draft.log(.mission, "Einsatz \(number) gelöscht", subject: .mission(missionID))
     }
 }
 

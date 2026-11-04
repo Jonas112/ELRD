@@ -24,6 +24,22 @@ public enum Radius {
 public enum TouchTarget {
     public static let minimum: CGFloat = 44
     public static let comfortable: CGFloat = 56
+    /// Hauptaktionen, die man auch verschlafen sofort trifft („Einsatz starten“).
+    public static let large: CGFloat = 72
+}
+
+/// Flächen für Hauptaktionen (gefüllte Knöpfe mit weißer Schrift).
+///
+/// Die Akzentfarbe selbst ist im dunklen Modus hell (#5C9DFF) und eignet sich
+/// nur für Text und Symbole; weiße Schrift darauf wäre zu kontrastarm.
+public enum ActionFill {
+    public static let primary = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0x2F / 255, green: 0x6F / 255, blue: 0xD6 / 255, alpha: 1)
+            : UIColor(red: 0x1F / 255, green: 0x5F / 255, blue: 0xAD / 255, alpha: 1)
+    })
+    /// Ausgewählter Zustand von Auswahlknöpfen (Hintergrund).
+    public static let selected = Color.accentColor.opacity(0.22)
 }
 
 public extension Color {

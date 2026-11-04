@@ -4,6 +4,7 @@ import Testing
 @testable import ELRDDomain
 @testable import ELRDFeatures
 @testable import ELRDPersistence
+import ELRDStore
 
 @Suite("Start und Anmeldung")
 @MainActor
@@ -46,9 +47,13 @@ struct AccountFlowTests {
         case .login:
             #expect(environment.userService.directory.activeUsers.count == 3)
             #expect(environment.userService.currentUser == nil)
-        case .workspace:
-            #expect(environment.userService.currentUser?.displayName == "Max Muster")
+        case .missions, .newMission, .workspace:
+            #expect(environment.userService.currentUser?.displayName == "Erika Beispiel")
+            let missions = try MissionOverview.load(from: environment.repository)
+            #expect(missions.count == 6)
+            #expect(missions.filter { !$0.isClosed }.count == 1, "genau ein laufender Einsatz")
         }
+        #expect(environment.demoScreen == screen)
         let masterData = try environment.repository.document(MasterDataSet.self, key: .masterData)
         #expect(masterData?.injuries.count == 59)
     }

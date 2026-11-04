@@ -9,11 +9,14 @@ import ELRDStore
 
 /// Startoptionen, u. a. für automatische Bildschirmfotos in der CI.
 ///
-/// `--demo-screen setup|login|workspace` startet mit Beispieldaten im
-/// Arbeitsspeicher (nichts wird gespeichert, Keychain bleibt unberührt).
+/// `--demo-screen setup|login|missions|newMission|workspace` startet mit
+/// Beispieldaten im Arbeitsspeicher (nichts wird gespeichert, Keychain bleibt unberührt).
 public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
-        case setup, login, workspace
+        case setup, login, missions, newMission, workspace
+
+        /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
+        var needsMissions: Bool { [.missions, .newMission, .workspace].contains(self) }
     }
 
     public let demoScreen: DemoScreen?
@@ -44,13 +47,16 @@ public final class AppEnvironment {
     public let entitlements: StaticEntitlements
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
+    /// Gewünschter Beispielbildschirm (nur Demo).
+    public let demoScreen: AppLaunchOptions.DemoScreen?
 
     init(
         repository: any EntityRepository & DocumentRepository,
         userService: UserService,
         device: DeviceIdentity,
         entitlements: StaticEntitlements,
-        isDemo: Bool
+        isDemo: Bool,
+        demoScreen: AppLaunchOptions.DemoScreen? = nil
     ) throws {
         self.repository = repository
         self.userService = userService
@@ -58,6 +64,7 @@ public final class AppEnvironment {
         self.deviceClock = try DeviceClock(deviceID: device.deviceID, repository: repository)
         self.entitlements = entitlements
         self.isDemo = isDemo
+        self.demoScreen = demoScreen
     }
 
     /// Startet passend zu den Startoptionen.
@@ -93,23 +100,28 @@ public final class AppEnvironment {
             provider: LocalAuthProvider(hasher: PasswordHasher(iterations: 1_000))
         )
         if screen != .setup {
-            try await users.createInitialAdmin(firstName: "Erika", lastName: "Beispiel", callsign: "ELRD 1", password: "demo123")
-            let commander = try await users.createUser(
+            let admin = try await users.createInitialAdmin(firstName: "Erika", lastName: "Beispiel", callsign: "ELRD 1", password: "demo123")
+            try await users.createUser(
                 NewUser(firstName: "Max", lastName: "Muster", callsign: "ELRD 2", role: .commander, password: nil)
             )
             try await users.createUser(
                 NewUser(firstName: "Jana", lastName: "Probe", callsign: "OrgL 1", role: .commander, password: "probe12")
             )
             try users.logout()
-            if screen == .workspace { try await users.login(commander.id, password: nil) }
+            if screen.needsMissions { try await users.login(admin.id, password: "demo123") }
         }
-        return try AppEnvironment(
+        let environment = try AppEnvironment(
             repository: repository,
             userService: users,
             device: device,
             entitlements: StaticEntitlements.development(),
-            isDemo: true
+            isDemo: true,
+            demoScreen: screen
         )
+        if screen.needsMissions, let user = users.currentUser {
+            try DemoMissions.seed(in: environment, user: user)
+        }
+        return environment
     }
 
     /// Gerätekennung und Nummernpräfix; beim ersten Start mit „A“ angelegt.

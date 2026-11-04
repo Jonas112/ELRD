@@ -54,23 +54,41 @@ struct AppFlowView: View {
     }
 }
 
-/// Nach der Anmeldung. Bis Schritt 16 (Einsatzliste) mit dem Beispieleinsatz.
+/// Nach der Anmeldung: Einsatzliste, von dort in den Arbeitsbereich eines Einsatzes.
 struct SignedInView: View {
     let environment: AppEnvironment
     let user: UserAccount
 
-    @State private var demoStore: MissionStore? = nil
+    @State private var list: MissionListModel?
+    @State private var openStore: MissionStore?
 
     var body: some View {
         Group {
-            if let demoStore {
-                MissionWorkspaceView(store: demoStore, account: account)
+            if let openStore {
+                MissionWorkspaceView(store: openStore, account: account) {
+                    self.openStore = nil
+                    list?.reload()
+                }
+            } else if let list {
+                MissionListView(
+                    model: list,
+                    account: account,
+                    showsNewMissionInitially: environment.demoScreen == .newMission
+                ) { store in
+                    openStore = store
+                }
             } else {
                 ProgressView()
             }
         }
         .task(id: user.id) {
-            demoStore = try? PreviewData.makeStore()
+            openStore = nil
+            let model = MissionListModel(environment: environment, user: user)
+            list = model
+            // Bildschirmfoto „Arbeitsbereich“: laufenden Beispieleinsatz direkt öffnen.
+            if environment.demoScreen == .workspace, let running = model.result.running.first {
+                openStore = try? model.open(running.id)
+            }
         }
     }
 

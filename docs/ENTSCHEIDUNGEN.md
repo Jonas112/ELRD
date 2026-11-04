@@ -50,3 +50,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E44 | 2026-10-29 | Akzentfarbe Blau; Rot, Gelb, Grün nur für Sichtungskategorien | Farbbedeutung im Einsatz eindeutig; rote Auswahl wirkte wie Alarm |
 | E45 | 2026-10-29 | CI erstellt Bildschirmfotos hell/dunkel im Branch `ci-screenshots` | Oberflächen können ohne Xcode-Zugriff geprüft werden |
 | E46 | 2026-10-29 | Startargument `--demo-screen` startet eine Beispielumgebung nur im Speicher (eigene Benutzer, schneller Hasher) | Reproduzierbare CI-Bildschirmfotos ohne Eingaben; echte Daten und Keychain bleiben unberührt |
+| E47 | 2026-11-04 | ILS-Einsatznummer bleibt freier Text (Jonas bestätigt) | Formate der Leitstellen unterscheiden sich |
+| E48 | 2026-11-04 | Doppelte Patientennummern werden nur als Hinweis angezeigt, nie blockiert (Jonas bestätigt) | Mehrere Geräte/Helfer vergeben Nummern; im Einsatz darf nichts sperren |
+| E49 | 2026-11-04 | Region Schweinfurt erhält die Kliniken Unterfranken automatisch (Jonas bestätigt; so bereits umgesetzt, Kempten weiterhin nicht) | Präzisiert E37 |

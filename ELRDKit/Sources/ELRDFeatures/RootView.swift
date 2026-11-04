@@ -65,7 +65,12 @@ struct SignedInView: View {
     var body: some View {
         Group {
             if let openStore {
-                MissionWorkspaceView(store: openStore, account: account) {
+                MissionWorkspaceView(
+                    store: openStore,
+                    account: account,
+                    people: people,
+                    showsDetailsInitially: environment.demoScreen == .missionDetails
+                ) {
                     self.openStore = nil
                     list?.reload()
                 }
@@ -86,9 +91,16 @@ struct SignedInView: View {
             let model = MissionListModel(environment: environment, user: user)
             list = model
             // Bildschirmfoto „Arbeitsbereich“: laufenden Beispieleinsatz direkt öffnen.
-            if environment.demoScreen == .workspace, let running = model.result.running.first {
+            if [.workspace, .missionDetails].contains(environment.demoScreen), let running = model.result.running.first {
                 openStore = try? model.open(running.id)
             }
+        }
+    }
+
+    /// Aktive Benutzer zur Auswahl als Einsatzleiter.
+    private var people: [PersonChoice] {
+        environment.userService.directory.activeUsers.map {
+            PersonChoice(id: $0.id, name: $0.displayName, detail: $0.callsign)
         }
     }
 

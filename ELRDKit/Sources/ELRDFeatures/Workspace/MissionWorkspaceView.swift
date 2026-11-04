@@ -10,18 +10,28 @@ import ELRDStore
 public struct MissionWorkspaceView: View {
     let store: MissionStore
     let account: AccountMenuModel?
+    let people: [PersonChoice]
     let onClose: (() -> Void)?
 
     @State private var selection: WorkspaceSection = .overview
     @State private var showsMessages = false
+    @State private var showsDetails: Bool
     @State private var showsQuickAdd = false
     @State private var lastAdded: Patient?
     @State private var errorMessage: String?
 
-    public init(store: MissionStore, account: AccountMenuModel? = nil, onClose: (() -> Void)? = nil) {
+    public init(
+        store: MissionStore,
+        account: AccountMenuModel? = nil,
+        people: [PersonChoice] = [],
+        showsDetailsInitially: Bool = false,
+        onClose: (() -> Void)? = nil
+    ) {
         self.store = store
         self.account = account
+        self.people = people
         self.onClose = onClose
+        _showsDetails = State(initialValue: showsDetailsInitially)
     }
 
     public var body: some View {
@@ -40,12 +50,14 @@ public struct MissionWorkspaceView: View {
                         )
                         VStack(spacing: 0) {
                             situationBar(layout: layout, badges: badges)
+                            closedBanner
                             content
                         }
                     }
                 case .bottomBar:
                     VStack(spacing: 0) {
                         situationBar(layout: layout, badges: badges)
+                        closedBanner
                         content
                         WorkspaceTabBar(selection: $selection, badges: badges)
                     }
@@ -73,6 +85,7 @@ public struct MissionWorkspaceView: View {
             if !Task.isCancelled { lastAdded = nil }
         }
         .sheet(isPresented: $showsMessages) { MessagesPlaceholder() }
+        .sheet(isPresented: $showsDetails) { MissionDetailsView(store: store, people: people) }
         .alert("Aktion nicht möglich", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -90,10 +103,46 @@ public struct MissionWorkspaceView: View {
             canAddPatients: !store.state.mission.isClosed && store.isEnabled(.missionEditing),
             showsQuickAdd: $showsQuickAdd,
             onClose: onClose,
+            onDetails: { showsDetails = true },
             onMessages: { showsMessages = true },
             onTriage: { _ in selection = .patients },
             onQuickAdd: addPatient
         )
+    }
+
+    /// Hinweis bei beendetem Einsatz: nur Ansicht, mit „Wieder öffnen“.
+    @ViewBuilder private var closedBanner: some View {
+        let mission = store.state.mission
+        if mission.isClosed {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: "flag.checkered").font(.title3.weight(.semibold))
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("Einsatz beendet – nur Ansicht").font(.headline)
+                    if let endedAt = mission.endedAt {
+                        Text("Ende \(endedAt.formatted(date: .numeric, time: .shortened))")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: Spacing.m)
+                Button("Wieder öffnen", action: reopen)
+                    .font(.headline)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(!store.isEnabled(.missionEditing))
+            }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.vertical, Spacing.m)
+            .background(Surface.elevated)
+        }
+    }
+
+    private func reopen() {
+        do {
+            try store.perform(ReopenMission())
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private var content: some View {
@@ -143,6 +192,7 @@ struct SituationBar: View {
     let canAddPatients: Bool
     @Binding var showsQuickAdd: Bool
     let onClose: (() -> Void)?
+    let onDetails: () -> Void
     let onMessages: () -> Void
     let onTriage: (Sichtungskategorie) -> Void
     let onQuickAdd: (Sichtungskategorie) -> Void
@@ -196,19 +246,31 @@ struct SituationBar: View {
         }
     }
 
+    /// Titel und Laufzeit; ein Tipp öffnet die Einsatzdaten.
     private var missionTitle: some View {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(mission.title)
-                .font(.title3.weight(.bold))
-                .lineLimit(1)
-            TimelineView(.periodic(from: .now, by: 60)) { context in
-                Text(subtitle(now: context.date))
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+        Button(action: onDetails) {
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                HStack(spacing: Spacing.xs) {
+                    Text(mission.title)
+                        .font(.title3.weight(.bold))
+                        .lineLimit(1)
+                    Image(systemName: "chevron.down.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    Text(subtitle(now: context.date))
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
+            .frame(minHeight: TouchTarget.comfortable, alignment: .leading)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityHint("Öffnet die Einsatzdaten")
     }
 
     private func subtitle(now: Date) -> String {

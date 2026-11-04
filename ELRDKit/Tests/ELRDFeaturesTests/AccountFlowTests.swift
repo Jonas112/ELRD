@@ -58,6 +58,17 @@ struct AccountFlowTests {
         #expect(masterData?.injuries.count == 59)
     }
 
+    @Test func loginSuggestsLastSignedInUser() {
+        var erika = UserAccount(firstName: "Erika", lastName: "Beispiel", role: .admin, createdAt: Date())
+        var max = UserAccount(firstName: "Max", lastName: "Muster", role: .commander, createdAt: Date())
+        let jana = UserAccount(firstName: "Jana", lastName: "Probe", role: .commander, createdAt: Date())
+        #expect(LoginSuggestion.preferred(in: [erika, max, jana])?.id == erika.id, "noch niemand angemeldet: erste Person")
+        erika.lastLoginAt = Date(timeIntervalSince1970: 1_000)
+        max.lastLoginAt = Date(timeIntervalSince1970: 2_000)
+        #expect(LoginSuggestion.preferred(in: [erika, max, jana])?.id == max.id)
+        #expect(LoginSuggestion.preferred(in: []) == nil)
+    }
+
     @Test func deviceIdentityIsCreatedOnceAndKept() throws {
         let repository = InMemoryRepository()
         let first = try AppEnvironment.loadOrCreateDevice(in: repository)

@@ -67,6 +67,24 @@ public struct NewMissionRequest: Sendable {
     }
 }
 
+/// Löscht einen Patienten (weich). Die Nummer bleibt vergeben, damit sie nicht
+/// doppelt auftaucht – auch nach „Rückgängig“ direkt nach der Schnellanlage.
+public struct DeletePatient: MissionCommand {
+    public let patientID: PatientID
+
+    public init(patientID: PatientID) {
+        self.patientID = patientID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let patient = draft.get(Patient.self, id: patientID), !patient.metadata.isDeleted else {
+            throw CommandError.notFound(.patient)
+        }
+        try draft.delete(Patient.self, id: patientID)
+        draft.log(.patient, "Patient \(patient.number) gelöscht", subject: .patient(patientID))
+    }
+}
+
 /// Löscht einen Einsatz (weich: er verschwindet aus der Liste, bleibt aber für
 /// Synchronisation und Wiederherstellung erhalten). Auch für beendete Einsätze.
 public struct DeleteMission: MissionCommand {

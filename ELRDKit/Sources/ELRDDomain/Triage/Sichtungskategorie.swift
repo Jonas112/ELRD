@@ -51,7 +51,7 @@ public enum Sichtungskategorie: Int, CaseIterable, Codable, Sendable, Identifiab
         switch self {
         case .sk1: RGBColor(hex: 0xD32F2F)
         case .sk2: RGBColor(hex: 0xFFC107)
-        case .sk3: RGBColor(hex: 0x388E3C)
+        case .sk3: RGBColor(hex: 0x2E7D32) // dunkler als ELRDRG, damit weiße Schrift gut lesbar ist
         case .unverletzt: RGBColor(hex: 0xE0E0E0)
         case .ungesichtet: RGBColor(hex: 0x90A4AE)
         case .verstorben: RGBColor(hex: 0x212121)

@@ -20,7 +20,7 @@ struct UserAvatar: View {
             .font(.system(size: size * 0.38, weight: .semibold, design: .rounded))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(Circle().fill(user.isAdmin ? Color.accentColor : Color.secondary))
+            .background(Circle().fill(user.isAdmin ? ActionFill.primary : Color(uiColor: .systemGray)))
             .accessibilityHidden(true)
     }
 }
@@ -46,6 +46,37 @@ public struct AccountMenuModel {
         self.displayName = displayName
         self.detail = detail
         self.signOut = signOut
+    }
+}
+
+extension AccountMenuModel {
+    /// Initialen aus dem Anzeigenamen, z. B. „Erika Beispiel“ → „EB“.
+    var initials: String {
+        let letters = displayName.split(whereSeparator: \.isWhitespace).prefix(2).compactMap(\.first)
+        return letters.isEmpty ? "?" : String(letters).uppercased()
+    }
+}
+
+/// Kontomenü als runder Avatar (Symbolleiste, Lageleiste).
+struct AccountAvatarMenu: View {
+    let account: AccountMenuModel
+    var size: CGFloat = TouchTarget.comfortable
+
+    var body: some View {
+        Menu {
+            Section("\(account.displayName) · \(account.detail)") {
+                Button(role: .destructive, action: account.signOut) {
+                    Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            }
+        } label: {
+            Text(account.initials)
+                .font(.system(size: size * 0.34, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(Circle().fill(ActionFill.primary))
+        }
+        .accessibilityLabel("Konto: \(account.displayName)")
     }
 }
 

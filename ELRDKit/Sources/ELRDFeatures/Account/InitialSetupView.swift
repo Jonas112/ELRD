@@ -45,9 +45,12 @@ struct InitialSetupView: View {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: Spacing.s) {
-                        Image(systemName: "cross.case.circle.fill")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.tint)
+                        Image(systemName: "plus")
+                            .font(.system(size: 30, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 64, height: 64)
+                            .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .accessibilityHidden(true)
                         Text("Willkommen bei ELRD")
                             .font(.title2.weight(.bold))
                         Text("Lege zuerst einen Administrator an. Er verwaltet später Benutzer, Stammdaten und Einstellungen. Weitere Einsatzleiter kannst du danach hinzufügen.")
@@ -109,13 +112,15 @@ struct InitialSetupView: View {
                     Button(action: save) {
                         HStack {
                             Spacer()
-                            if isSaving { ProgressView().padding(.trailing, Spacing.s) }
-                            Text("Einrichten").font(.headline)
+                            if isSaving { ProgressView().tint(.white).padding(.trailing, Spacing.s) }
+                            Text("Einrichten").font(.title3.weight(.heavy))
                             Spacer()
                         }
-                        .frame(minHeight: TouchTarget.minimum)
+                        .foregroundStyle(form.isValid ? Color.white : Color.secondary)
+                        .frame(minHeight: TouchTarget.large)
                     }
                     .disabled(!form.isValid || isSaving)
+                    .listRowBackground(form.isValid ? ActionFill.primary : Surface.card)
                 }
             }
             .frame(maxWidth: 640)

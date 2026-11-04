@@ -75,12 +75,13 @@ public enum HospitalRegistrationState: Int, CaseIterable, Codable, Sendable, Ide
         }
     }
 
-    /// Ampelfarbe wie in ELRDRG: offen = rot, angefragt = orange, angemeldet = grün.
+    /// Statusfarbe: offen = grau, angefragt = orange, angemeldet = grün.
+    /// Rot bleibt SK 1 vorbehalten (E44); ELRDRG zeigte „offen“ rot.
     public var color: RGBColor {
         switch self {
-        case .unklar, .nichtAngefragt: RGBColor(hex: 0xD32F2F)
+        case .unklar, .nichtAngefragt: RGBColor(hex: 0x8E8E93)
         case .angefragt: RGBColor(hex: 0xF57C00)
-        case .angemeldet: RGBColor(hex: 0x388E3C)
+        case .angemeldet: RGBColor(hex: 0x2E7D32)
         }
     }
 }

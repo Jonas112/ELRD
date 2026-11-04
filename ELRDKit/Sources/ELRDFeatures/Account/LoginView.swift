@@ -2,7 +2,16 @@ import SwiftUI
 import ELRDAuth
 import ELRDDomain
 
-/// Anmeldung: Benutzer wählen, ggf. Passwort eingeben.
+/// Wen die Anmeldung vorschlägt: die zuletzt angemeldete Person, sonst die erste.
+enum LoginSuggestion {
+    static func preferred(in users: [UserAccount]) -> UserAccount? {
+        let signedInBefore = users.filter { $0.lastLoginAt != nil }
+        if let last = signedInBefore.max(by: { $0.lastLoginAt! < $1.lastLoginAt! }) { return last }
+        return users.first
+    }
+}
+
+/// Anmeldung: zuletzt angemeldete Person ist vorausgewählt – meist nur Passwort und „Anmelden“.
 struct LoginView: View {
     let userService: UserService
 
@@ -13,58 +22,81 @@ struct LoginView: View {
     @FocusState private var passwordFocused: Bool
 
     private var users: [UserAccount] { userService.directory.activeUsers }
-    private var selectedUser: UserAccount? { selectedID.flatMap { userService.directory.user($0) } }
+    private var selectedUser: UserAccount? {
+        selectedID.flatMap { userService.directory.user($0) } ?? LoginSuggestion.preferred(in: users)
+    }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.xl) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("Wer arbeitet an diesem Gerät?")
-                            .font(.title2.weight(.bold))
-                        Text("Benutzer auswählen, um sich anzumelden.")
+        ScrollView {
+            VStack(spacing: Spacing.xxl) {
+                VStack(spacing: Spacing.m) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 64, height: 64)
+                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .accessibilityHidden(true)
+                    Text("Anmelden").font(.largeTitle.weight(.heavy))
+                }
+                .padding(.top, Spacing.xxl)
+
+                if let user = selectedUser {
+                    loginPanel(for: user)
+                }
+
+                let others = users.filter { $0.id != selectedUser?.id }
+                if !others.isEmpty {
+                    VStack(alignment: .leading, spacing: Spacing.m) {
+                        Text("Andere Person")
+                            .font(.headline)
                             .foregroundStyle(.secondary)
-                    }
-
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: Spacing.m)], spacing: Spacing.m) {
-                        ForEach(users) { user in
-                            UserTile(user: user, isSelected: user.id == selectedID) { select(user) }
+                            .padding(.leading, Spacing.s)
+                        VStack(spacing: 0) {
+                            ForEach(Array(others.enumerated()), id: \.element.id) { index, user in
+                                if index > 0 { Divider().padding(.leading, 88) }
+                                UserRow(user: user) { select(user) }
+                            }
                         }
-                    }
-
-                    if let user = selectedUser {
-                        loginPanel(for: user)
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                     }
                 }
-                .padding(Spacing.xl)
-                .frame(maxWidth: 900)
-                .frame(maxWidth: .infinity)
             }
-            .background(Surface.canvas)
-            .navigationTitle("Anmelden")
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, Spacing.xxl)
+            .frame(maxWidth: 600)
+            .frame(maxWidth: .infinity)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .background(Surface.canvas)
+        .onAppear { passwordFocused = selectedUser?.hasPassword ?? false }
     }
 
     @ViewBuilder
     private func loginPanel(for user: UserAccount) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.m) {
-            HStack(spacing: Spacing.m) {
-                UserAvatar(user: user, size: 40)
-                VStack(alignment: .leading) {
-                    Text(user.displayName).font(.headline)
-                    RoleLabel(role: user.role)
+        VStack(alignment: .leading, spacing: Spacing.xl) {
+            HStack(spacing: Spacing.l) {
+                UserAvatar(user: user, size: 72)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text(user.displayName).font(.title2.weight(.bold))
+                    Text(detail(for: user)).foregroundStyle(.secondary)
                 }
             }
 
             if user.hasPassword {
                 SecureField("Passwort", text: $password)
+                    .font(.title2)
                     .textContentType(.password)
                     .focused($passwordFocused)
                     .submitLabel(.go)
                     .onSubmit(login)
-                    .padding(Spacing.m)
-                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                    .padding(.horizontal, Spacing.l)
+                    .frame(minHeight: 64)
+                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Color.accentColor, lineWidth: passwordFocused ? 2 : 0)
+                    }
+                    .accessibilityLabel("Passwort für \(user.displayName)")
             }
 
             if let errorMessage {
@@ -74,17 +106,28 @@ struct LoginView: View {
             }
 
             Button(action: login) {
-                HStack {
+                HStack(spacing: Spacing.m) {
                     if isLoggingIn { ProgressView().tint(.white) }
-                    Text("Anmelden").font(.headline)
+                    Text("Anmelden").font(.title3.weight(.heavy))
                 }
-                .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
+                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
             .disabled(isLoggingIn || (user.hasPassword && password.isEmpty))
+            .opacity(isLoggingIn || (user.hasPassword && password.isEmpty) ? 0.5 : 1)
         }
-        .frame(maxWidth: 480, alignment: .leading)
-        .cardStyle()
+        .padding(Spacing.xxl)
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+    }
+
+    private func detail(for user: UserAccount) -> String {
+        var parts: [String] = []
+        if !user.callsign.isEmpty { parts.append(user.callsign) }
+        parts.append(user.role.displayName)
+        if !user.hasPassword { parts.append("ohne Passwort") }
+        return parts.joined(separator: " · ")
     }
 
     private func select(_ user: UserAccount) {
@@ -112,44 +155,41 @@ struct LoginView: View {
     }
 }
 
-/// Kachel eines Benutzers in der Anmeldung.
-private struct UserTile: View {
+/// Zeile „Andere Person“.
+private struct UserRow: View {
     let user: UserAccount
-    let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.m) {
-                UserAvatar(user: user)
+            HStack(spacing: Spacing.l) {
+                UserAvatar(user: user, size: 52)
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(user.displayName)
-                        .font(.headline)
+                        .font(.title3.weight(.semibold))
                         .foregroundStyle(.primary)
-                    if !user.callsign.isEmpty {
-                        Text(user.callsign)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    RoleLabel(role: user.role)
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
-                if !user.hasPassword {
-                    Image(systemName: "lock.open")
-                        .foregroundStyle(.secondary)
-                        .accessibilityLabel("Ohne Passwort")
-                }
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .padding(Spacing.l)
-            .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable * 1.4, alignment: .leading)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 2)
-            }
+            .padding(.horizontal, Spacing.xl)
+            .frame(minHeight: 80)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint("Als diese Person anmelden")
+    }
+
+    private var subtitle: String {
+        var parts: [String] = []
+        if !user.callsign.isEmpty { parts.append(user.callsign) }
+        parts.append(user.hasPassword ? user.role.displayName : "ohne Passwort")
+        return parts.joined(separator: " · ")
     }
 }
 

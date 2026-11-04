@@ -103,15 +103,35 @@ jobs:
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP"
           mkdir -p shots
-          for mode in light dark; do
-            xcrun simctl ui "$DEVICE_ID" appearance $mode
-            for screen in setup login missions newMission workspace; do
-              xcrun simctl terminate "$DEVICE_ID" ELRD.App || true
-              xcrun simctl launch "$DEVICE_ID" ELRD.App --demo-screen $screen -AppleLanguages "(de)" -AppleLocale de_DE
-              sleep 5
-              xcrun simctl io "$DEVICE_ID" screenshot "shots/$screen-$mode.png"
+          shoot() { # Gerät, Präfix, Modi, Bildschirme
+            local device=$1 prefix=$2 modes=$3 screens=$4
+            for mode in $modes; do
+              xcrun simctl ui "$device" appearance $mode
+              for screen in $screens; do
+                xcrun simctl terminate "$device" ELRD.App || true
+                xcrun simctl launch "$device" ELRD.App --demo-screen $screen -AppleLanguages "(de)" -AppleLocale de_DE
+                sleep 5
+                xcrun simctl io "$device" screenshot "shots/$prefix$screen-$mode.png"
+              done
             done
-          done
+          }
+          shoot "$DEVICE_ID" "" "light dark" "setup login missions newMission workspace"
+          # iPad mini (hochkant): Leiste unten
+          MINI_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = [d for runtime, lst in devices.items() if "iOS" in runtime for d in lst]
+          pick = next((d for d in ios if "iPad mini" in d["name"]), None)
+          print(pick["udid"] if pick else "")
+          ')
+          if [ -n "$MINI_ID" ]; then
+            xcrun simctl boot "$MINI_ID" || true
+            xcrun simctl bootstatus "$MINI_ID" -b
+            xcrun simctl install "$MINI_ID" "$APP"
+            shoot "$MINI_ID" "mini-" "dark" "login missions workspace"
+          else
+            echo "::warning title=Bildschirmfotos::Kein iPad-mini-Simulator gefunden"
+          fi
           git config user.name "ELRD CI"
           git config user.email "ci@users.noreply.github.com"
           cd shots

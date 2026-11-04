@@ -2,43 +2,40 @@ import SwiftUI
 import ELRDDomain
 import ELRDStore
 
-/// Bereiche eines Einsatzes in der Seitenleiste.
+/// Bereiche eines Einsatzes (Symbolleiste links bzw. unten).
+///
+/// Bewusst nur fünf (E55): Nachrichten sind die Glocke in der Leiste,
+/// das Protokoll wird ein Filter im Tagebuch.
 public enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable, Sendable {
     case overview
     case patients
     case organisation
     case map
     case journal
-    case messages
-    case log
 
     public var id: String { rawValue }
 
     public var title: String {
         switch self {
-        case .overview: "Übersicht"
+        case .overview: "Lage"
         case .patients: "Patienten"
-        case .organisation: "Organisation"
-        case .map: "Lagekarte"
+        case .organisation: "Einheiten"
+        case .map: "Karte"
         case .journal: "Tagebuch"
-        case .messages: "Nachrichten"
-        case .log: "Protokoll"
         }
     }
 
     public var systemImage: String {
         switch self {
         case .overview: "square.grid.2x2"
-        case .patients: "cross.case"
-        case .organisation: "rectangle.3.group"
+        case .patients: "person.2"
+        case .organisation: "box.truck"
         case .map: "map"
         case .journal: "book.pages"
-        case .messages: "bubble.left.and.bubble.right"
-        case .log: "list.bullet.rectangle"
         }
     }
 
-    /// Tastaturkürzel ⌘1 … ⌘7.
+    /// Tastaturkürzel ⌘1 … ⌘5.
     public var shortcut: KeyEquivalent {
         KeyEquivalent(Character(String(Self.allCases.firstIndex(of: self)! + 1)))
     }
@@ -51,13 +48,11 @@ public enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable, Send
         case .organisation: 24
         case .map: 28
         case .journal: 33
-        case .messages: 36
-        case .log: 36
         }
     }
 }
 
-/// Zahlen neben den Bereichen in der Seitenleiste.
+/// Zahlen an den Bereichen und an der Glocke.
 public struct WorkspaceBadges: Equatable, Sendable {
     /// Patienten, deren Versorgung noch nicht abgeschlossen ist.
     public let openPatients: Int
@@ -69,11 +64,20 @@ public struct WorkspaceBadges: Equatable, Sendable {
     }
 
     public func badge(for section: WorkspaceSection) -> Int {
-        switch section {
-        case .patients: openPatients
-        case .messages: unreadMessages
-        default: 0
-        }
+        section == .patients ? openPatients : 0
+    }
+}
+
+/// Anordnung des Arbeitsbereichs je nach verfügbarer Breite.
+public enum WorkspaceLayout: Equatable, Sendable {
+    /// Symbolleiste links (iPad quer, große iPads hoch).
+    case rail
+    /// Leiste unten (iPad mini hoch, schmale Fenster in Split View/Stage Manager).
+    case bottomBar
+
+    /// Ab 800 pt Breite links, darunter unten – dort liegt sie am Daumen.
+    public static func forWidth(_ width: CGFloat) -> WorkspaceLayout {
+        width < 800 ? .bottomBar : .rail
     }
 }
 
@@ -103,7 +107,7 @@ public extension FocusedValues {
     }
 }
 
-/// Menü „Einsatz“ mit ⌘1 … ⌘7 (Hardware-Tastatur, Magic Keyboard).
+/// Menü „Einsatz“ mit ⌘1 … ⌘5 (Hardware-Tastatur, Magic Keyboard).
 /// Wirkt auf das jeweils aktive Fenster.
 public struct WorkspaceCommands: Commands {
     @FocusedBinding(\.workspaceSelection) private var selection

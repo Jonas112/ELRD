@@ -1,6 +1,7 @@
 import Foundation
 import ELRDDomain
 import ELRDAuth
+import ELRDPersistence
 import ELRDStore
 
 /// Beispieleinsätze für Bildschirmfotos und Vorschauen (nur Demo-Umgebung).
@@ -108,6 +109,30 @@ enum DemoMissions {
         try running.perform(EditPatient(patientID: added[9].id) {
             $0.identifyingFeatures = "im Graben, rechte Fahrbahnseite"
         })
+        // Einsatzort nahe Schweinfurt, damit Kliniken nach Entfernung sortiert werden.
+        try running.perform(EditMission { $0.coordinate = GeoCoordinate(latitude: 50.10, longitude: 10.18) })
+
+        // Versorgungsstand: Einheiten zugeordnet, Kliniken angefragt, ein Transport.
+        let hospitals = (try? environment.repository.document(MasterDataSet.self, key: .masterData))?.hospitals ?? []
+        let leo = hospitals.first { $0.name == "LEO Schweinfurt" }?.snapshot
+        let josef = hospitals.first { $0.name == "KHS St. Josef Schweinfurt" }?.snapshot
+        let rtws = running.state.activeUnits.filter { $0.type == .rtw }
+        if rtws.count >= 2 {
+            try running.perform(AssignUnit(patientID: added[2].id, unitID: rtws[0].id))
+            try running.perform(AssignUnit(patientID: added[3].id, unitID: rtws[1].id))
+        }
+        if let josef {
+            try running.perform(SetDestination(patientID: added[2].id, hospital: josef))
+            try running.perform(SetRegistration(patientID: added[2].id, state: .angemeldet))
+        }
+        if let leo {
+            try running.perform(SetDestination(patientID: added[1].id, hospital: leo))
+            try running.perform(SetRegistration(patientID: added[1].id, state: .angefragt))
+            try running.perform(SetDestination(patientID: added[3].id, hospital: leo))
+            try running.perform(SetRegistration(patientID: added[3].id, state: .angemeldet))
+        }
+        time.date = start.addingTimeInterval(30 * 60)
+        if rtws.count >= 2 { try running.perform(StartTransport(patientID: added[3].id)) }
         try running.perform(AddJournalText("Lage: 3 Pkw beteiligt, 1 Person eingeklemmt."))
     }
 }

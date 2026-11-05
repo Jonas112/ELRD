@@ -141,6 +141,159 @@ public struct RemoveInjury: MissionCommand {
     }
 }
 
+// MARK: - Transport
+
+/// Liest einen aktiven Patienten oder meldet „nicht gefunden“.
+@MainActor
+private func activePatient(_ id: PatientID, in draft: MissionDraft) throws -> Patient {
+    guard let patient = draft.get(Patient.self, id: id), !patient.metadata.isDeleted else {
+        throw CommandError.notFound(.patient)
+    }
+    return patient
+}
+
+/// Ordnet eine Einheit zu (mehrere je Patient möglich, wie ELRDRG).
+public struct AssignUnit: MissionCommand {
+    public let patientID: PatientID
+    public let unitID: UnitID
+
+    public init(patientID: PatientID, unitID: UnitID) {
+        self.patientID = patientID
+        self.unitID = unitID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let patient = try activePatient(patientID, in: draft)
+        guard let unit = draft.get(MissionUnit.self, id: unitID), !unit.metadata.isDeleted else {
+            throw CommandError.notFound(.unit)
+        }
+        guard patient.status != .released else { throw CommandError.invalid("Der Patient ist entlassen.") }
+        guard !patient.unitIDs.contains(unitID) else { return }
+        let assigned = unitID
+        try draft.update(Patient.self, id: patientID) { $0.assign(unit: assigned) }
+        draft.log(.patient, "Patient \(patient.number): \(unit.displayName) zugeordnet", subject: .patient(patientID))
+    }
+}
+
+/// Löst die Zuordnung einer Einheit.
+public struct UnassignUnit: MissionCommand {
+    public let patientID: PatientID
+    public let unitID: UnitID
+
+    public init(patientID: PatientID, unitID: UnitID) {
+        self.patientID = patientID
+        self.unitID = unitID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let patient = try activePatient(patientID, in: draft)
+        guard patient.unitIDs.contains(unitID) else { return }
+        let name = draft.get(MissionUnit.self, id: unitID)?.displayName ?? "Einheit"
+        let removed = unitID
+        try draft.update(Patient.self, id: patientID) { $0.unassign(unit: removed) }
+        draft.log(.patient, "Patient \(patient.number): \(name) nicht mehr zugeordnet", subject: .patient(patientID))
+    }
+}
+
+/// Setzt oder entfernt die Zielklinik. Beim Wechsel beginnt die Anmeldung von vorn.
+public struct SetDestination: MissionCommand {
+    public let patientID: PatientID
+    public let hospital: HospitalSnapshot?
+
+    public init(patientID: PatientID, hospital: HospitalSnapshot?) {
+        self.patientID = patientID
+        self.hospital = hospital
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let patient = try activePatient(patientID, in: draft)
+        guard patient.destination != hospital else { return }
+        let target = hospital
+        try draft.update(Patient.self, id: patientID) { $0.setDestination(target) }
+        let text = target.map { "Zielklinik \($0.name)" } ?? "Zielklinik entfernt"
+        draft.log(.patient, "Patient \(patient.number): \(text)", subject: .patient(patientID))
+    }
+}
+
+/// Ändert den Anmeldestatus bei der Zielklinik.
+public struct SetRegistration: MissionCommand {
+    public let patientID: PatientID
+    public let state: HospitalRegistrationState
+
+    public init(patientID: PatientID, state: HospitalRegistrationState) {
+        self.patientID = patientID
+        self.state = state
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let patient = try activePatient(patientID, in: draft)
+        guard patient.registrationState != state else { return }
+        let newState = state
+        try draft.update(Patient.self, id: patientID) { $0.registrationState = newState }
+        draft.log(.patient, "Patient \(patient.number): Klinik \(state.displayName)", subject: .patient(patientID))
+    }
+}
+
+/// Beginnt den Transport (Zeitstempel = jetzt). Braucht eine zugeordnete Einheit.
+public struct StartTransport: MissionCommand {
+    public let patientID: PatientID
+
+    public init(patientID: PatientID) {
+        self.patientID = patientID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let patient = try activePatient(patientID, in: draft)
+        guard patient.outcome == nil else { return }
+        guard !patient.unitIDs.isEmpty else { throw CommandError.invalid("Zuerst eine Einheit zuordnen.") }
+        let now = draft.context.now
+        try draft.update(Patient.self, id: patientID) { $0.startTransport(at: now) }
+        let units = patient.unitIDs.compactMap { draft.get(MissionUnit.self, id: $0)?.displayName }.joined(separator: ", ")
+        let target = patient.destination.map { " nach \($0.name)" } ?? ""
+        draft.log(.patient, "Patient \(patient.number): Transport mit \(units)\(target)", subject: .patient(patientID))
+    }
+}
+
+/// Entlässt einen Patienten vor Ort. Die Einheiten werden frei, ihre Namen bleiben
+/// am Patienten vermerkt (wie ELRDRG).
+public struct ReleasePatient: MissionCommand {
+    public let patientID: PatientID
+    public let clearDestination: Bool
+
+    public init(patientID: PatientID, clearDestination: Bool = true) {
+        self.patientID = patientID
+        self.clearDestination = clearDestination
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let patient = try activePatient(patientID, in: draft)
+        guard patient.outcome == nil else { return }
+        let now = draft.context.now
+        var names: [UnitID: String] = [:]
+        for id in patient.unitIDs { names[id] = draft.get(MissionUnit.self, id: id)?.displayName }
+        let clear = clearDestination
+        let lookup = names
+        try draft.update(Patient.self, id: patientID) { $0.release(at: now, unitNames: { lookup[$0] }, clearDestination: clear) }
+        draft.log(.patient, "Patient \(patient.number): vor Ort entlassen", subject: .patient(patientID))
+    }
+}
+
+/// Nimmt Transport bzw. Entlassung zurück (Fehlbedienung).
+public struct ResetOutcome: MissionCommand {
+    public let patientID: PatientID
+
+    public init(patientID: PatientID) {
+        self.patientID = patientID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let patient = try activePatient(patientID, in: draft)
+        guard patient.outcome != nil else { return }
+        try draft.update(Patient.self, id: patientID) { $0.resetOutcome() }
+        draft.log(.patient, "Patient \(patient.number): Transport/Entlassung zurückgenommen", subject: .patient(patientID))
+    }
+}
+
 /// Löscht einen Patienten (weich). Die Nummer bleibt vergeben, damit sie nicht
 /// doppelt auftaucht – auch nach „Rückgängig“ direkt nach der Schnellanlage.
 public struct DeletePatient: MissionCommand {

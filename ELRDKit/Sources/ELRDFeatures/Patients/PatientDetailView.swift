@@ -19,6 +19,8 @@ struct PatientDetailView: View {
     @State private var saveState: SaveState = .saved
     @State private var confirmsDelete = false
     @State private var showsInjuries = false
+    @State private var showsHospitals = false
+    @State private var confirmsRelease = false
     @FocusState private var focus: Field?
 
     enum Field: Hashable { case number, dispatch, firstName, lastName, birthDate, age, features, notes }
@@ -368,17 +370,173 @@ struct PatientDetailView: View {
 
     private func transportCard(_ patient: Patient) -> some View {
         DetailCard(title: "Transport") {
-            Label(patient.status.displayName, systemImage: "box.truck")
-                .font(.title3.weight(.semibold))
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text("Schockraum").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                SegmentedChoice(
-                    options: [(TraumaRoom.none, "keiner"), (.a, "A"), (.b, "B")],
-                    selection: patientBinding(patient, \.traumaRoom)
+            switch patient.outcome {
+            case .transported(let startedAt):
+                outcomeSummary(
+                    title: "Im Transport seit \(startedAt.formatted(date: .omitted, time: .shortened))",
+                    detail: [assignedUnitNames(patient), patient.destination?.name].compactMap { $0 }.joined(separator: " → "),
+                    symbol: "arrow.right.circle.fill",
+                    undoTitle: "Transport zurücknehmen"
                 )
+                destinationSection(patient)
+            case .released(let at, let handledBy):
+                outcomeSummary(
+                    title: "Vor Ort entlassen um \(at.formatted(date: .omitted, time: .shortened))",
+                    detail: handledBy.isEmpty ? "" : "versorgt durch \(handledBy.joined(separator: ", "))",
+                    symbol: "checkmark.circle.fill",
+                    undoTitle: "Entlassung zurücknehmen"
+                )
+            case nil:
+                unitSection(patient)
+                destinationSection(patient)
+                transportActions(patient)
             }
-            .disabled(!canEdit)
-            PlannedHint(text: "Einheit zuweisen, Zielklinik, Anmeldung und Transport starten: Schritt 22")
+        }
+        .disabled(!canEdit)
+        .sheet(isPresented: $showsHospitals) {
+            HospitalPickerView(
+                choices: hospitalChoices(patient),
+                current: patient.destination,
+                onSelect: { hospital in perform(SetDestination(patientID: patientID, hospital: hospital)) }
+            )
+            .largeSheet()
+        }
+        .confirmationDialog("Patient \(patient.number) vor Ort entlassen?", isPresented: $confirmsRelease, titleVisibility: .visible) {
+            Button("Entlassen") { perform(ReleasePatient(patientID: patientID, clearDestination: true)) }
+            if patient.destination != nil {
+                Button("Entlassen, Zielklinik behalten") { perform(ReleasePatient(patientID: patientID, clearDestination: false)) }
+            }
+        } message: {
+            Text("Zugeordnete Einheiten werden frei; ihre Namen bleiben am Patienten vermerkt.")
+        }
+    }
+
+    /// Einheiten als große Knöpfe: Tipp ordnet zu bzw. löst die Zuordnung.
+    private func unitSection(_ patient: Patient) -> some View {
+        let choices = UnitChoice.ordered(units: store.state.units, patients: store.state.patients, for: patientID)
+        let hasUnit = choices.contains(where: \.isAssigned)
+        return VStack(alignment: .leading, spacing: Spacing.s) {
+            Text(hasUnit ? "Einheit" : "Einheit – noch keine zugewiesen")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(hasUnit ? Color.secondary : Color.orange)
+            if choices.isEmpty {
+                Text("Im Einsatz sind noch keine Einheiten. Unter „Einheiten“ hinzufügen.")
+                    .font(.callout).foregroundStyle(.secondary)
+            } else {
+                FlowLayout(spacing: Spacing.s) {
+                    ForEach(choices) { choice in
+                        ChoiceChip(choice.label, isSelected: choice.isAssigned, minHeight: 52, background: Surface.elevated) {
+                            if choice.isAssigned {
+                                perform(UnassignUnit(patientID: patientID, unitID: choice.id))
+                            } else {
+                                perform(AssignUnit(patientID: patientID, unitID: choice.id))
+                            }
+                        }
+                        .opacity(choice.isFree || choice.isAssigned ? 1 : 0.75)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Zielklinik: gewählte mit „ändern“, sonst die ersten Vorschläge und „Alle …“.
+    private func destinationSection(_ patient: Patient) -> some View {
+        let suggestions = Array(hospitalChoices(patient).prefix(3))
+        return VStack(alignment: .leading, spacing: Spacing.s) {
+            Text("Zielklinik").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            if let destination = patient.destination {
+                Button { showsHospitals = true } label: {
+                    HStack {
+                        Text(destination.name).font(.headline).foregroundStyle(.primary)
+                        Spacer()
+                        Text("ändern").font(.subheadline.weight(.semibold))
+                    }
+                    .padding(.horizontal, Spacing.m)
+                    .frame(minHeight: TouchTarget.comfortable)
+                    .background(ActionFill.selected, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                SegmentedChoice(
+                    options: [(HospitalRegistrationState.nichtAngefragt, "nicht angefragt"), (.angefragt, "angefragt"), (.angemeldet, "angemeldet")],
+                    selection: Binding(
+                        get: { patient.registrationState },
+                        set: { perform(SetRegistration(patientID: patientID, state: $0)) }
+                    )
+                )
+            } else {
+                FlowLayout(spacing: Spacing.s) {
+                    ForEach(suggestions) { choice in
+                        ChoiceChip(
+                            choice.distanceText.map { "\(choice.hospital.name) · \($0)" } ?? choice.hospital.name,
+                            isSelected: false, minHeight: 52, background: Surface.elevated
+                        ) {
+                            perform(SetDestination(patientID: patientID, hospital: choice.hospital.snapshot))
+                        }
+                    }
+                    Button("Alle Kliniken …") { showsHospitals = true }
+                        .font(.headline)
+                        .frame(minHeight: 52)
+                }
+            }
+            Text("Schockraum").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            SegmentedChoice(
+                options: [(TraumaRoom.none, "keiner"), (.a, "A"), (.b, "B")],
+                selection: patientBinding(patient, \.traumaRoom)
+            )
+        }
+    }
+
+    /// „Transport starten“ groß, „Vor Ort entlassen“ daneben bzw. darunter.
+    private func transportActions(_ patient: Patient) -> some View {
+        let canStart = !patient.unitIDs.isEmpty
+        return VStack(spacing: Spacing.s) {
+            Button { perform(StartTransport(patientID: patientID)) } label: {
+                VStack(spacing: 2) {
+                    Label("Transport starten", systemImage: "arrow.right.circle.fill").font(.title3.weight(.heavy))
+                    if !canStart { Text("zuerst Einheit wählen").font(.caption.weight(.semibold)) }
+                }
+                .foregroundStyle(canStart ? Color.white : Color.secondary)
+                .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
+                .background(canStart ? ActionFill.primary : Surface.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canStart)
+            Button { confirmsRelease = true } label: {
+                Label("Vor Ort entlassen", systemImage: "figure.walk")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        }
+    }
+
+    private func outcomeSummary(title: String, detail: String, symbol: String, undoTitle: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            Label(title, systemImage: symbol).font(.title3.weight(.bold))
+            if !detail.isEmpty { Text(detail).foregroundStyle(.secondary) }
+            Button(undoTitle) { perform(ResetOutcome(patientID: patientID)) }
+                .font(.headline)
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+        }
+    }
+
+    private func assignedUnitNames(_ patient: Patient) -> String? {
+        let names = store.state.units.filter { patient.unitIDs.contains($0.id) }.map(\.displayName)
+        return names.isEmpty ? nil : names.joined(separator: ", ")
+    }
+
+    private func hospitalChoices(_ patient: Patient) -> [HospitalChoice] {
+        HospitalChoice.ordered(hospitals: catalogs.hospitals, patients: store.state.patients, near: store.state.mission.coordinate)
+    }
+
+    /// Führt einen Befehl aus; Fehler erscheinen oben als „nicht gespeichert“.
+    private func perform<Command: MissionCommand>(_ command: Command) {
+        do {
+            _ = try store.perform(command)
+        } catch {
+            saveState = .failed(error.localizedDescription)
         }
     }
 

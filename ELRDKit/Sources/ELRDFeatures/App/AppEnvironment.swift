@@ -124,6 +124,14 @@ public final class AppEnvironment {
             isDemo: true,
             demoScreen: screen
         )
+        if screen.needsMissions {
+            // Region Schweinfurt (Fahrzeuge, Kliniken Unterfranken) für Klinikauswahl und Entfernungen.
+            if let region = BundledMasterData.region(id: "schweinfurt"),
+               var master = try repository.document(MasterDataSet.self, key: .masterData) {
+                _ = master.merge(try BundledMasterData.package(for: region).package)
+                try repository.saveDocument(master, key: .masterData, at: Date())
+            }
+        }
         if screen.needsMissions, let user = users.currentUser {
             try DemoMissions.seed(in: environment, user: user)
         }

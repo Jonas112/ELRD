@@ -36,7 +36,7 @@ struct InjuryPickerView: View {
                     Group {
                         if isWide {
                             HStack(alignment: .top, spacing: Spacing.xl) {
-                                diagram.frame(width: 250, height: 440)
+                                diagram.frame(width: 290, height: 510)
                                 details
                             }
                         } else {

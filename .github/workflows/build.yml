@@ -51,6 +51,10 @@ jobs:
             grep -E "error: " build.log | grep -v "^\s*/Applications" | cut -c1-400 | sort -u | head -20 | while IFS= read -r line; do
               echo "::error title=Compiler::$line"
             done
+            # Compiler-Absturz: Hinweise aus dem Stack-Dump.
+            grep -iE "stack dump|segmentation|assertion|LLVM ERROR|while (type-checking|evaluating|emitting|silgen)|in (file|function)|^[0-9]+\.\s+Program arguments" build.log | cut -c1-300 | head -15 | while IFS= read -r line; do
+              echo "::error title=Absturz::$line"
+            done
             grep -E "error:|failed|FAILED" build.log | grep -vE "^/" | sort -u | head -15 | while IFS= read -r line; do
               echo "::error title=Build::$line"
             done

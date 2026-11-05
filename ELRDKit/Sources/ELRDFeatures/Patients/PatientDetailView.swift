@@ -59,18 +59,29 @@ struct PatientDetailView: View {
 
     private func content(_ patient: Patient) -> some View {
         GeometryReader { proxy in
-            let isWide = proxy.size.width >= 900
+            let width = proxy.size.width
+            let isWide = width >= 900
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.l) {
                     header(patient)
                     triageRow(patient)
-                    let columns = isWide
-                        ? AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.l))
-                        : AnyLayout(VStackLayout(spacing: Spacing.l))
-                    columns {
+                    if width >= 1150 {
+                        // iPad Pro quer: drei Spalten wie im Mockup.
+                        HStack(alignment: .top, spacing: Spacing.l) {
+                            personCard(patient)
+                            conditionCard
+                            transportCard(patient)
+                        }
+                    } else {
+                        // Schmaler: Person über die volle Breite, darunter Zustand und Transport.
                         personCard(patient)
-                        conditionCard
-                        transportCard(patient)
+                        let rest = width >= 700
+                            ? AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.l))
+                            : AnyLayout(VStackLayout(spacing: Spacing.l))
+                        rest {
+                            conditionCard
+                            transportCard(patient)
+                        }
                     }
                 }
                 .padding(isWide ? Spacing.xl : Spacing.l)
@@ -395,10 +406,11 @@ struct TriageChoiceButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(category == .ungesichtet || category == .unverletzt || category == .verstorben ? category.displayName : category.shortName)
-                .font(.title3.weight(.heavy))
+            Text(category == .ungesichtet || category == .unverletzt || category == .verstorben ? category.displayName.lowercased() : category.shortName)
+                .font(category.shortName.count > 3 ? .headline.weight(.heavy) : .title3.weight(.heavy))
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.6)
+                .padding(.horizontal, Spacing.xs)
                 .foregroundStyle(Color.onTriage(category))
                 .frame(maxWidth: .infinity, minHeight: 64)
                 .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -406,7 +418,8 @@ struct TriageChoiceButton: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .strokeBorder(Color.primary, lineWidth: isSelected ? 4 : (TriageBadge.needsOutline(category) ? 1 : 0))
                 }
-                .opacity(isSelected ? 1 : 0.55)
+                // Nicht gewählt nur leicht abgeschwächt, damit die Schrift lesbar bleibt.
+                .opacity(isSelected ? 1 : 0.72)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(category.displayName)

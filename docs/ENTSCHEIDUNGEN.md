@@ -63,3 +63,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E57 | 2026-11-04 | Feste Lageleiste in allen Bereichen: Laufzeit, SK-Zähler, „+ Patient“ mit Schnellanlage und Rückgängig statt Rückfrage | Neuer Patient ist überall zwei Tipps entfernt; Fehlgriffe ohne Dialog korrigierbar |
 | E58 | 2026-11-04 | Lage zeigt „offene Punkte“ (dringendste zuerst, je mit Knopf) statt reiner Zahlen | Unter Stress sieht man sofort, was zu tun ist |
 | E59 | 2026-11-04 | SK 3 #2E7D32 statt #388E3C; Klinik-Anmeldestatus ohne Rot (offen grau) | Kontrast weißer Schrift; Rot nur für SK 1 (E44) |
+| E60 | 2026-11-05 | Formulare (Einsatzdaten, Patient) schreiben nur tatsächlich geänderte Felder; Patientendaten speichern automatisch ohne „Speichern“-Knopf | Keine verlorenen Änderungen anderer Fenster/Geräte; im Einsatz kein vergessenes Speichern |
+| E61 | 2026-11-05 | Geburtsdatum wird als Text eingegeben (TT.MM.JJJJ, auch verkürzt), kein Datumsrad; ersatzweise geschätztes Alter | Schneller unter Stress; Geburtsdatum hat Vorrang |
+| E62 | 2026-11-05 | Neues Feld „Erkennungsmerkmale / Fundort“ am Patienten, in Liste und Suche | Unbekannte Personen wiederfinden (Jonas) |

@@ -1,7 +1,11 @@
 name: Build
 
-# Läuft nur bei Code-Änderungen (nicht bei reinen Doku-Commits), um
-# macOS-Minuten zu sparen. Manuell startbar über „Run workflow“.
+# Läuft nur bei Code-Änderungen (nicht bei reinen Doku-Commits).
+# Seit 2026-11-05 auf Jonas' Mac als eigener Runner (E71), weil die freien
+# macOS-Minuten von GitHub aufgebraucht waren. Zurück auf GitHub-Runner:
+# `runs-on: macos-26` setzen.
+# Bildschirmfotos nur, wenn die letzte Commit-Nachricht „[fotos]“ enthält oder
+# der Lauf manuell gestartet wird (spart Zeit).
 # Fehler werden zusätzlich als Annotationen ausgegeben, damit sie in der
 # Lauf-Übersicht stehen (auch ohne Log-Download lesbar).
 on:
@@ -13,6 +17,11 @@ on:
       - "ELRD.xcodeproj/**"
       - ".github/workflows/**"
   workflow_dispatch:
+    inputs:
+      fotos:
+        description: "Bildschirmfotos erstellen"
+        type: boolean
+        default: true
 
 concurrency:
   group: build-${{ github.ref }}
@@ -23,8 +32,11 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-26
-    timeout-minutes: 30
+    runs-on: [self-hosted, macOS]
+    timeout-minutes: 45
+    env:
+      # Bleibt zwischen den Läufen erhalten: schnellere, inkrementelle Builds.
+      DERIVED: ${{ github.workspace }}/../ELRD-DerivedData
     steps:
       - uses: actions/checkout@v4
 
@@ -38,6 +50,7 @@ jobs:
             -scheme ELRD \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$DERIVED" \
             CODE_SIGNING_ALLOWED=NO \
             build > build.log 2>&1 || true
           # Fehler zuerst (sonst verdrängen die vielen SDK-Warnungen sie aus der Liste).
@@ -96,7 +109,7 @@ jobs:
           done
 
       - name: Bildschirmfotos (iPad Simulator)
-        if: success()
+        if: success() && (contains(github.event.head_commit.message, '[fotos]') || (github.event_name == 'workflow_dispatch' && inputs.fotos))
         run: |
           DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
@@ -106,12 +119,12 @@ jobs:
           print(pick["udid"] if pick else "")
           ')
           xcodebuild -project ELRD.xcodeproj -scheme ELRD -configuration Debug \
-            -destination "id=$DEVICE_ID" -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO build > shots-build.log 2>&1 || { tail -20 shots-build.log; exit 1; }
-          APP=build/dd/Build/Products/Debug-iphonesimulator/ELRD.app
+            -destination "id=$DEVICE_ID" -derivedDataPath "$DERIVED" CODE_SIGNING_ALLOWED=NO build > shots-build.log 2>&1 || { tail -20 shots-build.log; exit 1; }
+          APP="$DERIVED/Build/Products/Debug-iphonesimulator/ELRD.app"
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP"
-          mkdir -p shots
+          rm -rf shots && mkdir -p shots
           shoot() { # Gerät, Präfix, Modi, Bildschirme
             local device=$1 prefix=$2 modes=$3 screens=$4
             for mode in $modes; do
@@ -141,15 +154,19 @@ jobs:
           else
             echo "::warning title=Bildschirmfotos::Kein iPad-mini-Simulator gefunden"
           fi
-          git config user.name "ELRD CI"
-          git config user.email "ci@users.noreply.github.com"
           cd shots
           git init -q -b ci-screenshots
+          git config user.name "ELRD CI"
+          git config user.email "ci@users.noreply.github.com"
           echo "Bildschirmfotos von ${GITHUB_SHA} (automatisch erzeugt)" > README.md
           git add -A
           git commit -q -m "Bildschirmfotos ${GITHUB_SHA::7}"
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-screenshots
           echo "::notice title=Bildschirmfotos::Branch ci-screenshots aktualisiert"
+
+      - name: Simulatoren beenden
+        if: always()
+        run: xcrun simctl shutdown all || true
 
       - name: Logs sichern
         if: always()

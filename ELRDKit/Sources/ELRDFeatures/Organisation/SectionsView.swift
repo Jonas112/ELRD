@@ -278,7 +278,8 @@ struct UnitRowLabel: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(width: 52, height: 36)
-                .background(Surface.canvas, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Surface.separator, lineWidth: 1))
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.unit.displayName)
                     .font(.headline)

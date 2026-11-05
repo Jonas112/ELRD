@@ -406,20 +406,22 @@ struct TriageChoiceButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(category == .ungesichtet || category == .unverletzt || category == .verstorben ? category.displayName.lowercased() : category.shortName)
+            HStack(spacing: Spacing.xs) {
+                if isSelected { Image(systemName: "checkmark.circle.fill") }
+                Text(category == .ungesichtet || category == .unverletzt || category == .verstorben ? category.displayName.lowercased() : category.shortName)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
                 .font(category.shortName.count > 3 ? .headline.weight(.heavy) : .title3.weight(.heavy))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
                 .padding(.horizontal, Spacing.xs)
                 .foregroundStyle(Color.onTriage(category))
                 .frame(maxWidth: .infinity, minHeight: 64)
                 .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Color.primary, lineWidth: isSelected ? 4 : (TriageBadge.needsOutline(category) ? 1 : 0))
+                        .strokeBorder(Color.primary, lineWidth: isSelected ? 5 : (TriageBadge.needsOutline(category) ? 1 : 0))
                 }
-                // Nicht gewählt nur leicht abgeschwächt, damit die Schrift lesbar bleibt.
-                .opacity(isSelected ? 1 : 0.72)
+                // Farben immer kräftig (lesbar); gewählt = dicker Rand + Häkchen.
         }
         .buttonStyle(.plain)
         .accessibilityLabel(category.displayName)

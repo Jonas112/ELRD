@@ -102,7 +102,7 @@ struct MissionDetailsView: View {
                 Text("Einsatzart").foregroundStyle(.secondary)
                 FlowLayout(spacing: Spacing.s) {
                     ForEach(NewMissionForm.typeOrder, id: \.self) { type in
-                        ChoiceChip(type.chipLabel, isSelected: form.type == type, minHeight: 48) {
+                        ChoiceChip(type.chipLabel, isSelected: form.type == type, minHeight: 48, background: Surface.elevated) {
                             form.type = form.type == type ? nil : type
                         }
                     }

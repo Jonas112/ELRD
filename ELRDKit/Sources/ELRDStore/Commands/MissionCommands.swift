@@ -87,8 +87,8 @@ public struct EditPatient: MissionCommand {
         var candidate = before
         transform(&candidate)
         guard candidate != before else { return before }
-        let transform = transform
-        let after = try draft.update(Patient.self, id: patientID) { transform(&$0) }
+        let change = transform
+        let after = try draft.update(Patient.self, id: patientID) { change(&$0) }
         if after.number != before.number {
             draft.log(.patient, "Patient \(before.number): Nummer geändert in \(after.number)", subject: .patient(patientID))
         } else {
@@ -114,8 +114,8 @@ public struct AddInjury: MissionCommand {
         }
         guard !injury.diagnosis.isEmpty else { throw CommandError.invalid("Diagnose fehlt") }
         guard !patient.injuries.contains(where: { $0.id == injury.id }) else { return }
-        let injury = injury
-        try draft.update(Patient.self, id: patientID) { $0.addInjury(injury) }
+        let newInjury = injury
+        try draft.update(Patient.self, id: patientID) { $0.addInjury(newInjury) }
         draft.log(.patient, "Patient \(patient.number): Verletzung erfasst", subject: .patient(patientID))
     }
 }
@@ -135,8 +135,8 @@ public struct RemoveInjury: MissionCommand {
             throw CommandError.notFound(.patient)
         }
         guard patient.injuries.contains(where: { $0.id == injuryID }) else { return }
-        let injuryID = injuryID
-        try draft.update(Patient.self, id: patientID) { $0.removeInjury(injuryID) }
+        let removedID = injuryID
+        try draft.update(Patient.self, id: patientID) { $0.removeInjury(removedID) }
         draft.log(.patient, "Patient \(patient.number): Verletzung entfernt", subject: .patient(patientID))
     }
 }

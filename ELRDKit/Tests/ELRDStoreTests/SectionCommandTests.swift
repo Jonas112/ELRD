@@ -82,8 +82,10 @@ struct SectionCommandTests {
 
     @Test func templateSavedOnlyOnce() {
         var master = MasterDataSet()
-        #expect(master.addSection(named: "Patientenablage"))
-        #expect(!master.addSection(named: "  patientenablage "), "Groß/klein und Leerraum egal")
+        let added = master.addSection(named: "Patientenablage")
+        let again = master.addSection(named: "  patientenablage ")
+        #expect(added)
+        #expect(!again, "Groß/klein und Leerraum egal")
         #expect(master.sections.map(\.name) == ["Patientenablage"])
         #expect(master.revision == 1)
     }

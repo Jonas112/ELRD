@@ -66,3 +66,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E60 | 2026-11-05 | Formulare (Einsatzdaten, Patient) schreiben nur tatsächlich geänderte Felder; Patientendaten speichern automatisch ohne „Speichern“-Knopf | Keine verlorenen Änderungen anderer Fenster/Geräte; im Einsatz kein vergessenes Speichern |
 | E61 | 2026-11-05 | Geburtsdatum wird als Text eingegeben (TT.MM.JJJJ, auch verkürzt), kein Datumsrad; ersatzweise geschätztes Alter | Schneller unter Stress; Geburtsdatum hat Vorrang |
 | E62 | 2026-11-05 | Neues Feld „Erkennungsmerkmale / Fundort“ am Patienten, in Liste und Suche | Unbekannte Personen wiederfinden (Jonas) |
+| E63 | 2026-11-05 | Verletzung erfassen: Region → (bei Extremitäten) Seite → Diagnose als Chip; Suche über alle, unbekannter Text als eigene Diagnose | Zwei bis drei Tipps statt langer Listen; nichts ist durch den Katalog blockiert |
+| E64 | 2026-11-05 | Zielklinik-Vorschläge: im Einsatz bereits gewählte zuerst, dann nach Luftlinie zum Einsatzort | Bei mehreren Patienten meist dieselben Kliniken; nächste Klinik ohne Suchen |
+| E65 | 2026-11-05 | „Transport starten“ erst mit zugeordneter Einheit; „Vor Ort entlassen“ fragt, ob die Zielklinik behalten wird; beides zurücknehmbar | Wie ELRDRG; Fehlgriffe unter Stress korrigierbar |

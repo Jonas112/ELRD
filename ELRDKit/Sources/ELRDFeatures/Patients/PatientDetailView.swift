@@ -287,17 +287,32 @@ struct PatientDetailView: View {
     private func circulationSection(_ patient: Patient) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("Kreislauf").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            HStack(spacing: Spacing.s) {
-                SegmentedChoice(
-                    options: [(CirculationState.unbekannt, "unbekannt"), (.stabil, "stabil"), (.instabil, "instabil")],
-                    selection: patientBinding(patient, \.circulation)
-                )
-                Toggle(isOn: patientBinding(patient, \.isIntubated)) { Text("intubiert").font(.headline) }
-                    .toggleStyle(.button)
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
+            // Schmale Spalte (iPad mini hoch): „intubiert“ unter den Kreislauf, damit nichts gekürzt wird.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Spacing.s) {
+                    circulationChoice(patient)
+                    intubatedToggle(patient)
+                }
+                VStack(alignment: .leading, spacing: Spacing.s) {
+                    circulationChoice(patient)
+                    intubatedToggle(patient)
+                }
             }
         }
+    }
+
+    private func circulationChoice(_ patient: Patient) -> some View {
+        SegmentedChoice(
+            options: [(CirculationState.unbekannt, "unbekannt"), (.stabil, "stabil"), (.instabil, "instabil")],
+            selection: patientBinding(patient, \.circulation)
+        )
+    }
+
+    private func intubatedToggle(_ patient: Patient) -> some View {
+        Toggle(isOn: patientBinding(patient, \.isIntubated)) { Text("intubiert").font(.headline) }
+            .toggleStyle(.button)
+            .buttonStyle(.bordered)
+            .controlSize(.large)
     }
 
     /// IVENA: RMI, Priorität, PZC; bei Priorität 1 zusätzlich der ABCD-Status.

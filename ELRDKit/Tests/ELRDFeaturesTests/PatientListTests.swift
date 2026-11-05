@@ -83,16 +83,18 @@ struct PatientListTests {
         var patients = store.state.patients
         // Zwei Patienten mit gleicher Nummer (z. B. von zwei Geräten mit gleichem Präfix).
         patients.append(Self.patient(1, .sk3))
-        patients[0].firstName = "Thomas"
-        patients[0].lastName = "Mustermann"
-        patients[0].gender = .maennlich
-        patients[0].estimatedAge = 45
-        patients[0].dispatchPatientNumber = "2614"
+        // Reihenfolge im Stand ist nach Anlage, nicht nach Nummer – daher über die Nummer suchen.
+        let index = try #require(patients.firstIndex { $0.number.description == "A-1" })
+        patients[index].firstName = "Thomas"
+        patients[index].lastName = "Mustermann"
+        patients[index].gender = .maennlich
+        patients[index].estimatedAge = 45
+        patients[index].dispatchPatientNumber = "2614"
 
         var state = store.state
         state.patients = patients
         let rows = PatientRow.rows(for: PatientListQuery(sort: .number).apply(to: patients), state: state, now: now)
-        let first = try #require(rows.first { $0.id == patients[0].id })
+        let first = try #require(rows.first { $0.id == patients[index].id })
         #expect(first.name == "Mustermann, Thomas")
         #expect(first.details == "ILS 2614 · m ~45 J")
         #expect(first.unitText == "keine Einheit")

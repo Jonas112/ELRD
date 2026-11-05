@@ -40,7 +40,11 @@ public struct Injury: Identifiable, Hashable, Codable, Sendable {
     }
 
     /// Anzeige wie in ELRDRG: „Diagnose Ort“, z. B. „Fraktur Unterschenkel rechts“.
+    /// Steckt die Region schon in der Diagnose („Unterschenkel#“, „stumpfes
+    /// Thoraxtrauma“), wird sie nicht wiederholt: „Unterschenkel# rechts“.
     public var displayText: String {
-        [diagnosis, locationText].filter { !$0.isEmpty }.joined(separator: " ")
+        let regionInDiagnosis = region.map { diagnosis.range(of: $0.displayName, options: .caseInsensitive) != nil } ?? false
+        let location = regionInDiagnosis ? (side?.displayName ?? "") : locationText
+        return [diagnosis, location].filter { !$0.isEmpty }.joined(separator: " ")
     }
 }

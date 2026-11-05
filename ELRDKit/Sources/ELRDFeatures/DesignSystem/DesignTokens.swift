@@ -79,3 +79,15 @@ public struct CardStyle: ViewModifier {
 public extension View {
     func cardStyle() -> some View { modifier(CardStyle()) }
 }
+
+public extension View {
+    /// Blatt in Seitengröße statt kleinem Formularblatt (iPadOS 18+); weniger Scrollen.
+    @ViewBuilder
+    func largeSheet() -> some View {
+        if #available(iOS 18.0, *) {
+            presentationSizing(.page)
+        } else {
+            self
+        }
+    }
+}

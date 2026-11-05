@@ -83,6 +83,11 @@ enum DemoMissions {
             $0.birthDate = calendar.date(from: DateComponents(year: 1981, month: 3, day: 14, hour: 12))
             $0.identifyingFeatures = "Fahrer Pkw rot, eingeklemmt, blaue Arbeitsjacke"
             $0.notes = "2 Zugänge, 500 ml VEL. GCS 13."
+            $0.circulation = .stabil
+            $0.rmiCode = 212
+            $0.treatmentPriority = .sofortigeIntervention
+            $0.abcd = ABCDStatus(airway: 2, breathing: 2, circulation: 2)
+            $0.traumaRoom = .a
         })
         try running.perform(AddInjury(patientID: added[0].id, injury: Injury(diagnosis: "Unterschenkel#", region: .unterschenkel, side: .rechts)))
         try running.perform(AddInjury(patientID: added[0].id, injury: Injury(diagnosis: "stumpfes Thoraxtrauma", region: .thorax)))

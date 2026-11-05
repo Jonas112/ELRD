@@ -95,7 +95,7 @@ public struct MissionWorkspaceView: View {
             if !Task.isCancelled { lastAdded = nil }
         }
         .sheet(isPresented: $showsMessages) { MessagesPlaceholder() }
-        .sheet(isPresented: $showsDetails) { MissionDetailsView(store: store, people: people) }
+        .sheet(isPresented: $showsDetails) { MissionDetailsView(store: store, people: people).largeSheet() }
         .alert("Aktion nicht möglich", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {

@@ -33,7 +33,7 @@ struct InjuryTests {
 
     @Test func injuryTakesRegionFromCatalogAndSideOnlyWhereItFits() {
         let leg = InjurySuggestions.injury(from: Self.catalog[0], text: "", region: nil, side: .rechts)
-        #expect(leg.displayText == "Unterschenkel# Unterschenkel rechts")
+        #expect(leg.displayText == "Unterschenkel# rechts", "Region steckt schon in der Diagnose")
         #expect(leg.masterInjuryID == Self.catalog[0].id)
         let head = InjurySuggestions.injury(from: Self.catalog[2], text: "", region: nil, side: .links)
         #expect(head.side == nil, "Kopf hat keine Seite")

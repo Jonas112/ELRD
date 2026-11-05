@@ -257,6 +257,8 @@ struct PatientDetailView: View {
     private var conditionCard: some View {
         if let binding = Binding($form), let patient {
             DetailCard(title: "Zustand") {
+                circulationSection(patient)
+                ivenaSection(patient)
                 injuriesSection(patient)
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Notiz").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
@@ -265,7 +267,6 @@ struct PatientDetailView: View {
                         .focused($focus, equals: .notes)
                         .inputBox()
                 }
-                PlannedHint(text: "Kreislauf, intubiert, IVENA mit ABCD-Status: Schritt 21")
             }
             .disabled(!canEdit)
             .sheet(isPresented: $showsInjuries) {
@@ -275,7 +276,74 @@ struct PatientDetailView: View {
                     onAdd: addInjury,
                     onRemove: removeInjury
                 )
+                .largeSheet()
             }
+        }
+    }
+
+    /// Kreislauf (3 Zustände) und intubiert – ein Tipp speichert sofort.
+    private func circulationSection(_ patient: Patient) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("Kreislauf").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            HStack(spacing: Spacing.s) {
+                SegmentedChoice(
+                    options: [(CirculationState.unbekannt, "unbekannt"), (.stabil, "stabil"), (.instabil, "instabil")],
+                    selection: patientBinding(patient, \.circulation)
+                )
+                Toggle(isOn: patientBinding(patient, \.isIntubated)) { Text("intubiert").font(.headline) }
+                    .toggleStyle(.button)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+            }
+        }
+    }
+
+    /// IVENA: RMI, Priorität, PZC; bei Priorität 1 zusätzlich der ABCD-Status.
+    private func ivenaSection(_ patient: Patient) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("IVENA").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                Spacer()
+                let code = patient.allocationCode(at: Date())
+                Text("PZC ").font(.subheadline).foregroundStyle(.secondary)
+                    + Text(code.description).font(.title3.weight(.heavy).monospacedDigit())
+                        .foregroundStyle(code.isComplete ? Color.primary : Color.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            RMIField(catalog: catalogs.rmi, code: patient.rmiCode) { code in
+                update { $0.rmiCode = code }
+            }
+            SegmentedChoice(
+                options: [(TreatmentPriority.sofortigeIntervention, "1 sofort"), (.stationaereAufnahmeWahrscheinlich, "2 stationär"), (.vermutlichAmbulant, "3 ambulant")],
+                selection: patientBinding(patient, \.treatmentPriority)
+            )
+            if patient.treatmentPriority == .sofortigeIntervention {
+                Text("ABCD-Status · Info für die Klinik").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                ABCDPicker(status: patient.abcd ?? ABCDStatus()) { letter, level in
+                    update { patient in
+                        var status = patient.abcd ?? ABCDStatus()
+                        status[letter] = level
+                        patient.abcd = status.isEmpty ? nil : status
+                    }
+                }
+            }
+        }
+    }
+
+    /// Bindung an ein Patientenfeld, die jede Änderung sofort speichert.
+    private func patientBinding<Value: Equatable>(_ patient: Patient, _ keyPath: WritableKeyPath<Patient, Value>) -> Binding<Value> {
+        Binding(
+            get: { self.patient?[keyPath: keyPath] ?? patient[keyPath: keyPath] },
+            set: { value in update { $0[keyPath: keyPath] = value } }
+        )
+    }
+
+    /// Speichert eine sofortige Änderung (Auswahlknöpfe) über `EditPatient`.
+    private func update(_ change: @escaping (inout Patient) -> Void) {
+        do {
+            try store.perform(EditPatient(patientID: patientID, change))
+        } catch {
+            saveState = .failed(error.localizedDescription)
         }
     }
 
@@ -302,7 +370,15 @@ struct PatientDetailView: View {
         DetailCard(title: "Transport") {
             Label(patient.status.displayName, systemImage: "box.truck")
                 .font(.title3.weight(.semibold))
-            PlannedHint(text: "Einheit zuweisen, Zielklinik, Schockraum, Anmeldung und Transport starten: Schritt 22")
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Schockraum").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                SegmentedChoice(
+                    options: [(TraumaRoom.none, "keiner"), (.a, "A"), (.b, "B")],
+                    selection: patientBinding(patient, \.traumaRoom)
+                )
+            }
+            .disabled(!canEdit)
+            PlannedHint(text: "Einheit zuweisen, Zielklinik, Anmeldung und Transport starten: Schritt 22")
         }
     }
 

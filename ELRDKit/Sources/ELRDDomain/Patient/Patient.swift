@@ -42,6 +42,8 @@ public struct Patient: VersionedEntity, MissionScoped {
     /// IVENA-Rückmeldeindikator (dreistellig).
     public var rmiCode: Int?
     public var treatmentPriority: TreatmentPriority
+    /// ABCD-Status für IVENA bei Priorität 1 (E50). Ohne Einfluss auf den PZC.
+    public var abcd: ABCDStatus?
 
     // MARK: Organisation und Transport
 
@@ -74,6 +76,7 @@ public struct Patient: VersionedEntity, MissionScoped {
         circulation: CirculationState = .unbekannt,
         rmiCode: Int? = nil,
         treatmentPriority: TreatmentPriority = .keineDringlichkeit,
+        abcd: ABCDStatus? = nil,
         sectionID: SectionID? = nil,
         unitIDs: [UnitID] = [],
         destination: HospitalSnapshot? = nil,
@@ -100,6 +103,7 @@ public struct Patient: VersionedEntity, MissionScoped {
         self.circulation = circulation
         self.rmiCode = rmiCode
         self.treatmentPriority = treatmentPriority
+        self.abcd = abcd
         self.sectionID = sectionID
         self.unitIDs = []
         self.destination = destination

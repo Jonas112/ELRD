@@ -294,10 +294,12 @@ struct WidePatientRow: View {
         HStack(spacing: Spacing.l) {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 PatientTitle(row: row)
-                Text(row.details.isEmpty ? " " : row.details)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if !row.details.isEmpty {
+                    Text(row.details)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             PatientUnitText(row: row)

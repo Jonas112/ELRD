@@ -21,6 +21,8 @@ struct PatientDetailView: View {
     @State private var showsInjuries = false
     @State private var showsHospitals = false
     @State private var confirmsRelease = false
+    /// Kreislauf und „intubiert“ untereinander, wenn die Spalte schmal ist.
+    @State private var stacksCirculation = false
     @FocusState private var focus: Field?
 
     enum Field: Hashable { case number, dispatch, firstName, lastName, birthDate, age, features, notes }
@@ -97,6 +99,11 @@ struct PatientDetailView: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
+            .onChange(of: width, initial: true) { _, newWidth in
+                // Spaltenbreite der Zustandskarte (Rand und Abstand grob abgezogen).
+                let columns: CGFloat = newWidth >= 1150 ? 3 : newWidth >= 700 ? 2 : 1
+                stacksCirculation = (newWidth - 80) / columns < 420
+            }
         }
         .navigationTitle("Patient \(patient.number)")
         .navigationBarTitleDisplayMode(.inline)
@@ -288,15 +295,12 @@ struct PatientDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             Text("Kreislauf").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
             // Schmale Spalte (iPad mini hoch): „intubiert“ unter den Kreislauf, damit nichts gekürzt wird.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Spacing.s) {
-                    circulationChoice(patient)
-                    intubatedToggle(patient)
-                }
-                VStack(alignment: .leading, spacing: Spacing.s) {
-                    circulationChoice(patient)
-                    intubatedToggle(patient)
-                }
+            let layout = stacksCirculation
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.s))
+                : AnyLayout(HStackLayout(spacing: Spacing.s))
+            layout {
+                circulationChoice(patient)
+                intubatedToggle(patient)
             }
         }
     }

@@ -43,9 +43,17 @@ struct PatientDetailTests {
         #expect(saved.identifyingFeatures == "Fahrer Pkw rot")
         #expect(saved.dispatchPatientNumber == "2614", "fremde Änderung bleibt erhalten")
 
-        form.markSaved(saved)
+        form.markSaved(saved, now: Self.now)
         #expect(!form.hasChanges(now: Self.now), "getrimmte Eingabe gilt als gespeichert")
         #expect(form.lastName == " Mustermann ", "Eingabetext bleibt beim Tippen unverändert")
+        #expect(form.dispatchNumber == "2614", "nicht bearbeitetes Feld zeigt den fremden Stand")
+
+        // Nächstes Speichern darf die fremde Änderung nicht zurücksetzen.
+        form.notes = "GCS 13"
+        let again = form
+        let second = try store.perform(EditPatient(patientID: patient.id) { again.apply(to: &$0, now: Self.now) })
+        #expect(second.dispatchPatientNumber == "2614")
+        #expect(second.notes == "GCS 13")
     }
 
     @Test func birthDateWinsOverAge() throws {
@@ -57,7 +65,7 @@ struct PatientDetailTests {
         #expect(saved.estimatedAge == 45)
         #expect(saved.birthDate == nil)
 
-        form.markSaved(saved)
+        form.markSaved(saved, now: Self.now)
         form.birthDate = "14.03.1981"
         snapshot = form
         saved = try store.perform(EditPatient(patientID: patient.id) { snapshot.apply(to: &$0, now: Self.now) })

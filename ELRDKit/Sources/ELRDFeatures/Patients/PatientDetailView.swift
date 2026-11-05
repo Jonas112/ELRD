@@ -289,7 +289,7 @@ struct PatientDetailView: View {
         let snapshot = current
         do {
             let updated = try store.perform(EditPatient(patientID: patientID) { snapshot.apply(to: &$0, now: now) })
-            current.markSaved(updated)
+            current.markSaved(updated, now: now)
             form = current
             saveState = .saved
         } catch {

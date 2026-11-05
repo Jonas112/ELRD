@@ -196,9 +196,28 @@ struct PatientEditForm: Equatable {
         if values.notes != saved.notes { patient.notes = values.notes }
     }
 
-    /// Nach dem Speichern: Vergleichsstand übernehmen, die Eingabetexte bleiben
-    /// unverändert (kein Springen des Cursors, kein Abschneiden beim Tippen).
-    mutating func markSaved(_ patient: Patient) {
+    /// Nach dem Speichern: Vergleichsstand übernehmen.
+    ///
+    /// Felder, die hier bearbeitet wurden, behalten ihren Eingabetext (kein Springen
+    /// des Cursors, kein Abschneiden beim Tippen). Felder, die hier *nicht* bearbeitet
+    /// wurden, übernehmen den gespeicherten Stand – sonst würde eine zwischenzeitliche
+    /// Änderung von anderer Stelle beim nächsten Speichern überschrieben.
+    mutating func markSaved(_ patient: Patient, now: Date = Date()) {
+        let edited = current(now: now)
+        let previous = saved
+        let fresh = PatientEditForm(patient: patient)
+        if edited.number == previous.number { number = fresh.number }
+        if edited.dispatchNumber == previous.dispatchNumber { dispatchNumber = fresh.dispatchNumber }
+        if edited.firstName == previous.firstName { firstName = fresh.firstName }
+        if edited.lastName == previous.lastName { lastName = fresh.lastName }
+        if edited.birthDate == previous.birthDate && edited.age == previous.age {
+            birthDate = fresh.birthDate
+            age = fresh.age
+        }
+        if edited.gender == previous.gender { gender = fresh.gender }
+        if edited.isChild == previous.isChild { isChild = fresh.isChild }
+        if edited.identifyingFeatures == previous.identifyingFeatures { identifyingFeatures = fresh.identifyingFeatures }
+        if edited.notes == previous.notes { notes = fresh.notes }
         saved = Self.values(of: patient)
     }
 

@@ -155,6 +155,18 @@ public extension MasterDataSet {
         sections.filter(\.addAutomatically).sorted { $0.sortIndex < $1.sortIndex }
     }
 
+    /// Übernimmt einen im Einsatz angelegten Abschnitt als Vorlage für künftige
+    /// Einsätze (ELRDRG: „safe_new_sections_permanent“). Gibt es den Namen schon
+    /// (Groß/klein und Leerraum egal), passiert nichts und es kommt `false`.
+    @discardableResult
+    mutating func addSection(named name: String) -> Bool {
+        let candidate = MasterSection(name: name, sortIndex: (sections.map(\.sortIndex).max() ?? 0) + 1)
+        guard !sections.contains(where: { $0.matchKey == candidate.matchKey }) else { return false }
+        sections.append(candidate)
+        revision += 1
+        return true
+    }
+
     /// Einheiten, die im Einsatz noch nicht verwendet werden (ELRDRG: „unused base units“).
     func unusedUnits(in missionUnits: some Sequence<MissionUnit>) -> [MasterUnit] {
         let used = Set(missionUnits.active.compactMap(\.masterUnitID))

@@ -12,6 +12,7 @@ public struct MissionWorkspaceView: View {
     let account: AccountMenuModel?
     let people: [PersonChoice]
     let catalogs: PatientCatalogs
+    let sectionTemplates: SectionTemplates?
     let onClose: (() -> Void)?
 
     @State private var selection: WorkspaceSection
@@ -29,6 +30,7 @@ public struct MissionWorkspaceView: View {
         account: AccountMenuModel? = nil,
         people: [PersonChoice] = [],
         catalogs: PatientCatalogs = .empty,
+        sectionTemplates: SectionTemplates? = nil,
         showsDetailsInitially: Bool = false,
         initialSection: WorkspaceSection = .overview,
         initialPatient: PatientID? = nil,
@@ -39,6 +41,7 @@ public struct MissionWorkspaceView: View {
         self.account = account
         self.people = people
         self.catalogs = catalogs
+        self.sectionTemplates = sectionTemplates
         self.onClose = onClose
         _showsDetails = State(initialValue: showsDetailsInitially)
         _selection = State(initialValue: initialSection)
@@ -164,7 +167,7 @@ public struct MissionWorkspaceView: View {
 
     private var content: some View {
         NavigationStack(path: $path) {
-            WorkspaceDetail(section: selection, store: store, patientQuery: $patientQuery, onQuickAdd: addPatient) { target in
+            WorkspaceDetail(section: selection, store: store, sectionTemplates: sectionTemplates, patientQuery: $patientQuery, onQuickAdd: addPatient) { target in
                 switch target {
                 case .section(let section): selection = section
                 case .patient(let id): open(id)
@@ -584,6 +587,7 @@ struct MessagesPlaceholder: View {
 struct WorkspaceDetail: View {
     let section: WorkspaceSection
     let store: MissionStore
+    let sectionTemplates: SectionTemplates?
     @Binding var patientQuery: PatientListQuery
     let onQuickAdd: (Sichtungskategorie) -> Void
     let onTarget: (OpenItem.Target) -> Void
@@ -594,6 +598,8 @@ struct WorkspaceDetail: View {
             SituationOverview(store: store, onTarget: onTarget)
         case .patients:
             PatientsView(store: store, query: $patientQuery, onQuickAdd: onQuickAdd)
+        case .organisation:
+            SectionsView(store: store, templates: sectionTemplates) { onTarget(.patient($0)) }
         default:
             ContentUnavailableView {
                 Label(section.title, systemImage: section.systemImage)

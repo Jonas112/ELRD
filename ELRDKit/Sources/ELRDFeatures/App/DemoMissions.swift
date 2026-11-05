@@ -134,5 +134,17 @@ enum DemoMissions {
         time.date = start.addingTimeInterval(30 * 60)
         if rtws.count >= 2 { try running.perform(StartTransport(patientID: added[3].id)) }
         try running.perform(AddJournalText("Lage: 3 Pkw beteiligt, 1 Person eingeklemmt."))
+
+        // Abschnitte: Bereitstellungsraum wird Initialabschnitt; eine Einheit bleibt ohne Abschnitt.
+        let staging = try running.perform(AddSection(name: "Bereitstellungsraum"))
+        let scene = try running.perform(AddSection(name: "Einsatzstelle"))
+        let casualties = try running.perform(AddSection(name: "Patientenablage"))
+        if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }
+        if let nef = running.state.activeUnits.first(where: { $0.type == .nef }) {
+            try running.perform(MoveUnit(unitID: nef.id, to: staging.id))
+        }
+        for patient in [added[4], added[5]] {
+            try running.perform(EditPatient(patientID: patient.id) { $0.sectionID = casualties.id })
+        }
     }
 }

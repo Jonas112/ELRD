@@ -62,6 +62,7 @@ struct SignedInView: View {
     @State private var list: MissionListModel?
     @State private var openStore: MissionStore?
     @State private var catalogs = PatientCatalogs.empty
+    @State private var sectionTemplates: SectionTemplates?
 
     var body: some View {
         Group {
@@ -71,8 +72,9 @@ struct SignedInView: View {
                     account: account,
                     people: people,
                     catalogs: catalogs,
+                    sectionTemplates: sectionTemplates,
                     showsDetailsInitially: environment.demoScreen == .missionDetails,
-                    initialSection: environment.demoScreen?.opensPatients == true ? .patients : .overview,
+                    initialSection: environment.demoScreen?.initialWorkspaceSection ?? .overview,
                     initialPatient: environment.demoScreen?.opensPatient == true ? openStore.state.activePatients.first?.id : nil,
                     initialPatientLayout: environment.demoScreen.map { $0 == .patientTiles ? .tiles : .list } ?? .stored
                 ) {
@@ -94,6 +96,7 @@ struct SignedInView: View {
         .task(id: user.id) {
             openStore = nil
             catalogs = PatientCatalogs.load(from: environment.repository)
+            sectionTemplates = SectionTemplates(repository: environment.repository)
             let model = MissionListModel(environment: environment, user: user)
             list = model
             // Bildschirmfoto „Arbeitsbereich“: laufenden Beispieleinsatz direkt öffnen.

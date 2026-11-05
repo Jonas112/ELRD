@@ -13,7 +13,7 @@ import ELRDStore
 /// Beispieldaten im Arbeitsspeicher (nichts wird gespeichert, Keychain bleibt unberührt).
 public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
-        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries
+        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, sections
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
@@ -21,8 +21,11 @@ public struct AppLaunchOptions: Equatable, Sendable {
         /// Bildschirme, die direkt im laufenden Beispieleinsatz starten.
         var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission].contains(self) }
 
-        /// Bildschirme, die im Bereich „Patienten“ starten.
-        var opensPatients: Bool { [.patients, .patientTiles].contains(self) || opensPatient }
+        /// Bereich, in dem der Arbeitsbereich startet.
+        var initialWorkspaceSection: WorkspaceSection {
+            if [.patients, .patientTiles].contains(self) || opensPatient { return .patients }
+            return self == .sections ? .organisation : .overview
+        }
 
         /// Bildschirme, die direkt einen Patienten öffnen.
         var opensPatient: Bool { [.patientDetail, .injuries].contains(self) }

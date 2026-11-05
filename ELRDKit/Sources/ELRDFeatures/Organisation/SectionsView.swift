@@ -168,10 +168,6 @@ struct SectionCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             head
-            if column.units.isEmpty && column.loosePatients.isEmpty {
-                Text("Keine Einheiten").foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable, alignment: .leading)
-            }
             ForEach(column.units) { entry in
                 unitRow(entry)
             }
@@ -215,7 +211,7 @@ struct SectionCard: View {
                             .accessibilityLabel("Initialabschnitt: neue Einheiten kommen hierher")
                     }
                 }
-                Text(column.typeSummary.isEmpty ? (column.section == nil ? "" : "leer") : column.typeSummary)
+                Text(column.typeSummary.isEmpty ? "keine Einheiten" : column.typeSummary)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
             }

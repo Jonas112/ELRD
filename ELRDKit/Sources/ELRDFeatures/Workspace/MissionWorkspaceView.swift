@@ -32,6 +32,7 @@ public struct MissionWorkspaceView: View {
         showsDetailsInitially: Bool = false,
         initialSection: WorkspaceSection = .overview,
         initialPatient: PatientID? = nil,
+        initialPatientLayout: PatientListLayout = .stored,
         onClose: (() -> Void)? = nil
     ) {
         self.store = store
@@ -42,6 +43,7 @@ public struct MissionWorkspaceView: View {
         _showsDetails = State(initialValue: showsDetailsInitially)
         _selection = State(initialValue: initialSection)
         _path = State(initialValue: initialPatient.map { [$0] } ?? [])
+        _patientQuery = State(initialValue: PatientListQuery(layout: initialPatientLayout))
     }
 
     public var body: some View {
@@ -117,7 +119,7 @@ public struct MissionWorkspaceView: View {
             onMessages: { showsMessages = true },
             onTriage: { category in
                 // Tipp auf einen Zähler: Patienten dieser Kategorie zeigen.
-                patientQuery = PatientListQuery(triage: category, sort: patientQuery.sort)
+                patientQuery = PatientListQuery(triage: category, sort: patientQuery.sort, layout: patientQuery.layout)
                 selection = .patients
                 path.removeAll()
             },

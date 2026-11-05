@@ -72,6 +72,17 @@ struct WorkspaceTests {
         #expect(items.last?.target == .section(.organisation))
     }
 
+    @Test func notEmergencyDoctorButTransportCounts() throws {
+        let store = try PreviewData.makeStore() // A-1 ist SK 1
+        let first = store.state.activePatients[0]
+        let nef = try #require(store.state.activeUnits.first { $0.type == .nef })
+        let rtw = try #require(store.state.activeUnits.first { $0.type == .rtw })
+        try store.perform(AssignUnit(patientID: first.id, unitID: nef.id))
+        #expect(OpenItem.items(for: store.state, now: Date()).first?.title == "A-1 hat kein Transportmittel", "NEF ist kein Transportmittel (E66)")
+        try store.perform(AssignUnit(patientID: first.id, unitID: rtw.id))
+        #expect(OpenItem.items(for: store.state, now: Date()).first?.kind == .notTriaged)
+    }
+
     @Test func statusCountsSkipDeletedPatients() throws {
         let store = try PreviewData.makeStore()
         let first = try #require(store.state.activePatients.first)

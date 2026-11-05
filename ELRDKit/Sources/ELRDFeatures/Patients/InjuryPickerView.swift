@@ -1,10 +1,11 @@
 import SwiftUI
 import ELRDDomain
 
-/// Verletzungen erfassen: Region → (Seite) → Diagnose antippen. Mehrere nacheinander.
+/// Verletzungen erfassen: Körperteil in der Grafik antippen (Region und Seite
+/// in einem Tipp) → Diagnose antippen. Mehrere nacheinander.
 ///
-/// Oben stehen die schon erfassten Verletzungen (mit Entfernen), darunter große
-/// Knöpfe für Region, Seite und Diagnosen; Freitext legt eine neue Diagnose an.
+/// Oben bzw. rechts stehen die schon erfassten Verletzungen (mit Entfernen),
+/// darunter die Diagnosen; Freitext legt eine neue Diagnose an.
 struct InjuryPickerView: View {
     let catalog: [MasterInjury]
     let injuries: [Injury]
@@ -12,74 +13,43 @@ struct InjuryPickerView: View {
     let onRemove: (InjuryID) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var region: BodyRegion?
-    @State private var side: BodySide?
+    @State private var spot: BodySpot?
     @State private var search = ""
 
+    init(catalog: [MasterInjury], injuries: [Injury], initialSpot: BodySpot? = nil,
+         onAdd: @escaping (Injury) -> Void, onRemove: @escaping (InjuryID) -> Void) {
+        self.catalog = catalog
+        self.injuries = injuries
+        self.onAdd = onAdd
+        self.onRemove = onRemove
+        _spot = State(initialValue: initialSpot)
+    }
+
+    private var region: BodyRegion? { spot?.region }
+    private var side: BodySide? { spot?.side }
+
     var body: some View {
-        let matches = InjurySuggestions.matches(in: catalog, region: region, search: search)
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.xl) {
-                    if !injuries.isEmpty { recorded }
-
-                    section("Körperregion") {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.s)], spacing: Spacing.s) {
-                            ForEach(InjurySuggestions.regionOrder) { candidate in
-                                ChoiceChip(candidate.displayName, isSelected: region == candidate, fillsWidth: true) {
-                                    region = region == candidate ? nil : candidate
-                                    if region?.hasSide != true { side = nil }
-                                }
+            GeometryReader { proxy in
+                let isWide = proxy.size.width >= 640
+                ScrollView {
+                    Group {
+                        if isWide {
+                            HStack(alignment: .top, spacing: Spacing.xl) {
+                                diagram.frame(width: 250, height: 440)
+                                details
+                            }
+                        } else {
+                            VStack(alignment: .leading, spacing: Spacing.xl) {
+                                diagram.frame(height: 320).frame(maxWidth: .infinity)
+                                details
                             }
                         }
                     }
-
-                    if region?.hasSide == true {
-                        section("Seite") {
-                            HStack(spacing: Spacing.s) {
-                                ForEach(BodySide.allCases) { candidate in
-                                    ChoiceChip(candidate.displayName, isSelected: side == candidate, fillsWidth: true) {
-                                        side = side == candidate ? nil : candidate
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    section(region.map { "Diagnose – \($0.displayName)" } ?? "Diagnose") {
-                        HStack(spacing: Spacing.s) {
-                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                            TextField("Suchen oder neue Diagnose eingeben", text: $search)
-                                .autocorrectionDisabled()
-                                .submitLabel(.done)
-                                .onSubmit { if InjurySuggestions.offersCustom(search, in: matches) { addCustom() } }
-                        }
-                        .inputBox()
-
-                        if InjurySuggestions.offersCustom(search, in: matches) {
-                            Button(action: addCustom) {
-                                Label("„\(search.trimmingCharacters(in: .whitespaces))“ als neue Diagnose erfassen", systemImage: "plus.circle.fill")
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable, alignment: .leading)
-                            }
-                        }
-
-                        FlowLayout(spacing: Spacing.s) {
-                            ForEach(matches) { master in
-                                ChoiceChip(label(for: master), isSelected: false, minHeight: 52) {
-                                    add(master)
-                                }
-                            }
-                        }
-                        if matches.isEmpty && search.isEmpty {
-                            Text("Für diese Region gibt es keine Diagnosen in den Stammdaten.")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    .padding(Spacing.xl)
                 }
-                .padding(Spacing.xl)
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
             .background(Surface.canvas)
             .navigationTitle("Verletzungen")
             .navigationBarTitleDisplayMode(.inline)
@@ -89,6 +59,56 @@ struct InjuryPickerView: View {
                 }
             }
         }
+    }
+
+    private var diagram: some View {
+        VStack(spacing: Spacing.s) {
+            BodyDiagramView(selection: spot, counts: BodyPart.counts(for: injuries)) { tapped in
+                spot = spot == tapped ? nil : tapped
+            }
+            Text(spot?.title ?? "Körperteil antippen")
+                .font(.headline)
+                .foregroundStyle(spot == nil ? .secondary : .primary)
+        }
+    }
+
+    private var details: some View {
+        let matches = InjurySuggestions.matches(in: catalog, region: region, search: search)
+        return VStack(alignment: .leading, spacing: Spacing.xl) {
+            if !injuries.isEmpty { recorded }
+
+            section(spot.map { "Diagnose – \($0.title)" } ?? "Diagnose – alle Regionen") {
+                HStack(spacing: Spacing.s) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Suchen oder neue Diagnose eingeben", text: $search)
+                        .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .onSubmit { if InjurySuggestions.offersCustom(search, in: matches) { addCustom() } }
+                }
+                .inputBox()
+
+                if InjurySuggestions.offersCustom(search, in: matches) {
+                    Button(action: addCustom) {
+                        Label("„\(search.trimmingCharacters(in: .whitespaces))“ als neue Diagnose erfassen", systemImage: "plus.circle.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable, alignment: .leading)
+                    }
+                }
+
+                FlowLayout(spacing: Spacing.s) {
+                    ForEach(matches) { master in
+                        ChoiceChip(label(for: master), isSelected: false, minHeight: 52) {
+                            add(master)
+                        }
+                    }
+                }
+                if matches.isEmpty && search.isEmpty {
+                    Text("Für diese Region gibt es keine Diagnosen in den Stammdaten.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var recorded: some View {

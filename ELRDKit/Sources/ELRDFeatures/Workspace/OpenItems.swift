@@ -39,13 +39,15 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         var items: [OpenItem] = []
         let patients = Patient.sortedByNumber(state.patients)
 
-        for patient in patients where patient.status == .waiting {
+        for patient in patients where patient.outcome == nil {
+            // Ohne RTW/KTW/RTH gilt ein Patient als „ohne Transportmittel“, auch mit NEF (E66).
+            let needsTransport = !patient.hasTransportUnit(in: state.units)
             switch patient.triage {
-            case .sk1:
+            case .sk1 where needsTransport:
                 items.append(patientItem(patient, .criticalWithoutTransport, "hat kein Transportmittel", waiting(patient, now), "Einheit zuweisen"))
-            case .sk2:
+            case .sk2 where needsTransport:
                 items.append(patientItem(patient, .urgentWithoutTransport, "hat kein Transportmittel", waiting(patient, now), "Einheit zuweisen"))
-            case .ungesichtet:
+            case .ungesichtet where patient.status == .waiting:
                 items.append(patientItem(patient, .notTriaged, "noch nicht gesichtet", "angelegt vor \(minutes(since: patient.metadata.createdAt, now)) min", "Sichten"))
             default:
                 break

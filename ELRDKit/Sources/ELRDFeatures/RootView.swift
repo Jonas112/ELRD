@@ -72,8 +72,9 @@ struct SignedInView: View {
                     people: people,
                     catalogs: catalogs,
                     showsDetailsInitially: environment.demoScreen == .missionDetails,
-                    initialSection: (environment.demoScreen == .patients || environment.demoScreen?.opensPatient == true) ? .patients : .overview,
-                    initialPatient: environment.demoScreen?.opensPatient == true ? openStore.state.activePatients.first?.id : nil
+                    initialSection: environment.demoScreen?.opensPatients == true ? .patients : .overview,
+                    initialPatient: environment.demoScreen?.opensPatient == true ? openStore.state.activePatients.first?.id : nil,
+                    initialPatientLayout: environment.demoScreen.map { $0 == .patientTiles ? .tiles : .list } ?? .stored
                 ) {
                     self.openStore = nil
                     list?.reload()

@@ -58,6 +58,22 @@ struct TransportCommandTests {
         #expect(try patient(first.id, in: store).status == .assigned)
     }
 
+    @Test func emergencyDoctorAloneCannotTransport() throws {
+        let (_, store, first, _, rtw, nef) = try makeStore()
+        try store.perform(AssignUnit(patientID: first.id, unitID: nef.id))
+        #expect(throws: CommandError.invalid("Zum Transport ein Transportmittel (RTW, KTW, RTH) zuordnen.")) {
+            try store.perform(StartTransport(patientID: first.id))
+        }
+        try store.perform(AssignUnit(patientID: first.id, unitID: rtw.id))
+        try store.perform(StartTransport(patientID: first.id))
+        #expect(try patient(first.id, in: store).status == .inTransport)
+        #expect(store.state.visibleLog.last?.message.hasPrefix("Patient A-1: Transport mit ") == true)
+    }
+
+    @Test func transportTypes() {
+        #expect(UnitType.allCases.filter(\.transportsPatients) == [.rtw, .ktw, .rth, .ktwKatS])
+    }
+
     @Test func releaseFreesUnitsAndKeepsTheirNames() throws {
         let (_, store, first, _, rtw, _) = try makeStore()
         try store.perform(AssignUnit(patientID: first.id, unitID: rtw.id))

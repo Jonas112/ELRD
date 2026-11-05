@@ -44,18 +44,37 @@ public enum PatientSort: String, CaseIterable, Sendable {
 }
 
 /// Auswahl der Patientenliste: Stand, Sichtungskategorie, Suche, Sortierung.
+/// Darstellung der Patientenliste: Zeilen oder große Kacheln.
+public enum PatientListLayout: String, CaseIterable, Sendable {
+    case list, tiles
+
+    var title: String { self == .list ? "Liste" : "Kacheln" }
+    var symbol: String { self == .list ? "list.bullet" : "square.grid.2x2" }
+
+    /// Zuletzt gewählte Darstellung (nur Komfort je Gerät).
+    public static let storageKey = "patientListLayout"
+    public static var stored: PatientListLayout {
+        UserDefaults.standard.string(forKey: storageKey).flatMap(PatientListLayout.init(rawValue:)) ?? .list
+    }
+}
+
 public struct PatientListQuery: Equatable, Sendable {
     public var status: PatientStatusFilter = .all
     /// Gesetzt durch Tipp auf einen SK-Zähler in der Lageleiste.
     public var triage: Sichtungskategorie?
     public var searchText = ""
     public var sort: PatientSort = .triage
+    public var layout: PatientListLayout = .list
 
-    public init(status: PatientStatusFilter = .all, triage: Sichtungskategorie? = nil, searchText: String = "", sort: PatientSort = .triage) {
+    public init(
+        status: PatientStatusFilter = .all, triage: Sichtungskategorie? = nil, searchText: String = "",
+        sort: PatientSort = .triage, layout: PatientListLayout = .list
+    ) {
         self.status = status
         self.triage = triage
         self.searchText = searchText
         self.sort = sort
+        self.layout = layout
     }
 
     public var isFiltered: Bool {

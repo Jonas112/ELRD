@@ -19,6 +19,8 @@ struct PatientDetailView: View {
     @State private var saveState: SaveState = .saved
     @State private var confirmsDelete = false
     @State private var showsInjuries = false
+    /// Körperteil, mit dem die Verletzungsauswahl öffnet (Tipp in die kleine Grafik).
+    @State private var injuryStartSpot: BodySpot?
     @State private var showsHospitals = false
     @State private var confirmsRelease = false
     /// Kreislauf und „intubiert“ untereinander, wenn die Spalte schmal ist.
@@ -51,7 +53,10 @@ struct PatientDetailView: View {
         .onAppear {
             if form == nil, let patient { form = PatientEditForm(patient: patient) }
             // Nur für CI-Bildschirmfotos: Verletzungsauswahl direkt öffnen.
-            if AppLaunchOptions.current.demoScreen == .injuries { showsInjuries = true }
+            if AppLaunchOptions.current.demoScreen == .injuries {
+                injuryStartSpot = BodySpot(.unterschenkel, .rechts)
+                showsInjuries = true
+            }
         }
         // Automatisch speichern, kurz nachdem nicht mehr getippt wird.
         .task(id: form) {
@@ -282,6 +287,7 @@ struct PatientDetailView: View {
                 InjuryPickerView(
                     catalog: catalogs.injuries,
                     injuries: self.patient?.injuries ?? [],
+                    initialSpot: injuryStartSpot,
                     onAdd: addInjury,
                     onRemove: removeInjury
                 )
@@ -372,10 +378,24 @@ struct PatientDetailView: View {
     private func injuriesSection(_ patient: Patient) -> some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             Text("Verletzungen").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            ForEach(patient.injuries) { injury in
-                InjuryRow(injury: injury, onRemove: canEdit ? { removeInjury(injury.id) } : nil)
+            HStack(alignment: .top, spacing: Spacing.m) {
+                // Kleine Körpergrafik mit Markierungen; Tipp öffnet die Auswahl an dieser Stelle.
+                if !patient.injuries.isEmpty && !stacksCirculation {
+                    BodyDiagramView(
+                        selection: nil,
+                        counts: BodyPart.counts(for: patient.injuries),
+                        onSelect: canEdit ? { openInjuries(at: $0) } : nil,
+                        showsLabels: false
+                    )
+                    .frame(width: 96, height: 168)
+                }
+                VStack(spacing: Spacing.s) {
+                    ForEach(patient.injuries) { injury in
+                        InjuryRow(injury: injury, onRemove: canEdit ? { removeInjury(injury.id) } : nil)
+                    }
+                }
             }
-            Button { showsInjuries = true } label: {
+            Button { openInjuries(at: nil) } label: {
                 Label(patient.injuries.isEmpty ? "Verletzung erfassen" : "Weitere Verletzung", systemImage: "plus")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
@@ -383,6 +403,11 @@ struct PatientDetailView: View {
             .buttonStyle(.bordered)
             .controlSize(.large)
         }
+    }
+
+    private func openInjuries(at spot: BodySpot?) {
+        injuryStartSpot = spot
+        showsInjuries = true
     }
 
     // MARK: Transport
@@ -507,12 +532,15 @@ struct PatientDetailView: View {
 
     /// „Transport starten“ groß, „Vor Ort entlassen“ daneben bzw. darunter.
     private func transportActions(_ patient: Patient) -> some View {
-        let canStart = !patient.unitIDs.isEmpty
+        let canStart = patient.hasTransportUnit(in: store.state.units)
         return VStack(spacing: Spacing.s) {
             Button { perform(StartTransport(patientID: patientID)) } label: {
                 VStack(spacing: 2) {
                     Label("Transport starten", systemImage: "arrow.right.circle.fill").font(.title3.weight(.heavy))
-                    if !canStart { Text("zuerst Einheit wählen").font(.caption.weight(.semibold)) }
+                    if !canStart {
+                        Text(patient.unitIDs.isEmpty ? "zuerst Einheit wählen" : "zuerst RTW, KTW oder RTH wählen")
+                            .font(.caption.weight(.semibold))
+                    }
                 }
                 .foregroundStyle(canStart ? Color.white : Color.secondary)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.large)

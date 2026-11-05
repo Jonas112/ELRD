@@ -246,6 +246,10 @@ public struct StartTransport: MissionCommand {
         let patient = try activePatient(patientID, in: draft)
         guard patient.outcome == nil else { return }
         guard !patient.unitIDs.isEmpty else { throw CommandError.invalid("Zuerst eine Einheit zuordnen.") }
+        let assigned = patient.unitIDs.compactMap { draft.get(MissionUnit.self, id: $0) }
+        guard assigned.contains(where: { $0.type.transportsPatients }) else {
+            throw CommandError.invalid("Zum Transport ein Transportmittel (RTW, KTW, RTH) zuordnen.")
+        }
         let now = draft.context.now
         try draft.update(Patient.self, id: patientID) { $0.startTransport(at: now) }
         let units = patient.unitIDs.compactMap { draft.get(MissionUnit.self, id: $0)?.displayName }.joined(separator: ", ")

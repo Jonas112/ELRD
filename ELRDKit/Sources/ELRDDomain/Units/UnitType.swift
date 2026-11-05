@@ -52,6 +52,15 @@ public enum UnitType: Int, CaseIterable, Codable, Sendable, Identifiable, Displa
         }
     }
 
+    /// Darf Patienten transportieren (Jonas, E66). NEF, HvO usw. können einem
+    /// Patienten zugeordnet werden, reichen aber nicht für „Transport starten“.
+    public var transportsPatients: Bool {
+        switch self {
+        case .rtw, .ktw, .rth, .ktwKatS: true
+        default: false
+        }
+    }
+
     /// Typen, für die es eine Schnellanlage als Platzhalter gibt (wie in ELRDRG).
     public static let placeholderQuickAddTypes: [UnitType] = [.rtw, .ktw, .nef]
 }

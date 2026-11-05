@@ -85,6 +85,7 @@ struct PatientsView: View {
                 .frame(maxWidth: isWide ? 360 : .infinity)
                 .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 if isWide { Spacer() }
+                layoutToggle
                 Menu {
                     Picker("Sortierung", selection: $query.sort) {
                         ForEach(PatientSort.allCases, id: \.self) { Text($0.title).tag($0) }
@@ -99,6 +100,28 @@ struct PatientsView: View {
                 .accessibilityLabel("Sortierung: \(query.sort.title)")
             }
         }
+    }
+
+    /// Umschalter Liste/Kacheln; die Wahl merkt sich das Gerät.
+    private var layoutToggle: some View {
+        HStack(spacing: 0) {
+            ForEach(PatientListLayout.allCases, id: \.self) { layout in
+                Button {
+                    query.layout = layout
+                    UserDefaults.standard.set(layout.rawValue, forKey: PatientListLayout.storageKey)
+                } label: {
+                    Image(systemName: layout.symbol)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(query.layout == layout ? Color.white : Color.primary)
+                        .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum + 4)
+                        .background(query.layout == layout ? ActionFill.primary : Color.clear, in: RoundedRectangle(cornerRadius: Radius.card - 2, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(layout.title)
+                .accessibilityAddTraits(query.layout == layout ? .isSelected : [])
+            }
+        }
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     // MARK: Liste
@@ -124,6 +147,13 @@ struct PatientsView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .cardStyle()
+        } else if query.layout == .tiles {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: isWide ? 230 : 200), spacing: Spacing.m)], spacing: Spacing.m) {
+                ForEach(rows) { row in
+                    NavigationLink(value: row.id) { PatientTile(row: row) }
+                        .buttonStyle(.plain)
+                }
+            }
         } else {
             LazyVStack(spacing: isWide ? 0 : Spacing.s) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
@@ -356,5 +386,65 @@ struct CompactPatientRow: View {
         .background(Surface.card)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(Rectangle())
+    }
+}
+
+/// Kachel für die Kachelansicht: oben SK-Farbe mit großer Nummer, darunter
+/// Name, Einheit und Klinik. Entlassene Patienten treten zurück.
+struct PatientTile: View {
+    let row: PatientRow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.s) {
+                Text(row.number)
+                    .font(.title.weight(.heavy))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Spacer(minLength: Spacing.xs)
+                if row.isDuplicateNumber {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .accessibilityLabel("Nummer doppelt")
+                }
+                Text(row.triage.shortName).font(.headline.weight(.heavy))
+            }
+            .foregroundStyle(Color.onTriage(row.triage))
+            .padding(.horizontal, Spacing.m)
+            .frame(minHeight: 56)
+            .background(Color.triage(row.triage))
+
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                if let name = row.name {
+                    Text(name).font(.headline).lineLimit(2)
+                } else {
+                    Text("Name unbekannt").font(.headline).italic().foregroundStyle(.secondary).lineLimit(1)
+                }
+                if !row.details.isEmpty {
+                    Text(row.details).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                }
+                Spacer(minLength: Spacing.xs)
+                PatientUnitText(row: row).font(.subheadline).lineLimit(1)
+                if let destination = row.destination, let registration = row.registration {
+                    HStack(spacing: Spacing.xs) {
+                        Text(destination).lineLimit(1)
+                        Text(registration.displayName)
+                            .fontWeight(.bold)
+                            .foregroundStyle(Color.registration(registration))
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                    }
+                    .font(.subheadline)
+                }
+            }
+            .padding(Spacing.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(height: 196)
+        .background(Surface.card)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .opacity(row.status == .released ? 0.55 : 1)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
     }
 }

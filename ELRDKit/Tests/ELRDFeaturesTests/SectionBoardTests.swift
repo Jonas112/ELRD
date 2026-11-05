@@ -35,7 +35,7 @@ struct SectionBoardTests {
     @Test func templatesAreSavedAndOfferedOnce() throws {
         let repository = InMemoryRepository()
         try repository.saveDocument(MasterDataSet(), key: .masterData, at: Date())
-        let templates = SectionTemplates(repository: repository)
+        let templates = MasterDataEditor(repository: repository)
         try templates.save("Patientenablage")
         try templates.save("patientenablage")
         #expect(templates.sections.map(\.name) == ["Patientenablage"])
@@ -44,6 +44,6 @@ struct SectionBoardTests {
 
         let store = try PreviewData.makeStore() // enthält „Patientenablage“
         #expect(templates.unused(in: store.state.sections).isEmpty, "schon im Einsatz")
-        #expect(SectionTemplates(repository: repository).sections.count == 1, "dauerhaft gespeichert")
+        #expect(MasterDataEditor(repository: repository).sections.count == 1, "dauerhaft gespeichert")
     }
 }

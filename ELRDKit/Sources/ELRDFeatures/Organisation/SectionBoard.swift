@@ -75,39 +75,3 @@ struct SectionColumn: Identifiable, Equatable {
         PatientBadge(id: patient.id, number: patient.number.description, triage: patient.triage)
     }
 }
-
-/// Abschnitts-Vorlagen aus den Stammdaten; neue Abschnitte lassen sich für
-/// künftige Einsätze übernehmen. Schreibt nur das Stammdaten-Dokument, nie Einsatzdaten.
-@MainActor
-@Observable
-public final class SectionTemplates {
-    private let repository: (any DocumentRepository)?
-    public private(set) var sections: [MasterSection]
-
-    public init(repository: (any DocumentRepository)?) {
-        self.repository = repository
-        let master = repository.flatMap { try? $0.document(MasterDataSet.self, key: .masterData) }
-        sections = (master?.sections ?? []).sorted { $0.sortIndex < $1.sortIndex }
-    }
-
-    /// Vorlagen, die im Einsatz noch nicht als Abschnitt vorkommen.
-    func unused(in missionSections: [MissionSection]) -> [MasterSection] {
-        let used = Set(missionSections.active.map { MasterDataMatching.key($0.name) })
-        return sections.filter { !used.contains($0.matchKey) }
-    }
-
-    /// Ob es den Namen schon als Vorlage gibt.
-    func contains(_ name: String) -> Bool {
-        let key = MasterDataMatching.key(MissionSection.normalizedName(name))
-        return sections.contains { $0.matchKey == key }
-    }
-
-    /// Übernimmt einen Namen in die Stammdaten (doppelte werden ignoriert).
-    func save(_ name: String, at date: Date = Date()) throws {
-        guard let repository else { return }
-        var master = try repository.document(MasterDataSet.self, key: .masterData) ?? MasterDataSet()
-        guard master.addSection(named: name) else { return }
-        try repository.saveDocument(master, key: .masterData, at: date)
-        sections = master.sections.sorted { $0.sortIndex < $1.sortIndex }
-    }
-}

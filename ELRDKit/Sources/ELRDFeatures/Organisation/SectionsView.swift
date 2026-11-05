@@ -2,16 +2,18 @@ import SwiftUI
 import ELRDDomain
 import ELRDStore
 
-/// Bereich „Einheiten“, Teil Abschnitte: je Abschnitt eine Karte mit seinen
-/// Einheiten und deren Patienten. Ein Tipp auf eine Einheit verschiebt sie.
-///
-/// Einheiten hinzufügen, Filter und Suche folgen in Schritt 25, Ziehen in 27.
+/// Bereich „Einheiten“: je Abschnitt eine Karte mit seinen Einheiten und deren
+/// Patienten. Oben Hinzufügen, Typfilter und Suche; ein Tipp auf eine Einheit
+/// verschiebt sie (Ziehen folgt in Schritt 27).
 struct SectionsView: View {
     let store: MissionStore
-    let templates: SectionTemplates?
+    let templates: MasterDataEditor?
     let onOpenPatient: (PatientID) -> Void
 
     @State private var showsAddSection = false
+    @State private var showsAddUnit = AppLaunchOptions.current.demoScreen == .addUnit
+    @State private var filter = UnitFilter()
+    @State private var removing: MissionUnit?
     @State private var renaming: MissionSection?
     @State private var newName = ""
     @State private var deleting: MissionSection?
@@ -22,12 +24,23 @@ struct SectionsView: View {
     var body: some View {
         GeometryReader { proxy in
             let isWide = proxy.size.width >= 900
-            let columns = SectionColumn.columns(for: store.state)
+            let allColumns = SectionColumn.columns(for: store.state)
+            let columns = allColumns.compactMap { $0.filtered(by: filter) }
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.l) {
-                    header(columns: columns)
-                    if columns.isEmpty {
+                    header(columns: allColumns)
+                    if !store.state.activeUnits.isEmpty { filterBar(isWide: isWide) }
+                    if allColumns.isEmpty {
                         emptyState
+                    } else if columns.isEmpty {
+                        VStack(alignment: .leading, spacing: Spacing.m) {
+                            Text("Keine Einheit passt zur Auswahl.").font(.title3).foregroundStyle(.secondary)
+                            Button("Filter zurücksetzen") { filter = UnitFilter() }
+                                .font(.headline)
+                                .frame(minHeight: TouchTarget.minimum)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .cardStyle()
                     } else {
                         LazyVGrid(
                             columns: [GridItem(.adaptive(minimum: isWide ? 320 : 300), spacing: Spacing.m, alignment: .top)],
@@ -43,7 +56,8 @@ struct SectionsView: View {
                                     onOpenPatient: onOpenPatient,
                                     onRename: { section in newName = section.name; renaming = section },
                                     onMakeInitial: { perform(SetInitialSection(sectionID: $0)) },
-                                    onDelete: { deleting = $0 }
+                                    onDelete: { deleting = $0 },
+                                    onRemoveUnit: { removing = $0 }
                                 )
                             }
                         }
@@ -53,6 +67,22 @@ struct SectionsView: View {
                 .frame(maxWidth: 1400)
                 .frame(maxWidth: .infinity)
             }
+        }
+        .sheet(isPresented: $showsAddUnit) {
+            AddUnitSheet(store: store, masterData: templates)
+                .largeSheet()
+        }
+        .confirmationDialog(
+            removing.map { "\($0.displayName) aus dem Einsatz entfernen?" } ?? "",
+            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Entfernen", role: .destructive) {
+                if let unit = removing { perform(RemoveUnit(unitID: unit.id)) }
+                removing = nil
+            }
+        } message: {
+            Text("Die Einheit erscheint danach nicht mehr im Einsatz; das Protokoll behält den Eintrag.")
         }
         .sheet(isPresented: $showsAddSection) {
             AddSectionSheet(
@@ -99,13 +129,46 @@ struct SectionsView: View {
                 Button { showsAddSection = true } label: {
                     Label("Abschnitt", systemImage: "plus")
                         .font(.headline)
+                        .padding(.horizontal, Spacing.l)
+                        .frame(minHeight: TouchTarget.comfortable)
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Abschnitt hinzufügen")
+                Button { showsAddUnit = true } label: {
+                    Label("Einheit", systemImage: "plus")
+                        .font(.headline)
                         .foregroundStyle(.white)
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)
                         .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Abschnitt hinzufügen")
+                .accessibilityLabel("Einheit hinzufügen")
+            }
+        }
+    }
+
+    /// Typfilter mit Zählern und Suche (wie in der Patientenliste).
+    private func filterBar(isWide: Bool) -> some View {
+        let units = store.state.activeUnits
+        let counts = UnitFilter.counts(units, search: filter.search, type: \.type) { "\($0.displayName) \($0.typeDisplayName)" }
+        let layout = isWide
+            ? AnyLayout(HStackLayout(spacing: Spacing.m))
+            : AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.m))
+        return layout {
+            UnitSearchField(text: $filter.search)
+                .frame(maxWidth: isWide ? 320 : .infinity)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.s) {
+                    ForEach(UnitTypeFilter.allCases) { type in
+                        if type == .all || (counts[type] ?? 0) > 0 || filter.type == type {
+                            FilterPill(title: "\(type.title) \(counts[type] ?? 0)", isSelected: filter.type == type) {
+                                filter.type = type
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -113,7 +176,7 @@ struct SectionsView: View {
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             Text("Noch keine Abschnitte und Einheiten.").font(.title3)
-            Text("Abschnitte gliedern die Einsatzstelle, z. B. Bereitstellungsraum oder Patientenablage. Neue Einheiten kommen in den Initialabschnitt.")
+            Text("Abschnitte gliedern die Einsatzstelle, z. B. Bereitstellungsraum oder Patientenablage. Neue Einheiten kommen in den Initialabschnitt. Einheiten oben über „+ Einheit“ aus den Stammdaten wählen oder neu anlegen.")
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -164,6 +227,7 @@ struct SectionCard: View {
     let onRename: (MissionSection) -> Void
     let onMakeInitial: (SectionID?) -> Void
     let onDelete: (MissionSection) -> Void
+    let onRemoveUnit: (MissionUnit) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
@@ -258,6 +322,12 @@ struct SectionCard: View {
                         }
                     }
                 }
+                Section {
+                    Button(role: .destructive) { onRemoveUnit(entry.unit) } label: {
+                        Label("Aus dem Einsatz entfernen", systemImage: "minus.circle")
+                    }
+                    .disabled(!entry.patients.isEmpty)
+                }
             } label: { row }
             .buttonStyle(.plain)
         } else {
@@ -273,7 +343,7 @@ struct UnitRowLabel: View {
 
     var body: some View {
         HStack(spacing: Spacing.m) {
-            Text(entry.unit.type.shortName)
+            Text(entry.unit.typeDisplayName)
                 .font(.subheadline.weight(.heavy))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -343,5 +413,28 @@ struct PatientBadgeButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Patient \(badge.number), \(badge.triage.displayName) öffnen")
+    }
+}
+
+/// Suchfeld für Funkrufnamen.
+struct UnitSearchField: View {
+    @Binding var text: String
+
+    var body: some View {
+        HStack(spacing: Spacing.s) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField("Funkrufname suchen", text: $text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            if !text.isEmpty {
+                Button { text = "" } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Suche leeren")
+            }
+        }
+        .padding(.horizontal, Spacing.m)
+        .frame(minHeight: TouchTarget.minimum + 4)
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }

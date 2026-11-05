@@ -11,6 +11,8 @@ public struct MissionUnit: VersionedEntity, MissionScoped {
     public var metadata: EntityMetadata
 
     public var type: UnitType
+    /// Ursprüngliche Typbezeichnung aus den Stammdaten (z. B. „HVO“), falls genauer als `type` (E38).
+    public var typeLabel: String?
     /// Funkrufname. Bei Platzhaltern `nil`.
     public private(set) var callsign: String?
     /// Besatzungsstärke, falls bekannt.
@@ -28,6 +30,7 @@ public struct MissionUnit: VersionedEntity, MissionScoped {
         missionID: MissionID,
         metadata: EntityMetadata,
         type: UnitType,
+        typeLabel: String? = nil,
         callsign: String,
         crewCount: Int? = nil,
         masterUnitID: MasterUnitID? = nil,
@@ -37,6 +40,7 @@ public struct MissionUnit: VersionedEntity, MissionScoped {
         self.missionID = missionID
         self.metadata = metadata
         self.type = type
+        self.typeLabel = typeLabel
         self.callsign = MissionUnit.normalizedCallsign(callsign)
         self.crewCount = MissionUnit.normalizedCrewCount(crewCount)
         self.placeholderNumber = nil
@@ -72,6 +76,31 @@ public extension MissionUnit {
 
     /// Temporär angelegt: weder Platzhalter noch aus den Stammdaten.
     var isTemporary: Bool { !isPlaceholder && masterUnitID == nil }
+
+    /// Typ zur Anzeige: Originalbezeichnung („HVO“), sonst Kurzname („RTW“).
+    var typeDisplayName: String { typeLabel ?? type.shortName }
+
+    /// Reale Einheit aus einem Stammdaten-Eintrag.
+    static func from(
+        _ master: MasterUnit,
+        missionID: MissionID,
+        metadata: EntityMetadata,
+        sectionID: SectionID?
+    ) -> MissionUnit {
+        MissionUnit(
+            missionID: missionID,
+            metadata: metadata,
+            type: master.type,
+            typeLabel: master.typeLabel,
+            callsign: master.callsign,
+            crewCount: master.crewCount,
+            masterUnitID: master.id,
+            sectionID: sectionID
+        )
+    }
+
+    /// Schlüssel zum Erkennen doppelter Funkrufnamen (wie in den Stammdaten).
+    var matchKey: String? { callsign.map(MasterDataMatching.key) }
 
     /// Anzeigename, z. B. „Rotkreuz Musterstadt 71/1“ oder „RTW (Platzhalter 3)“.
     var displayName: String {

@@ -11,7 +11,7 @@ struct AddSectionSheet: View {
     }
 
     let existing: [MissionSection]
-    let templates: SectionTemplates?
+    let templates: MasterDataEditor?
     let onAdd: (Request) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -20,7 +20,7 @@ struct AddSectionSheet: View {
     @State private var saveAsTemplate = false
     @FocusState private var nameFocused: Bool
 
-    init(existing: [MissionSection], templates: SectionTemplates?, onAdd: @escaping (Request) -> Void) {
+    init(existing: [MissionSection], templates: MasterDataEditor?, onAdd: @escaping (Request) -> Void) {
         self.existing = existing
         self.templates = templates
         self.onAdd = onAdd

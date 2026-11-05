@@ -167,6 +167,17 @@ public extension MasterDataSet {
         return true
     }
 
+    /// Übernimmt eine im Einsatz temporär angelegte Einheit in die Stammdaten
+    /// (ELRDRG: „safedynCreatedUnit“). `nil`, wenn der Funkrufname schon existiert.
+    @discardableResult
+    mutating func addUnit(callsign: String, type: UnitType) -> MasterUnit? {
+        let candidate = MasterUnit(callsign: callsign, type: type, origin: .fromMission)
+        guard !candidate.callsign.isEmpty, !units.contains(where: { $0.matchKey == candidate.matchKey }) else { return nil }
+        units.append(candidate)
+        revision += 1
+        return candidate
+    }
+
     /// Einheiten, die im Einsatz noch nicht verwendet werden (ELRDRG: „unused base units“).
     func unusedUnits(in missionUnits: some Sequence<MissionUnit>) -> [MasterUnit] {
         let used = Set(missionUnits.active.compactMap(\.masterUnitID))

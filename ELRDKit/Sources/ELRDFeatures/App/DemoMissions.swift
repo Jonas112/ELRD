@@ -143,6 +143,11 @@ enum DemoMissions {
         if let nef = running.state.activeUnits.first(where: { $0.type == .nef }) {
             try running.perform(MoveUnit(unitID: nef.id, to: staging.id))
         }
+        // Einheiten aus den Stammdaten (Region Schweinfurt) und eine temporäre.
+        let masterUnits = (try? environment.repository.document(MasterDataSet.self, key: .masterData))?.units ?? []
+        let picked = ["RK SWFT 71/1", "RK SWFT 76/1"].compactMap { name in masterUnits.first { $0.callsign == name } }
+        _ = try running.perform(AddMasterUnits(picked, sectionID: staging.id))
+        _ = try running.perform(AddTemporaryUnit(callsign: "HvO Musterdorf", type: .sonstiges, sectionID: scene.id))
         for patient in [added[4], added[5]] {
             try running.perform(EditPatient(patientID: patient.id) { $0.sectionID = casualties.id })
         }

@@ -47,7 +47,7 @@ struct AccountFlowTests {
         case .login:
             #expect(environment.userService.directory.activeUsers.count == 3)
             #expect(environment.userService.currentUser == nil)
-        case .missions, .newMission, .workspace, .missionDetails, .patients, .patientTiles, .patientDetail, .injuries, .sections:
+        case .missions, .newMission, .workspace, .missionDetails, .patients, .patientTiles, .patientDetail, .injuries, .sections, .addUnit:
             #expect(environment.userService.currentUser?.displayName == "Erika Beispiel")
             let missions = try MissionOverview.load(from: environment.repository)
             #expect(missions.count == 6)

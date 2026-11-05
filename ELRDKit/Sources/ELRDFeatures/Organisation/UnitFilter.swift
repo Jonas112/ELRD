@@ -53,11 +53,16 @@ struct UnitFilter: Equatable {
     }
 
     /// Anzahl je Typfilter (mit der aktuellen Suche), für die Filter-Kapseln.
-    static func counts<Item>(_ items: [Item], search: String, type: (Item) -> UnitType, text: (Item) -> String) -> [UnitTypeFilter: Int] {
+    static func counts<Item>(
+        _ items: [Item],
+        search: String,
+        type typeOf: (Item) -> UnitType,
+        text textOf: (Item) -> String
+    ) -> [UnitTypeFilter: Int] {
         var result: [UnitTypeFilter: Int] = [:]
-        for filter in UnitTypeFilter.allCases {
-            let probe = UnitFilter(type: filter, search: search)
-            result[filter] = items.filter { probe.matches(type: type($0), text: text($0)) }.count
+        for candidate in UnitTypeFilter.allCases {
+            let probe = UnitFilter(type: candidate, search: search)
+            result[candidate] = items.filter { probe.matches(type: typeOf($0), text: textOf($0)) }.count
         }
         return result
     }

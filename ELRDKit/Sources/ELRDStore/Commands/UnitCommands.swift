@@ -31,7 +31,8 @@ public struct AddMasterUnits: MissionCommand {
         let section = try targetSection(sectionID, in: draft)
         var used = Set(draft.active(MissionUnit.self).compactMap(\.masterUnitID))
         var added: [MissionUnit] = []
-        for master in units where used.insert(master.id).inserted {
+        for master in units {
+            guard used.insert(master.id).inserted else { continue }
             let unit = MissionUnit.from(master, missionID: draft.missionID, metadata: draft.context.newMetadata(), sectionID: section?.id)
             try draft.insert(unit)
             added.append(unit)

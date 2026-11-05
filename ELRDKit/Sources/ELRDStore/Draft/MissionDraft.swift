@@ -42,6 +42,20 @@ public enum CommandError: Error, Equatable, Sendable {
     case invalid(String)
 }
 
+extension CommandError: LocalizedError {
+    /// Text für Hinweise in der Oberfläche.
+    public var errorDescription: String? {
+        switch self {
+        case .missionClosed: "Der Einsatz ist beendet und kann nicht mehr geändert werden."
+        case .missionAlreadyClosed: "Der Einsatz ist bereits beendet."
+        case .missionNotClosed: "Der Einsatz läuft noch."
+        case .notFound: "Der Eintrag wurde inzwischen gelöscht."
+        case .duplicate: "Der Eintrag existiert bereits."
+        case .invalid(let message): message
+        }
+    }
+}
+
 /// Vollständiger Stand eines Einsatzes (einschließlich gelöschter Einträge,
 /// damit Nummern nicht doppelt vergeben werden).
 public struct MissionState: Equatable, Sendable {

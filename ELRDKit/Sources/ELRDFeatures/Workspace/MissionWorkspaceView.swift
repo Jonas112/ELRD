@@ -11,6 +11,7 @@ public struct MissionWorkspaceView: View {
     let store: MissionStore
     let account: AccountMenuModel?
     let people: [PersonChoice]
+    let catalogs: PatientCatalogs
     let onClose: (() -> Void)?
 
     @State private var selection: WorkspaceSection
@@ -27,6 +28,7 @@ public struct MissionWorkspaceView: View {
         store: MissionStore,
         account: AccountMenuModel? = nil,
         people: [PersonChoice] = [],
+        catalogs: PatientCatalogs = .empty,
         showsDetailsInitially: Bool = false,
         initialSection: WorkspaceSection = .overview,
         initialPatient: PatientID? = nil,
@@ -35,6 +37,7 @@ public struct MissionWorkspaceView: View {
         self.store = store
         self.account = account
         self.people = people
+        self.catalogs = catalogs
         self.onClose = onClose
         _showsDetails = State(initialValue: showsDetailsInitially)
         _selection = State(initialValue: initialSection)
@@ -171,10 +174,12 @@ public struct MissionWorkspaceView: View {
                 PatientDetailView(
                     store: store,
                     patientID: id,
-                    order: patientQuery.apply(to: store.state.patients).map(\.id)
-                ) { next in
-                    if !path.isEmpty { path[path.count - 1] = next }
-                }
+                    order: patientQuery.apply(to: store.state.patients).map(\.id),
+                    onNavigate: { next in
+                        if !path.isEmpty { path[path.count - 1] = next }
+                    },
+                    catalogs: catalogs
+                )
                 // Neuer Zustand je Patient (Formular, Speicherstand).
                 .id(id)
             }

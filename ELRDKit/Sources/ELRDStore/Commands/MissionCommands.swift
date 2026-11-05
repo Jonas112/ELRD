@@ -98,6 +98,49 @@ public struct EditPatient: MissionCommand {
     }
 }
 
+/// Erfasst eine Verletzung. Im Protokoll ohne Diagnose (nur Nummer, E25).
+public struct AddInjury: MissionCommand {
+    public let patientID: PatientID
+    public let injury: Injury
+
+    public init(patientID: PatientID, injury: Injury) {
+        self.patientID = patientID
+        self.injury = injury
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let patient = draft.get(Patient.self, id: patientID), !patient.metadata.isDeleted else {
+            throw CommandError.notFound(.patient)
+        }
+        guard !injury.diagnosis.isEmpty else { throw CommandError.invalid("Diagnose fehlt") }
+        guard !patient.injuries.contains(where: { $0.id == injury.id }) else { return }
+        let injury = injury
+        try draft.update(Patient.self, id: patientID) { $0.addInjury(injury) }
+        draft.log(.patient, "Patient \(patient.number): Verletzung erfasst", subject: .patient(patientID))
+    }
+}
+
+/// Entfernt eine Verletzung.
+public struct RemoveInjury: MissionCommand {
+    public let patientID: PatientID
+    public let injuryID: InjuryID
+
+    public init(patientID: PatientID, injuryID: InjuryID) {
+        self.patientID = patientID
+        self.injuryID = injuryID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let patient = draft.get(Patient.self, id: patientID), !patient.metadata.isDeleted else {
+            throw CommandError.notFound(.patient)
+        }
+        guard patient.injuries.contains(where: { $0.id == injuryID }) else { return }
+        let injuryID = injuryID
+        try draft.update(Patient.self, id: patientID) { $0.removeInjury(injuryID) }
+        draft.log(.patient, "Patient \(patient.number): Verletzung entfernt", subject: .patient(patientID))
+    }
+}
+
 /// Löscht einen Patienten (weich). Die Nummer bleibt vergeben, damit sie nicht
 /// doppelt auftaucht – auch nach „Rückgängig“ direkt nach der Schnellanlage.
 public struct DeletePatient: MissionCommand {

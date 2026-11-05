@@ -84,6 +84,9 @@ enum DemoMissions {
             $0.identifyingFeatures = "Fahrer Pkw rot, eingeklemmt, blaue Arbeitsjacke"
             $0.notes = "2 Zugänge, 500 ml VEL. GCS 13."
         })
+        try running.perform(AddInjury(patientID: added[0].id, injury: Injury(diagnosis: "Unterschenkel#", region: .unterschenkel, side: .rechts)))
+        try running.perform(AddInjury(patientID: added[0].id, injury: Injury(diagnosis: "stumpfes Thoraxtrauma", region: .thorax)))
+        try running.perform(AddInjury(patientID: added[2].id, injury: Injury(diagnosis: "Oberarm#", region: .arm, side: .links)))
         try running.perform(EditPatient(patientID: added[1].id) {
             $0.gender = .weiblich
             $0.estimatedAge = 30

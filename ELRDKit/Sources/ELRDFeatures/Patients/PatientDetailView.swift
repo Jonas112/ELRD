@@ -12,11 +12,13 @@ struct PatientDetailView: View {
     /// Reihenfolge der aktuellen Liste für „vorheriger/nächster Patient“.
     let order: [PatientID]
     let onNavigate: (PatientID) -> Void
+    var catalogs: PatientCatalogs = .empty
 
     @Environment(\.dismiss) private var dismiss
     @State private var form: PatientEditForm?
     @State private var saveState: SaveState = .saved
     @State private var confirmsDelete = false
+    @State private var showsInjuries = false
     @FocusState private var focus: Field?
 
     enum Field: Hashable { case number, dispatch, firstName, lastName, birthDate, age, features, notes }
@@ -42,7 +44,11 @@ struct PatientDetailView: View {
             }
         }
         .background(Surface.canvas)
-        .onAppear { if form == nil, let patient { form = PatientEditForm(patient: patient) } }
+        .onAppear {
+            if form == nil, let patient { form = PatientEditForm(patient: patient) }
+            // Nur für CI-Bildschirmfotos: Verletzungsauswahl direkt öffnen.
+            if AppLaunchOptions.current.demoScreen == .injuries { showsInjuries = true }
+        }
         // Automatisch speichern, kurz nachdem nicht mehr getippt wird.
         .task(id: form) {
             guard form != nil else { return }
@@ -249,8 +255,9 @@ struct PatientDetailView: View {
 
     @ViewBuilder
     private var conditionCard: some View {
-        if let binding = Binding($form) {
+        if let binding = Binding($form), let patient {
             DetailCard(title: "Zustand") {
+                injuriesSection(patient)
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Notiz").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                     TextField("Maßnahmen, Medikamente, Besonderheiten …", text: binding.notes, axis: .vertical)
@@ -258,9 +265,34 @@ struct PatientDetailView: View {
                         .focused($focus, equals: .notes)
                         .inputBox()
                 }
-                PlannedHint(text: "Kreislauf, intubiert, IVENA mit ABCD-Status: Schritt 21 · Verletzungen: Schritt 20")
+                PlannedHint(text: "Kreislauf, intubiert, IVENA mit ABCD-Status: Schritt 21")
             }
             .disabled(!canEdit)
+            .sheet(isPresented: $showsInjuries) {
+                InjuryPickerView(
+                    catalog: catalogs.injuries,
+                    injuries: self.patient?.injuries ?? [],
+                    onAdd: addInjury,
+                    onRemove: removeInjury
+                )
+            }
+        }
+    }
+
+    /// Verletzungen: Liste mit Entfernen, „+ Verletzung“ öffnet die Auswahl.
+    private func injuriesSection(_ patient: Patient) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            Text("Verletzungen").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            ForEach(patient.injuries) { injury in
+                InjuryRow(injury: injury, onRemove: canEdit ? { removeInjury(injury.id) } : nil)
+            }
+            Button { showsInjuries = true } label: {
+                Label(patient.injuries.isEmpty ? "Verletzung erfassen" : "Weitere Verletzung", systemImage: "plus")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
         }
     }
 
@@ -303,6 +335,22 @@ struct PatientDetailView: View {
             current.markSaved(updated, now: now)
             form = current
             saveState = .saved
+        } catch {
+            saveState = .failed(error.localizedDescription)
+        }
+    }
+
+    private func addInjury(_ injury: Injury) {
+        do {
+            try store.perform(AddInjury(patientID: patientID, injury: injury))
+        } catch {
+            saveState = .failed(error.localizedDescription)
+        }
+    }
+
+    private func removeInjury(_ id: InjuryID) {
+        do {
+            try store.perform(RemoveInjury(patientID: patientID, injuryID: id))
         } catch {
             saveState = .failed(error.localizedDescription)
         }

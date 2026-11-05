@@ -9,17 +9,20 @@ import ELRDStore
 
 /// Startoptionen, u. a. für automatische Bildschirmfotos in der CI.
 ///
-/// `--demo-screen setup|login|missions|newMission|workspace|missionDetails|patients|patientDetail` startet mit
+/// `--demo-screen setup|login|missions|newMission|workspace|missionDetails|patients|patientDetail|injuries` startet mit
 /// Beispieldaten im Arbeitsspeicher (nichts wird gespeichert, Keychain bleibt unberührt).
 public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
-        case setup, login, missions, newMission, workspace, missionDetails, patients, patientDetail
+        case setup, login, missions, newMission, workspace, missionDetails, patients, patientDetail, injuries
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
-        var needsMissions: Bool { [.missions, .newMission, .workspace, .missionDetails, .patients, .patientDetail].contains(self) }
+        var needsMissions: Bool { [.missions, .newMission, .workspace, .missionDetails, .patients, .patientDetail, .injuries].contains(self) }
 
         /// Bildschirme, die direkt im laufenden Beispieleinsatz starten.
-        var opensRunningMission: Bool { [.workspace, .missionDetails, .patients, .patientDetail].contains(self) }
+        var opensRunningMission: Bool { [.workspace, .missionDetails, .patients, .patientDetail, .injuries].contains(self) }
+
+        /// Bildschirme, die direkt einen Patienten öffnen.
+        var opensPatient: Bool { [.patientDetail, .injuries].contains(self) }
     }
 
     public let demoScreen: DemoScreen?

@@ -29,6 +29,7 @@ public struct MissionWorkspaceView: View {
         people: [PersonChoice] = [],
         showsDetailsInitially: Bool = false,
         initialSection: WorkspaceSection = .overview,
+        initialPatient: PatientID? = nil,
         onClose: (() -> Void)? = nil
     ) {
         self.store = store
@@ -37,6 +38,7 @@ public struct MissionWorkspaceView: View {
         self.onClose = onClose
         _showsDetails = State(initialValue: showsDetailsInitially)
         _selection = State(initialValue: initialSection)
+        _path = State(initialValue: initialPatient.map { [$0] } ?? [])
     }
 
     public var body: some View {
@@ -166,7 +168,15 @@ public struct MissionWorkspaceView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: PatientID.self) { id in
-                PatientQuickDetailView(store: store, patientID: id)
+                PatientDetailView(
+                    store: store,
+                    patientID: id,
+                    order: patientQuery.apply(to: store.state.patients).map(\.id)
+                ) { next in
+                    if !path.isEmpty { path[path.count - 1] = next }
+                }
+                // Neuer Zustand je Patient (Formular, Speicherstand).
+                .id(id)
             }
             // Der Stack bringt sonst seinen eigenen (im hellen Modus weißen) Hintergrund mit.
             .frame(maxWidth: .infinity, maxHeight: .infinity)

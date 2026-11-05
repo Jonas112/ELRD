@@ -70,7 +70,7 @@ struct PatientsView: View {
             HStack(spacing: Spacing.s) {
                 HStack(spacing: Spacing.s) {
                     Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField("Name, Nummer, ILS-Nr.", text: $query.searchText)
+                    TextField("Name, Nummer, ILS-Nr., Merkmal", text: $query.searchText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     if !query.searchText.isEmpty {

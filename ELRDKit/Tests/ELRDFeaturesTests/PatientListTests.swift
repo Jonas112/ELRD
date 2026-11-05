@@ -113,6 +113,6 @@ struct PatientListTests {
         let binding = Binding(get: { query }, set: { query = $0 })
         _ = PatientsView(store: store, query: binding, onQuickAdd: { _ in }).body
         let id = try #require(store.state.activePatients.first?.id)
-        _ = PatientQuickDetailView(store: store, patientID: id).body
+        _ = PatientDetailView(store: store, patientID: id, order: [id], onNavigate: { _ in }).body
     }
 }

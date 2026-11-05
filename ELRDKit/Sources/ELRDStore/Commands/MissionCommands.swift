@@ -67,6 +67,37 @@ public struct NewMissionRequest: Sendable {
     }
 }
 
+/// Ändert Angaben eines Patienten (Person, Nummern, Merkmale, Notiz …).
+///
+/// Das Protokoll nennt nur die Nummer, nie Namen (E25).
+public struct EditPatient: MissionCommand {
+    public let patientID: PatientID
+    let transform: (inout Patient) -> Void
+
+    public init(patientID: PatientID, _ transform: @escaping (inout Patient) -> Void) {
+        self.patientID = patientID
+        self.transform = transform
+    }
+
+    @discardableResult
+    public func execute(_ draft: inout MissionDraft) throws -> Patient {
+        guard let before = draft.get(Patient.self, id: patientID), !before.metadata.isDeleted else {
+            throw CommandError.notFound(.patient)
+        }
+        var candidate = before
+        transform(&candidate)
+        guard candidate != before else { return before }
+        let transform = transform
+        let after = try draft.update(Patient.self, id: patientID) { transform(&$0) }
+        if after.number != before.number {
+            draft.log(.patient, "Patient \(before.number): Nummer geändert in \(after.number)", subject: .patient(patientID))
+        } else {
+            draft.log(.patient, "Patient \(after.number): Angaben geändert", subject: .patient(patientID))
+        }
+        return after
+    }
+}
+
 /// Löscht einen Patienten (weich). Die Nummer bleibt vergeben, damit sie nicht
 /// doppelt auftaucht – auch nach „Rückgängig“ direkt nach der Schnellanlage.
 public struct DeletePatient: MissionCommand {

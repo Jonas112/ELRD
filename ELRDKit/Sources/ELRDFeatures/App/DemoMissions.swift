@@ -5,8 +5,7 @@ import ELRDStore
 
 /// Beispieleinsätze für Bildschirmfotos und Vorschauen (nur Demo-Umgebung).
 ///
-/// Ein laufender Einsatz und mehrere beendete. Alle Orte sind erfunden,
-/// Patienten tragen nur Nummern.
+/// Ein laufender Einsatz und mehrere beendete. Alle Orte und Personen sind erfunden.
 @MainActor
 enum DemoMissions {
     /// Uhr, die beim Anlegen „zurückgedreht“ werden kann.
@@ -70,9 +69,37 @@ enum DemoMissions {
             startedAt: start
         )
         time.date = start.addingTimeInterval(8 * 60)
+        var added: [Patient] = []
         for triage in [Sichtungskategorie.sk1, .sk1, .sk2, .sk2, .sk2, .sk3, .sk3, .sk3, .sk3, .ungesichtet] {
-            try running.perform(AddPatient(triage: triage))
+            added.append(try running.perform(AddPatient(triage: triage)))
         }
+        // Einige Personendaten, wie sie im Einsatz nach und nach dazukommen.
+        let calendar = Calendar(identifier: .gregorian)
+        try running.perform(EditPatient(patientID: added[0].id) {
+            $0.firstName = "Thomas"
+            $0.lastName = "Mustermann"
+            $0.dispatchPatientNumber = "2614-0471-01"
+            $0.gender = .maennlich
+            $0.birthDate = calendar.date(from: DateComponents(year: 1981, month: 3, day: 14, hour: 12))
+            $0.identifyingFeatures = "Fahrer Pkw rot, eingeklemmt, blaue Arbeitsjacke"
+            $0.notes = "2 Zugänge, 500 ml VEL. GCS 13."
+        })
+        try running.perform(EditPatient(patientID: added[1].id) {
+            $0.gender = .weiblich
+            $0.estimatedAge = 30
+            $0.identifyingFeatures = "Beifahrerin Pkw rot, rote Daunenjacke"
+        })
+        try running.perform(EditPatient(patientID: added[2].id) {
+            $0.firstName = "Anna-Katharina"
+            $0.lastName = "Beispiel-Hoffmann"
+            $0.dispatchPatientNumber = "2614-0471-02"
+            $0.gender = .weiblich
+            $0.estimatedAge = 61
+            $0.identifyingFeatures = "Fahrerin Pkw blau"
+        })
+        try running.perform(EditPatient(patientID: added[9].id) {
+            $0.identifyingFeatures = "im Graben, rechte Fahrbahnseite"
+        })
         try running.perform(AddJournalText("Lage: 3 Pkw beteiligt, 1 Person eingeklemmt."))
     }
 }

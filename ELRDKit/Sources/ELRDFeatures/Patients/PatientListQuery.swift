@@ -87,7 +87,7 @@ public struct PatientListQuery: Equatable, Sendable {
         })
     }
 
-    /// Suchwörter in Nummer, ILS-Nummer, Name oder Notiz (Groß/klein und Akzente egal).
+    /// Suchwörter in Nummer, ILS-Nummer, Name, Erkennungsmerkmalen oder Notiz (Groß/klein und Akzente egal).
     func matchesSearch(_ patient: Patient) -> Bool {
         let words = searchText.split(whereSeparator: \.isWhitespace)
         guard !words.isEmpty else { return true }
@@ -97,6 +97,7 @@ public struct PatientListQuery: Equatable, Sendable {
             patient.dispatchPatientNumber ?? "",
             patient.firstName,
             patient.lastName,
+            patient.identifyingFeatures ?? "",
             patient.notes,
         ].joined(separator: " ")
         return words.allSatisfy { haystack.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) != nil }
@@ -116,7 +117,7 @@ struct PatientRow: Identifiable, Equatable {
     let number: String
     /// Name oder `nil`, wenn unbekannt.
     let name: String?
-    /// ILS-Nummer, Geschlecht/Alter, erste Diagnose.
+    /// ILS-Nummer, Erkennungsmerkmale, Geschlecht/Alter, erste Diagnose.
     let details: String
     let unitText: String
     let hasUnit: Bool
@@ -132,6 +133,7 @@ struct PatientRow: Identifiable, Equatable {
         name = patient.fullName.isEmpty ? nil : patient.fullName
         var parts: [String] = []
         if let ils = patient.dispatchPatientNumber, !ils.isEmpty { parts.append("ILS \(ils)") }
+        if let features = patient.identifyingFeatures, !features.isEmpty { parts.append(features) }
         var person: [String] = []
         if patient.gender != .unklar { person.append(patient.gender.shortName) }
         if let age = patient.age(at: now) { person.append(patient.birthDate == nil ? "~\(age) J" : "\(age) J") }

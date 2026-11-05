@@ -70,7 +70,8 @@ struct SignedInView: View {
                     account: account,
                     people: people,
                     showsDetailsInitially: environment.demoScreen == .missionDetails,
-                    initialSection: environment.demoScreen == .patients ? .patients : .overview
+                    initialSection: [.patients, .patientDetail].contains(environment.demoScreen) ? .patients : .overview,
+                    initialPatient: environment.demoScreen == .patientDetail ? openStore.state.activePatients.first?.id : nil
                 ) {
                     self.openStore = nil
                     list?.reload()

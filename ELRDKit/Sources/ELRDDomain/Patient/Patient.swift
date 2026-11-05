@@ -27,6 +27,9 @@ public struct Patient: VersionedEntity, MissionScoped {
     public var birthDate: Date?
     public var isChild: Bool
     public var gender: Gender
+    /// Merkmale zur Wiedererkennung, solange der Name fehlt, z. B. „Fahrer Pkw rot,
+    /// Beifahrersitz, blaue Jacke“. Optional, damit ältere Daten ohne Feld lesbar bleiben.
+    public var identifyingFeatures: String?
     /// Freitext für Zusatzinformationen.
     public var notes: String
 
@@ -63,6 +66,7 @@ public struct Patient: VersionedEntity, MissionScoped {
         birthDate: Date? = nil,
         isChild: Bool = false,
         gender: Gender = .unklar,
+        identifyingFeatures: String? = nil,
         notes: String = "",
         injuries: [Injury] = [],
         traumaRoom: TraumaRoom = .none,
@@ -88,6 +92,7 @@ public struct Patient: VersionedEntity, MissionScoped {
         self.birthDate = birthDate
         self.isChild = isChild
         self.gender = gender
+        self.identifyingFeatures = identifyingFeatures
         self.notes = notes
         self.injuries = []
         self.traumaRoom = traumaRoom

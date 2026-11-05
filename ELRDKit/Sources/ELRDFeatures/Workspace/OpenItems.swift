@@ -21,6 +21,8 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
 
     public enum Target: Equatable, Sendable {
         case section(WorkspaceSection)
+        /// Direkt zum Patienten.
+        case patient(PatientID)
         case messages
     }
 
@@ -108,7 +110,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
             title: "\(patient.displayName) \(problem)",
             detail: detail,
             actionTitle: action,
-            target: .section(.patients)
+            target: .patient(patient.id)
         )
     }
 

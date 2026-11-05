@@ -13,18 +13,22 @@ public struct MissionWorkspaceView: View {
     let people: [PersonChoice]
     let onClose: (() -> Void)?
 
-    @State private var selection: WorkspaceSection = .overview
+    @State private var selection: WorkspaceSection
     @State private var showsMessages = false
     @State private var showsDetails: Bool
     @State private var showsQuickAdd = false
     @State private var lastAdded: Patient?
     @State private var errorMessage: String?
+    @State private var patientQuery = PatientListQuery()
+    /// Geöffnete Patienten im Bereich (Navigation per Wert).
+    @State private var path: [PatientID] = []
 
     public init(
         store: MissionStore,
         account: AccountMenuModel? = nil,
         people: [PersonChoice] = [],
         showsDetailsInitially: Bool = false,
+        initialSection: WorkspaceSection = .overview,
         onClose: (() -> Void)? = nil
     ) {
         self.store = store
@@ -32,6 +36,7 @@ public struct MissionWorkspaceView: View {
         self.people = people
         self.onClose = onClose
         _showsDetails = State(initialValue: showsDetailsInitially)
+        _selection = State(initialValue: initialSection)
     }
 
     public var body: some View {
@@ -69,7 +74,7 @@ public struct MissionWorkspaceView: View {
                         text: "\(lastAdded.number) · \(lastAdded.triage.shortName) angelegt",
                         color: Color.triage(lastAdded.triage),
                         undo: { undo(lastAdded) },
-                        show: { selection = .patients; self.lastAdded = nil }
+                        show: { open(lastAdded.id); self.lastAdded = nil }
                     )
                     .padding(.bottom, layout == .bottomBar ? 104 : Spacing.xxl)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -105,7 +110,12 @@ public struct MissionWorkspaceView: View {
             onClose: onClose,
             onDetails: { showsDetails = true },
             onMessages: { showsMessages = true },
-            onTriage: { _ in selection = .patients },
+            onTriage: { category in
+                // Tipp auf einen Zähler: Patienten dieser Kategorie zeigen.
+                patientQuery = PatientListQuery(triage: category, sort: patientQuery.sort)
+                selection = .patients
+                path.removeAll()
+            },
             onQuickAdd: addPatient
         )
     }
@@ -146,19 +156,36 @@ public struct MissionWorkspaceView: View {
     }
 
     private var content: some View {
-        NavigationStack {
-            WorkspaceDetail(section: selection, store: store) { target in
+        NavigationStack(path: $path) {
+            WorkspaceDetail(section: selection, store: store, patientQuery: $patientQuery, onQuickAdd: addPatient) { target in
                 switch target {
                 case .section(let section): selection = section
+                case .patient(let id): open(id)
                 case .messages: showsMessages = true
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: PatientID.self) { id in
+                PatientQuickDetailView(store: store, patientID: id)
+            }
             // Der Stack bringt sonst seinen eigenen (im hellen Modus weißen) Hintergrund mit.
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Surface.canvas)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Bereichswechsel über die Leiste: zurück zur Übersicht des Bereichs.
+        .onChange(of: selection) { path.removeAll() }
+    }
+
+    /// Öffnet einen Patienten (z. B. aus „Offene Punkte“ oder der Schnellanlage).
+    private func open(_ id: PatientID) {
+        if selection != .patients {
+            selection = .patients
+            // Nach dem Bereichswechsel öffnen (der Wechsel leert den Pfad).
+            Task { @MainActor in path = [id] }
+        } else {
+            path = [id]
+        }
     }
 
     private func addPatient(_ triage: Sichtungskategorie) {
@@ -381,7 +408,7 @@ struct UndoToast: View {
                 .frame(minHeight: TouchTarget.comfortable)
                 .padding(.horizontal, Spacing.s)
             Button(action: show) {
-                Text("Patienten")
+                Text("Öffnen")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .padding(.horizontal, Spacing.l)
@@ -540,12 +567,16 @@ struct MessagesPlaceholder: View {
 struct WorkspaceDetail: View {
     let section: WorkspaceSection
     let store: MissionStore
+    @Binding var patientQuery: PatientListQuery
+    let onQuickAdd: (Sichtungskategorie) -> Void
     let onTarget: (OpenItem.Target) -> Void
 
     var body: some View {
         switch section {
         case .overview:
             SituationOverview(store: store, onTarget: onTarget)
+        case .patients:
+            PatientsView(store: store, query: $patientQuery, onQuickAdd: onQuickAdd)
         default:
             ContentUnavailableView {
                 Label(section.title, systemImage: section.systemImage)

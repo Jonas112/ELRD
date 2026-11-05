@@ -69,7 +69,8 @@ struct SignedInView: View {
                     store: openStore,
                     account: account,
                     people: people,
-                    showsDetailsInitially: environment.demoScreen == .missionDetails
+                    showsDetailsInitially: environment.demoScreen == .missionDetails,
+                    initialSection: environment.demoScreen == .patients ? .patients : .overview
                 ) {
                     self.openStore = nil
                     list?.reload()
@@ -91,7 +92,7 @@ struct SignedInView: View {
             let model = MissionListModel(environment: environment, user: user)
             list = model
             // Bildschirmfoto „Arbeitsbereich“: laufenden Beispieleinsatz direkt öffnen.
-            if [.workspace, .missionDetails].contains(environment.demoScreen), let running = model.result.running.first {
+            if environment.demoScreen?.opensRunningMission == true, let running = model.result.running.first {
                 openStore = try? model.open(running.id)
             }
         }

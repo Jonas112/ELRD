@@ -66,7 +66,7 @@ struct WorkspaceTests {
             .criticalWithoutTransport, .notTriaged, .urgentWithoutTransport, .urgentWithoutTransport, .placeholderUnits,
         ])
         #expect(items.first?.title == "A-1 hat kein Transportmittel")
-        #expect(items.first?.target == .section(.patients))
+        #expect(items.first?.target == .patient(store.state.activePatients[0].id), "führt direkt zum Patienten")
         #expect(items.last?.title == "3 Platzhalter ohne Fahrzeug")
         #expect(items.last?.detail == "2 RTW, 1 NEF")
         #expect(items.last?.target == .section(.organisation))

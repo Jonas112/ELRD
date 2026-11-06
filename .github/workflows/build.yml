@@ -4,7 +4,8 @@ name: Build
 # GitHub-Runner (macOS): seit das Repo öffentlich ist, kostenlos (E72).
 # Kein eigener Runner bei öffentlichem Repo – fremde Pull Requests könnten
 # sonst Code auf dem Rechner ausführen.
-# Bildschirmfotos nur, wenn die letzte Commit-Nachricht „[fotos]“ enthält oder
+# Bildschirmfotos nur, wenn die letzte Commit-Nachricht „[fotos]“ (alle) bzw.
+# „[fotos: name name]“ (nur diese) enthält oder
 # der Lauf manuell gestartet wird (spart Zeit).
 # Fehler werden zusätzlich als Annotationen ausgegeben, damit sie in der
 # Lauf-Übersicht stehen (auch ohne Log-Download lesbar).
@@ -108,8 +109,13 @@ jobs:
           done
 
       - name: Bildschirmfotos (iPad Simulator)
-        if: success() && (contains(github.event.head_commit.message, '[fotos]') || (github.event_name == 'workflow_dispatch' && inputs.fotos))
+        if: success() && (contains(github.event.head_commit.message, '[fotos') || (github.event_name == 'workflow_dispatch' && inputs.fotos))
+        env:
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
+          # „[fotos: map journal]“ fotografiert nur diese Bildschirme (schneller), „[fotos]“ alle.
+          ONLY=$(printf '%s' "$HEAD_MESSAGE" | sed -n 's/.*\[fotos: *\([A-Za-z ]*\)\].*/\1/p' | head -1)
+          if [ -n "$ONLY" ]; then echo "::notice title=Bildschirmfotos::Nur $ONLY"; fi
           DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
           devices = json.load(sys.stdin)["devices"]
@@ -136,7 +142,7 @@ jobs:
               done
             done
           }
-          shoot "$DEVICE_ID" "" "light dark" "setup login missions newMission workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo mapObject mapDrawing"
+          shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions newMission workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo mapObject mapDrawing journal journalEntry}"
           # iPad mini (hochkant): Leiste unten
           MINI_ID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
@@ -149,7 +155,7 @@ jobs:
             xcrun simctl boot "$MINI_ID" || true
             xcrun simctl bootstatus "$MINI_ID" -b
             xcrun simctl install "$MINI_ID" "$APP"
-            shoot "$MINI_ID" "mini-" "dark" "login missions workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo mapObject"
+            shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo mapObject}"
           else
             echo "::warning title=Bildschirmfotos::Kein iPad-mini-Simulator gefunden"
           fi

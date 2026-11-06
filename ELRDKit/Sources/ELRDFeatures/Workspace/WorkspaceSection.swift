@@ -39,17 +39,6 @@ public enum WorkspaceSection: String, CaseIterable, Identifiable, Hashable, Send
     public var shortcut: KeyEquivalent {
         KeyEquivalent(Character(String(Self.allCases.firstIndex(of: self)! + 1)))
     }
-
-    /// Schritt im Plan, in dem der Bereich gebaut wird (für Platzhalter).
-    var plannedStep: Int {
-        switch self {
-        case .overview: 37
-        case .patients: 18
-        case .organisation: 24
-        case .map: 28
-        case .journal: 33
-        }
-    }
 }
 
 /// Zahlen an den Bereichen und an der Glocke.

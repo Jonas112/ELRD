@@ -9,6 +9,8 @@ public struct DocumentKey: Hashable, Sendable, RawRepresentable {
 
     /// Stammdaten des Geräts (`MasterDataSet`).
     public static let masterData = DocumentKey(rawValue: "masterData")
+    /// Textbausteine des Tagebuchs (`JournalTemplateSet`).
+    public static let journalTemplates = DocumentKey(rawValue: "journalTemplates")
 }
 
 /// Speichert einzelne, als Ganzes behandelte Dokumente (Stammdaten, später Einstellungen).

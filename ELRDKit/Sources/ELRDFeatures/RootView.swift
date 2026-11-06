@@ -64,6 +64,7 @@ struct SignedInView: View {
     @State private var openStore: MissionStore?
     @State private var catalogs = PatientCatalogs.empty
     @State private var masterData: MasterDataEditor?
+    @State private var journalTemplates: JournalTemplateEditor?
 
     var body: some View {
         Group {
@@ -74,6 +75,7 @@ struct SignedInView: View {
                     people: people,
                     catalogs: catalogs,
                     masterData: masterData,
+                    journalTemplates: journalTemplates,
                     showsDetailsInitially: environment.demoScreen == .missionDetails,
                     initialSection: environment.demoScreen?.initialWorkspaceSection ?? .overview,
                     initialPatient: environment.demoScreen?.opensPatient == true ? openStore.state.activePatients.first?.id : nil,
@@ -98,6 +100,7 @@ struct SignedInView: View {
             openStore = nil
             catalogs = PatientCatalogs.load(from: environment.repository)
             masterData = MasterDataEditor(repository: environment.repository)
+            journalTemplates = JournalTemplateEditor(repository: environment.repository)
             let model = MissionListModel(environment: environment, user: user)
             list = model
             // Bildschirmfoto „Arbeitsbereich“: laufenden Beispieleinsatz direkt öffnen.

@@ -134,6 +134,8 @@ enum DemoMissions {
         }
         time.date = start.addingTimeInterval(30 * 60)
         if rtws.count >= 2 { try running.perform(StartTransport(patientID: added[3].id)) }
+        try running.perform(AddJournalText("Erstmeldung an ILS abgegeben", occurredAt: start.addingTimeInterval(4 * 60)))
+        try running.perform(AddJournalText("Nachalarmierung angefordert: 2 RTW, 1 KTW", occurredAt: start.addingTimeInterval(12 * 60)))
         try running.perform(AddJournalText("Lage: 3 Pkw beteiligt, 1 Person eingeklemmt."))
 
         // Abschnitte: Bereitstellungsraum wird Initialabschnitt; eine Einheit bleibt ohne Abschnitt.
@@ -157,6 +159,11 @@ enum DemoMissions {
            let png = Self.demoArrowPNG() {
             let file = try environment.attachments.save(png, kind: .drawing, createdAt: time.date, pixelWidth: 640, pixelHeight: 360)
             _ = try running.perform(AddMapObject(shape: .drawing(bounds: arrowBounds, image: file), title: "Anfahrt"))
+        }
+        // Kartenausschnitt im Tagebuch (Beispielbild statt echter Karte).
+        if let jpeg = Self.demoSnapshotJPEG() {
+            let file = try environment.attachments.save(jpeg, kind: .photo, createdAt: time.date, pixelWidth: 1200, pixelHeight: 800)
+            _ = try running.perform(AddMapSnapshot(image: file))
         }
         if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }
         if let nef = running.state.activeUnits.first(where: { $0.type == .nef }) {
@@ -196,5 +203,30 @@ enum DemoMissions {
             _ = context
         }
         return image.pngData()
+    }
+
+    /// Einfaches Bild im Stil einer Lagekarte (Grünfläche, Straße, roter Kreis).
+    static func demoSnapshotJPEG() -> Data? {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let size = CGSize(width: 1200, height: 800)
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
+            UIColor(red: 0.80, green: 0.90, blue: 0.74, alpha: 1).setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            let road = UIBezierPath()
+            road.move(to: CGPoint(x: 520, y: 0))
+            road.addCurve(to: CGPoint(x: 380, y: 800), controlPoint1: CGPoint(x: 420, y: 300), controlPoint2: CGPoint(x: 460, y: 500))
+            UIColor.white.setStroke()
+            road.lineWidth = 34
+            road.stroke()
+            let hazard = UIBezierPath(ovalIn: CGRect(x: 520, y: 380, width: 180, height: 180))
+            UIColor(MapObject.defaultColor).withAlphaComponent(0.25).setFill()
+            hazard.fill()
+            UIColor(MapObject.defaultColor).setStroke()
+            hazard.lineWidth = 6
+            hazard.stroke()
+        }
+        return image.jpegData(compressionQuality: 0.8)
     }
 }

@@ -2,9 +2,9 @@ import SwiftUI
 import ELRDDomain
 import ELRDStore
 
-/// Bereich „Lage“: offene Punkte (dringendste zuerst), Patienten nach Stand, Tagebuch.
-///
-/// Vollständiges Dashboard folgt in Schritt 37; die offenen Punkte sind schon echt.
+/// Bereich „Lage“ (Einsatz-Dashboard): offene Punkte (dringendste zuerst), Sichtung,
+/// Patienten nach Stand, Transportmittel, Verteilung auf Kliniken, Tagebuch.
+/// Jede Karte führt per Tipp in ihren Bereich.
 struct SituationOverview: View {
     let store: MissionStore
     let onTarget: (OpenItem.Target) -> Void
@@ -16,19 +16,29 @@ struct SituationOverview: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let items = OpenItem.items(for: store.state, now: context.date)
+            let dashboard = SituationDashboard(state: store.state)
             ScrollView {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: Spacing.xl) {
-                        openItemsCard(items).frame(minWidth: 520)
                         VStack(spacing: Spacing.xl) {
+                            openItemsCard(items)
+                            hospitalCard(dashboard)
+                        }
+                        .frame(minWidth: 520)
+                        VStack(spacing: Spacing.xl) {
+                            triageCard(dashboard)
                             statusCard
+                            unitCard(dashboard)
                             journalCard
                         }
                         .frame(minWidth: 340, maxWidth: 460)
                     }
                     VStack(spacing: Spacing.l) {
                         openItemsCard(items)
+                        triageCard(dashboard)
                         statusCard
+                        unitCard(dashboard)
+                        hospitalCard(dashboard)
                         journalCard
                     }
                 }
@@ -70,6 +80,110 @@ struct SituationOverview: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    // MARK: Sichtung
+
+    private func triageCard(_ dashboard: SituationDashboard) -> some View {
+        Button { onTarget(.section(.patients)) } label: {
+            VStack(alignment: .leading, spacing: Spacing.m) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Sichtung").font(.title2.weight(.bold)).foregroundStyle(.primary)
+                    Spacer()
+                    Text(dashboard.patientTotal == 1 ? "1 Patient" : "\(dashboard.patientTotal) Patienten")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                TriageSummaryView(counts: dashboard.triageCounts, showsEmpty: true)
+            }
+            .padding(Spacing.xl)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Öffnet die Patientenliste.")
+    }
+
+    // MARK: Transportmittel
+
+    private func unitCard(_ dashboard: SituationDashboard) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.l) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Transportmittel").font(.title2.weight(.bold))
+                Spacer()
+                Text("\(dashboard.unitTotal) Einheiten").font(.headline.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            Grid(horizontalSpacing: Spacing.m, verticalSpacing: Spacing.m) {
+                GridRow {
+                    countTile(dashboard.freeTransport, "frei", target: .organisation, highlight: dashboard.freeTransport == 0 && dashboard.patientTotal > 0)
+                    countTile(dashboard.busyTransport, "bei Patienten", target: .organisation)
+                }
+                if dashboard.placeholders > 0 {
+                    GridRow {
+                        countTile(dashboard.placeholders, dashboard.placeholders == 1 ? "Platzhalter ohne Fahrzeug" : "Platzhalter ohne Fahrzeug", target: .organisation)
+                            .gridCellColumns(2)
+                    }
+                }
+            }
+        }
+        .padding(Spacing.xl)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func countTile(_ count: Int, _ label: String, target: WorkspaceSection, highlight: Bool = false) -> some View {
+        Button { onTarget(.section(target)) } label: {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("\(count)")
+                    .font(.system(size: 40, weight: .heavy))
+                    .monospacedDigit()
+                    .foregroundStyle(highlight ? Color.orange : Color.primary)
+                Text(label)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
+            .padding(.horizontal, Spacing.l)
+            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(count) \(label)")
+    }
+
+    // MARK: Kliniken
+
+    @ViewBuilder
+    private func hospitalCard(_ dashboard: SituationDashboard) -> some View {
+        if !dashboard.hospitals.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Verteilung auf Kliniken").font(.title2.weight(.bold))
+                    .padding(Spacing.xl)
+                ForEach(dashboard.hospitals) { load in
+                    Divider()
+                    HStack(spacing: Spacing.m) {
+                        Text(load.name).font(.headline).lineLimit(2)
+                        Spacer(minLength: Spacing.m)
+                        ForEach(TriageSummaryView.order.filter { (load.byTriage[$0] ?? 0) > 0 }, id: \.self) { triage in
+                            Text("\(load.byTriage[triage] ?? 0)")
+                                .font(.headline.weight(.heavy).monospacedDigit())
+                                .foregroundStyle(Color.onTriage(triage))
+                                .frame(minWidth: 40, minHeight: 32)
+                                .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .accessibilityLabel("\(load.byTriage[triage] ?? 0) \(triage.displayName)")
+                        }
+                    }
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.vertical, Spacing.s)
+                    .frame(minHeight: TouchTarget.comfortable)
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .padding(.bottom, Spacing.s)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        }
     }
 
     // MARK: Patienten nach Stand

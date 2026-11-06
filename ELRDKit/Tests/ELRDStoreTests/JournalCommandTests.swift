@@ -55,10 +55,14 @@ struct JournalCommandTests {
 struct JournalTemplateTests {
     @Test func templatesAreUniqueAndSortedByUse() {
         var set = JournalTemplateSet()
-        #expect(set.add("Lage unverändert"))
-        #expect(!set.add("  lage UNVERÄNDERT "), "doppelt")
-        #expect(!set.add("   "), "leer")
-        #expect(set.add("Bereitstellungsraum eingerichtet"))
+        let first = set.add("Lage unverändert")
+        let duplicate = set.add("  lage UNVERÄNDERT ")
+        let empty = set.add("   ")
+        let second = set.add("Bereitstellungsraum eingerichtet")
+        #expect(first)
+        #expect(!duplicate, "doppelt")
+        #expect(!empty, "leer")
+        #expect(second)
         #expect(set.sorted.map(\.text) == ["Bereitstellungsraum eingerichtet", "Lage unverändert"])
         let lage = set.templates[0]
         set.markUsed(id: lage.id)

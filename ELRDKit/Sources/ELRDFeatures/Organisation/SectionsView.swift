@@ -3,8 +3,8 @@ import ELRDDomain
 import ELRDStore
 
 /// Bereich „Einheiten“: je Abschnitt eine Karte mit seinen Einheiten und deren
-/// Patienten. Oben Hinzufügen, Typfilter und Suche; ein Tipp auf eine Einheit
-/// verschiebt sie (Ziehen folgt in Schritt 27).
+/// Patienten. Oben Hinzufügen, Typfilter und Suche. Einheiten und Patienten ohne
+/// Einheit lassen sich ziehen (`DropAction`); ein Tipp öffnet dasselbe als Menü.
 struct SectionsView: View {
     let store: MissionStore
     let templates: MasterDataEditor?
@@ -59,7 +59,8 @@ struct SectionsView: View {
                                     onMakeInitial: { perform(SetInitialSection(sectionID: $0)) },
                                     onDelete: { deleting = $0 },
                                     onRemoveUnit: { removing = $0 },
-                                    onReplace: { replacing = $0 }
+                                    onReplace: { replacing = $0 },
+                                    onDrop: handleDrop
                                 )
                             }
                         }
@@ -222,6 +223,28 @@ struct SectionsView: View {
         }
     }
 
+    /// Führt ein Ablegen aus; bei einem Fehler bleibt der Rest ungetan.
+    private func handleDrop(_ payload: DragPayload, onto target: DropTarget) -> Bool {
+        let actions = DropAction.actions(for: payload, onto: target, in: store.state)
+        guard !actions.isEmpty else { return false }
+        do {
+            for action in actions {
+                switch action {
+                case .moveUnit(let unitID, let sectionID):
+                    try store.perform(MoveUnit(unitID: unitID, to: sectionID))
+                case .movePatient(let patientID, let sectionID):
+                    try store.perform(MovePatient(patientID: patientID, to: sectionID))
+                case .assign(let patientID, let unitID):
+                    try store.perform(AssignUnit(patientID: patientID, unitID: unitID))
+                }
+            }
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     private func perform<Command: MissionCommand>(_ command: Command) {
         do {
             _ = try store.perform(command)
@@ -244,6 +267,7 @@ struct SectionCard: View {
     let onDelete: (MissionSection) -> Void
     let onRemoveUnit: (MissionUnit) -> Void
     let onReplace: (MissionUnit) -> Void
+    let onDrop: (DragPayload, DropTarget) -> Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
@@ -257,6 +281,10 @@ struct SectionCard: View {
                     FlowLayout(spacing: Spacing.xs) {
                         ForEach(column.loosePatients) { badge in
                             PatientBadgeButton(badge: badge) { onOpenPatient(badge.id) }
+                                .organisationDraggable(canEdit ? .patient(badge.id) : nil) { PatientBadgeView(badge: badge) }
+                                .organisationDrop(isEnabled: canEdit, cornerRadius: 10) {
+                                    onDrop($0, .loosePatient(badge.id, section: column.section?.id))
+                                }
                         }
                     }
                 }
@@ -271,6 +299,7 @@ struct SectionCard: View {
                     .strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
             }
         }
+        .organisationDrop(isEnabled: canEdit, cornerRadius: 22) { onDrop($0, .section(column.section?.id)) }
     }
 
     private var head: some View {
@@ -317,10 +346,18 @@ struct SectionCard: View {
         }
     }
 
-    /// Einheit als Zeile; Tipp öffnet „Verschieben nach …“ (Platzhalter: zuerst
-    /// „Fahrzeug eintragen“).
-    @ViewBuilder
+    /// Einheit als Zeile: ziehbar und Ablagefläche (Patient → zuordnen).
     private func unitRow(_ entry: UnitEntry) -> some View {
+        unitRowContent(entry)
+            .organisationDraggable(canEdit ? .unit(entry.unit.id) : nil) {
+                UnitRowLabel(entry: entry, showsMoveHint: false).frame(width: 300)
+            }
+            .organisationDrop(isEnabled: canEdit, cornerRadius: 14) { onDrop($0, .unit(entry.unit.id)) }
+    }
+
+    /// Tipp öffnet „Verschieben nach …“ (Platzhalter: zuerst „Fahrzeug eintragen“).
+    @ViewBuilder
+    private func unitRowContent(_ entry: UnitEntry) -> some View {
         let row = UnitRowLabel(entry: entry, showsMoveHint: canEdit)
         if canEdit {
             Menu {

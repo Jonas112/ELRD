@@ -139,3 +139,32 @@ public struct MoveUnit: MissionCommand {
         draft.log(.unit, "\(unit.displayName) → \(targetText)", subject: .unit(unitID))
     }
 }
+
+/// Legt einen Patienten ohne Einheit in einen Abschnitt (`nil`: keiner), z. B. in
+/// die Patientenablage. Hat er schon eine Einheit, gilt deren Abschnitt – dann
+/// wird abgelehnt (wie ELRDRG: „Fügen Sie das Fahrzeug dem Abschnitt hinzu“).
+public struct MovePatient: MissionCommand {
+    public let patientID: PatientID
+    public let sectionID: SectionID?
+
+    public init(patientID: PatientID, to sectionID: SectionID?) {
+        self.patientID = patientID
+        self.sectionID = sectionID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let patient = draft.get(Patient.self, id: patientID), !patient.metadata.isDeleted else {
+            throw CommandError.notFound(.patient)
+        }
+        let target = try sectionID.map { try activeSection($0, in: draft) }
+        let assigned = patient.unitIDs.compactMap { draft.get(MissionUnit.self, id: $0) }.filter { !$0.metadata.isDeleted }
+        if let first = assigned.first {
+            throw CommandError.invalid("Patient \(patient.number) ist \(first.displayName) zugeordnet. Die Einheit in den Abschnitt verschieben.")
+        }
+        guard patient.sectionID != sectionID else { return }
+        let destination = sectionID
+        try draft.update(Patient.self, id: patientID) { $0.sectionID = destination }
+        let targetText = target.map { "„\($0.name)“" } ?? "ohne Abschnitt"
+        draft.log(.patient, "Patient \(patient.number) → \(targetText)", subject: .patient(patientID))
+    }
+}

@@ -192,12 +192,17 @@ struct AddUnitSheet: View {
                 }
             }
             Text("Alarmstichwort").font(.headline).foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Spacing.s)], spacing: Spacing.s) {
+            // Fünf gleich breite Kacheln – passt auch auf das iPad mini in eine Zeile.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Spacing.s), count: Alarmstichwort.allCases.count), spacing: Spacing.s) {
                 ForEach(Alarmstichwort.allCases) { stichwort in
                     Button { addStichwort(stichwort) } label: {
                         VStack(spacing: 2) {
                             Text(stichwort.rawValue).font(.title3.weight(.heavy))
-                            Text(stichwort.summary).font(.subheadline).foregroundStyle(.secondary)
+                            Text(stichwort.summary)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                         }
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.large + 8)
                         .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))

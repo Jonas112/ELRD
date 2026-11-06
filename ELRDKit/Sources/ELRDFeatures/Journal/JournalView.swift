@@ -8,8 +8,14 @@ import ELRDStore
 /// Bereich „Tagebuch“: oben schnell eintragen (Text, Zeit, Textbausteine),
 /// darunter alle Einträge, neueste zuerst. Kartenausschnitte erscheinen mit Bild.
 struct JournalView: View {
+    enum Mode: Hashable { case journal, log }
+
     let store: MissionStore
     let templates: JournalTemplateEditor?
+    var people: [PersonChoice] = []
+
+    @State private var mode: Mode = AppLaunchOptions.current.demoScreen == .protocolLog ? .log : .journal
+    @State private var protocolFilter = ProtocolFilter()
 
     @Environment(\.attachmentStore) private var attachments
     @State private var text = ""
@@ -35,29 +41,22 @@ struct JournalView: View {
             VStack(alignment: .leading, spacing: Spacing.l) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Tagebuch").font(.title2.weight(.bold))
-                        Text(entries.count == 1 ? "1 Eintrag" : "\(entries.count) Einträge")
+                        Text(mode == .log ? "Protokoll" : "Tagebuch").font(.title2.weight(.bold))
+                        Text(mode == .log ? "\(store.state.visibleLog.count) Aktionen, nur lesen" : entries.count == 1 ? "1 Eintrag" : "\(entries.count) Einträge")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
-                if canEdit { composer }
-                if entries.isEmpty {
-                    Text("Noch keine Einträge.").font(.title3).foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .cardStyle()
-                }
-                LazyVStack(spacing: Spacing.s) {
-                    ForEach(entries) { entry in
-                        JournalEntryRow(
-                            entry: entry,
-                            canEdit: canEdit && entry.origin != .automatic,
-                            attachments: attachments,
-                            player: player,
-                            onEdit: { editing = entry },
-                            onShowImage: { viewing = $0 }
-                        )
-                    }
+                SegmentedChoice(options: [(Mode.journal, "Tagebuch"), (.log, "Protokoll")], selection: $mode)
+                    .frame(maxWidth: 420)
+                if mode == .log {
+                    ProtocolList(
+                        entries: Array(store.state.visibleLog.reversed()),
+                        people: people,
+                        filter: $protocolFilter
+                    )
+                } else {
+                    journalContent(entries)
                 }
             }
             .padding(Spacing.l)
@@ -92,6 +91,28 @@ struct JournalView: View {
         .onAppear {
             if AppLaunchOptions.current.demoScreen == .journalEntry, editing == nil {
                 editing = entries.first { $0.origin == .manual }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func journalContent(_ entries: [JournalEntry]) -> some View {
+        if canEdit { composer }
+        if entries.isEmpty {
+            Text("Noch keine Einträge.").font(.title3).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .cardStyle()
+        }
+        LazyVStack(spacing: Spacing.s) {
+            ForEach(entries) { entry in
+                JournalEntryRow(
+                    entry: entry,
+                    canEdit: canEdit && entry.origin != .automatic,
+                    attachments: attachments,
+                    player: player,
+                    onEdit: { editing = entry },
+                    onShowImage: { viewing = $0 }
+                )
             }
         }
     }

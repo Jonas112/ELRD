@@ -137,6 +137,7 @@ enum DemoMissions {
         try running.perform(AddJournalText("Erstmeldung an ILS abgegeben", occurredAt: start.addingTimeInterval(4 * 60)))
         try running.perform(AddJournalText("Nachalarmierung angefordert: 2 RTW, 1 KTW", occurredAt: start.addingTimeInterval(12 * 60)))
         try running.perform(AddJournalText("Lage: 3 Pkw beteiligt, 1 Person eingeklemmt."))
+        _ = try running.perform(SendMessage("Landeplatz RTH auf der Wiese nördlich freihalten.", kind: .warning))
 
         // Abschnitte: Bereitstellungsraum wird Initialabschnitt; eine Einheit bleibt ohne Abschnitt.
         let staging = try running.perform(AddSection(name: "Bereitstellungsraum"))

@@ -13,7 +13,7 @@ import ELRDStore
 /// Beispieldaten im Arbeitsspeicher (nichts wird gespeichert, Keychain bleibt unberührt).
 public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
-        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapTopo, mapObject, mapDrawing, journal, journalEntry
+        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
@@ -25,7 +25,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
         var initialWorkspaceSection: WorkspaceSection {
             if [.patients, .patientTiles].contains(self) || opensPatient { return .patients }
             if [.map, .mapTopo, .mapObject, .mapDrawing].contains(self) { return .map }
-            if [.journal, .journalEntry].contains(self) { return .journal }
+            if [.journal, .journalEntry, .protocolLog].contains(self) { return .journal }
             return [.sections, .addUnit, .addPlaceholder, .replacePlaceholder].contains(self) ? .organisation : .overview
         }
 

@@ -17,7 +17,7 @@ public struct MissionWorkspaceView: View {
     let onClose: (() -> Void)?
 
     @State private var selection: WorkspaceSection
-    @State private var showsMessages = false
+    @State private var showsMessages = AppLaunchOptions.current.demoScreen == .messages
     @State private var showsDetails: Bool
     @State private var showsQuickAdd = false
     @State private var lastAdded: Patient?
@@ -102,7 +102,7 @@ public struct MissionWorkspaceView: View {
             try? await Task.sleep(for: .seconds(6))
             if !Task.isCancelled { lastAdded = nil }
         }
-        .sheet(isPresented: $showsMessages) { MessagesPlaceholder() }
+        .sheet(isPresented: $showsMessages) { MessagesView(store: store).largeSheet() }
         .sheet(isPresented: $showsDetails) { MissionDetailsView(store: store, people: people).largeSheet() }
         .alert("Aktion nicht möglich", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
@@ -172,7 +172,7 @@ public struct MissionWorkspaceView: View {
 
     private var content: some View {
         NavigationStack(path: $path) {
-            WorkspaceDetail(section: selection, store: store, masterData: masterData, journalTemplates: journalTemplates, patientQuery: $patientQuery, onQuickAdd: addPatient) { target in
+            WorkspaceDetail(section: selection, store: store, masterData: masterData, journalTemplates: journalTemplates, people: people, patientQuery: $patientQuery, onQuickAdd: addPatient) { target in
                 switch target {
                 case .section(let section): selection = section
                 case .patient(let id): open(id)
@@ -569,23 +569,6 @@ struct MessagesBellButton: View {
 }
 
 /// Nachrichten (Schritt 36).
-struct MessagesPlaceholder: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView(
-                "Nachrichten",
-                systemImage: "bell",
-                description: Text("Nachrichten und das Protokoll werden in Schritt 36 gebaut.")
-            )
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } }
-            }
-        }
-    }
-}
-
 // MARK: - Inhalt
 
 /// Inhalt des gewählten Bereichs. Die übrigen Bereiche entstehen in den folgenden Schritten.
@@ -594,6 +577,7 @@ struct WorkspaceDetail: View {
     let store: MissionStore
     let masterData: MasterDataEditor?
     let journalTemplates: JournalTemplateEditor?
+    let people: [PersonChoice]
     @Binding var patientQuery: PatientListQuery
     let onQuickAdd: (Sichtungskategorie) -> Void
     let onTarget: (OpenItem.Target) -> Void
@@ -609,7 +593,7 @@ struct WorkspaceDetail: View {
         case .map:
             MissionMapView(store: store)
         case .journal:
-            JournalView(store: store, templates: journalTemplates)
+            JournalView(store: store, templates: journalTemplates, people: people)
         }
     }
 }

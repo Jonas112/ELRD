@@ -22,8 +22,15 @@ struct MapCanvas: UIViewRepresentable {
     let missionTitle: String
     let showsUserLocation: Bool
     let focus: MapFocusRequest?
+    /// Abschnitte; nur die mit Koordinate erscheinen auf der Karte.
+    var sections: [MapSectionPin] = []
+    /// Abschnitte lassen sich auf der Karte verschieben.
+    var canEdit = false
+    var proxy: MapCanvasProxy?
     /// Kartenmitte nach jeder Bewegung (zum Setzen des Einsatzorts).
     var onCenterChange: (GeoCoordinate) -> Void = { _ in }
+    /// Abschnitt wurde auf der Karte verschoben.
+    var onMoveSection: (SectionID, GeoCoordinate) -> Void = { _, _ in }
 
     /// Ausschnitt um den Einsatzort (ca. 800 m), sonst ganz Deutschland.
     static func initialRegion(around coordinate: GeoCoordinate?) -> MKCoordinateRegion {
@@ -55,18 +62,26 @@ struct MapCanvas: UIViewRepresentable {
             scale.topAnchor.constraint(equalTo: map.safeAreaLayoutGuide.topAnchor, constant: 16),
         ])
 
+        proxy?.map = map
         context.coordinator.onCenterChange = onCenterChange
+        context.coordinator.onMoveSection = onMoveSection
+        context.coordinator.canEdit = canEdit
         map.setRegion(Self.initialRegion(around: missionCoordinate), animated: false)
         context.coordinator.apply(layer: layer, to: map)
         context.coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
+        context.coordinator.updateSections(sections, on: map)
         return map
     }
 
     func updateUIView(_ map: MKMapView, context: Context) {
         let coordinator = context.coordinator
+        proxy?.map = map
         coordinator.onCenterChange = onCenterChange
+        coordinator.onMoveSection = onMoveSection
+        coordinator.canEdit = canEdit
         coordinator.apply(layer: layer, to: map)
         coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
+        coordinator.updateSections(sections, on: map)
         if map.showsUserLocation != showsUserLocation { map.showsUserLocation = showsUserLocation }
         if let focus, focus.id != coordinator.lastFocusID {
             coordinator.lastFocusID = focus.id
@@ -88,6 +103,51 @@ struct MapCanvas: UIViewRepresentable {
         private var marker: MKPointAnnotation?
         var lastFocusID: UUID?
         var onCenterChange: (GeoCoordinate) -> Void = { _ in }
+        var onMoveSection: (SectionID, GeoCoordinate) -> Void = { _, _ in }
+        var canEdit = false
+        private var sectionAnnotations: [SectionID: SectionAnnotation] = [:]
+
+        /// Gleicht die Abschnittsmarkierungen mit dem Stand ab (nur Änderungen).
+        func updateSections(_ pins: [MapSectionPin], on map: MKMapView) {
+            let placed = pins.filter { $0.coordinate != nil }
+            let wanted = Set(placed.map(\.id))
+            for (id, annotation) in sectionAnnotations where !wanted.contains(id) {
+                map.removeAnnotation(annotation)
+                sectionAnnotations[id] = nil
+            }
+            for pin in placed {
+                guard let position = pin.coordinate?.clLocation else { continue }
+                let subtitle = pin.summary.isEmpty ? nil : pin.summary
+                if let existing = sectionAnnotations[pin.id] {
+                    if existing.coordinate.latitude != position.latitude || existing.coordinate.longitude != position.longitude {
+                        existing.coordinate = position
+                    }
+                    if existing.title != pin.name { existing.title = pin.name }
+                    if existing.subtitle != subtitle { existing.subtitle = subtitle }
+                    if let view = map.view(for: existing) { view.isDraggable = canEdit }
+                } else {
+                    let created = SectionAnnotation(pin: pin, coordinate: position)
+                    sectionAnnotations[pin.id] = created
+                    map.addAnnotation(created)
+                }
+            }
+        }
+
+        func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView,
+                     didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
+            switch newState {
+            case .ending:
+                view.setDragState(.none, animated: true)
+                if let annotation = view.annotation as? SectionAnnotation,
+                   let moved = GeoCoordinate(latitude: annotation.coordinate.latitude, longitude: annotation.coordinate.longitude) {
+                    onMoveSection(annotation.sectionID, moved)
+                }
+            case .canceling:
+                view.setDragState(.none, animated: true)
+            default:
+                break
+            }
+        }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             let center = mapView.centerCoordinate
@@ -144,6 +204,19 @@ struct MapCanvas: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
+            if let section = annotation as? SectionAnnotation {
+                let identifier = "section"
+                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)
+                    ?? MKMarkerAnnotationView(annotation: section, reuseIdentifier: identifier)
+                view.annotation = section
+                view.markerTintColor = .systemBlue
+                view.glyphImage = UIImage(systemName: "square.stack.3d.up.fill")
+                view.titleVisibility = .visible
+                view.subtitleVisibility = .adaptive
+                view.displayPriority = .required
+                view.isDraggable = canEdit
+                return view
+            }
             guard annotation === marker else { return nil }
             let identifier = "mission"
             let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)

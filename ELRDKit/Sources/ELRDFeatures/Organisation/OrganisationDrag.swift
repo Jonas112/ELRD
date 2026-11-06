@@ -8,14 +8,18 @@ import ELRDStore
 enum DragPayload: Equatable {
     case unit(UnitID)
     case patient(PatientID)
+    /// Abschnitt aus der Liste neben der Karte (Schritt 29).
+    case section(SectionID)
 
     private static let unitPrefix = "elrd-unit:"
     private static let patientPrefix = "elrd-patient:"
+    private static let sectionPrefix = "elrd-section:"
 
     var text: String {
         switch self {
         case .unit(let id): Self.unitPrefix + id.rawValue.uuidString
         case .patient(let id): Self.patientPrefix + id.rawValue.uuidString
+        case .section(let id): Self.sectionPrefix + id.rawValue.uuidString
         }
     }
 
@@ -24,6 +28,8 @@ enum DragPayload: Equatable {
             self = .unit(id)
         } else if text.hasPrefix(Self.patientPrefix), let id = PatientID(uuidString: String(text.dropFirst(Self.patientPrefix.count))) {
             self = .patient(id)
+        } else if text.hasPrefix(Self.sectionPrefix), let id = SectionID(uuidString: String(text.dropFirst(Self.sectionPrefix.count))) {
+            self = .section(id)
         } else {
             return nil
         }
@@ -71,6 +77,8 @@ enum DropAction: Equatable {
             case .unit(let unitID): return [.assign(patient: patientID, unit: unitID)]
             case .loosePatient: return []
             }
+        case .section:
+            return []
         }
     }
 }

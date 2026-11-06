@@ -139,6 +139,9 @@ enum DemoMissions {
         let staging = try running.perform(AddSection(name: "Bereitstellungsraum"))
         let scene = try running.perform(AddSection(name: "Einsatzstelle"))
         let casualties = try running.perform(AddSection(name: "Patientenablage"))
+        // Auf der Karte: Bereitstellungsraum und Einsatzstelle; die Patientenablage noch nicht.
+        try running.perform(SetSectionCoordinate(sectionID: staging.id, coordinate: GeoCoordinate(latitude: 50.1032, longitude: 10.1752)))
+        try running.perform(SetSectionCoordinate(sectionID: scene.id, coordinate: GeoCoordinate(latitude: 50.1001, longitude: 10.1806)))
         if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }
         if let nef = running.state.activeUnits.first(where: { $0.type == .nef }) {
             try running.perform(MoveUnit(unitID: nef.id, to: staging.id))

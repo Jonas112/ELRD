@@ -2,8 +2,14 @@ import SwiftUI
 import ELRDDomain
 import ELRDStore
 
-/// Bereich „Karte“: Lagekarte mit Einsatzort, eigenem Standort, Maßstab und
-/// wählbarer Kartengrundlage (Apple, OpenStreetMap, OpenTopoMap).
+/// Was gerade über das Fadenkreuz in der Kartenmitte gesetzt wird.
+enum MapPlacingTarget: Equatable {
+    case mission
+    case section(SectionID)
+}
+
+/// Bereich „Karte“: Lagekarte mit Einsatzort, Abschnitten, eigenem Standort,
+/// Maßstab und wählbarer Kartengrundlage (Apple, OpenStreetMap, OpenTopoMap).
 struct MissionMapView: View {
     let store: MissionStore
 
@@ -11,61 +17,55 @@ struct MissionMapView: View {
     @StateObject private var location = LocationAccess()
     @State private var focus: MapFocusRequest?
     @State private var showsLocationDenied = false
-    /// Einsatzort wird auf die Kartenmitte (Fadenkreuz) gesetzt.
-    @State private var placingMission = false
+    /// Gewähltes Ziel fürs Fadenkreuz; ohne Einsatzort ist es automatisch der Einsatzort.
+    @State private var placing: MapPlacingTarget?
     @State private var center: GeoCoordinate?
     @State private var errorMessage: String?
+    @State private var showsSectionList = false
+    @State private var proxy = MapCanvasProxy()
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
 
+    private func activePlacing(_ mission: Mission) -> MapPlacingTarget? {
+        guard canEdit else { return nil }
+        return placing ?? (mission.coordinate == nil ? .mission : nil)
+    }
+
     var body: some View {
-        let mission = store.state.mission
-        let isPlacing = canEdit && (placingMission || mission.coordinate == nil)
-        ZStack(alignment: .topTrailing) {
-            MapCanvas(
-                layer: layer,
-                missionCoordinate: mission.coordinate,
-                missionTitle: mission.location.isEmpty ? "Einsatzort" : mission.location,
-                showsUserLocation: location.isAllowed,
-                focus: focus,
-                onCenterChange: { center = $0 }
-            )
-
-            if isPlacing {
-                Image(systemName: "plus")
-                    .font(.system(size: 44, weight: .light))
-                    .foregroundStyle(.red)
-                    .shadow(color: .white, radius: 2)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(spacing: Spacing.s) {
-                layerMenu
-                missionControl(mission)
-                MapControlButton(title: "Ich", systemImage: location.isAllowed ? "location.fill" : "location") {
-                    locateMe()
+        GeometryReader { proxyGeometry in
+            let isWide = proxyGeometry.size.width >= 900
+            HStack(spacing: 0) {
+                if isWide {
+                    MapSectionList(
+                        pins: MapSectionPin.pins(for: store.state),
+                        canEdit: canEdit,
+                        allowsDragging: true,
+                        onSelect: select,
+                        onRemove: removeFromMap
+                    )
+                    .frame(width: 300)
+                    .background(Surface.canvas)
+                    Divider()
                 }
-                .accessibilityLabel("Mein Standort")
+                mapArea(showsSectionButton: !isWide)
             }
-            .padding(Spacing.m)
         }
-        .overlay(alignment: .bottom) {
-            if isPlacing { placingBar(hasCoordinate: mission.coordinate != nil) }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if let attribution = layer.attribution {
-                Text(attribution)
-                    .font(.caption2)
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, Spacing.s)
-                    .padding(.vertical, 4)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .padding(.trailing, Spacing.s)
-                    .padding(.bottom, 32)
-                    .accessibilityLabel("Quelle: \(attribution)")
+        .sheet(isPresented: $showsSectionList) {
+            NavigationStack {
+                MapSectionList(
+                    pins: MapSectionPin.pins(for: store.state),
+                    canEdit: canEdit,
+                    allowsDragging: false,
+                    onSelect: { pin in showsSectionList = false; select(pin) },
+                    onRemove: removeFromMap
+                )
+                .navigationTitle("Abschnitte")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) { Button("Fertig") { showsSectionList = false } }
+                }
             }
+            .presentationDetents([.medium, .large])
         }
         .alert("Standort nicht freigegeben", isPresented: $showsLocationDenied) {
             Button("Einstellungen") {
@@ -92,6 +92,73 @@ struct MissionMapView: View {
         }
     }
 
+    private func mapArea(showsSectionButton: Bool) -> some View {
+        let mission = store.state.mission
+        let target = activePlacing(mission)
+        return ZStack(alignment: .topTrailing) {
+            MapCanvas(
+                layer: layer,
+                missionCoordinate: mission.coordinate,
+                missionTitle: mission.location.isEmpty ? "Einsatzort" : mission.location,
+                showsUserLocation: location.isAllowed,
+                focus: focus,
+                sections: MapSectionPin.pins(for: store.state),
+                canEdit: canEdit,
+                proxy: proxy,
+                onCenterChange: { center = $0 },
+                onMoveSection: { id, coordinate in perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate)) }
+            )
+            .dropDestination(for: String.self) { items, point in
+                guard canEdit,
+                      case .section(let id)? = items.lazy.compactMap({ DragPayload(text: $0) }).first,
+                      let coordinate = proxy.coordinate(at: point) else { return false }
+                perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate))
+                return true
+            }
+
+            if target != nil {
+                Image(systemName: "plus")
+                    .font(.system(size: 44, weight: .light))
+                    .foregroundStyle(.red)
+                    .shadow(color: .white, radius: 2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+
+            VStack(spacing: Spacing.s) {
+                layerMenu
+                missionControl(mission)
+                MapControlButton(title: "Ich", systemImage: location.isAllowed ? "location.fill" : "location") {
+                    locateMe()
+                }
+                .accessibilityLabel("Mein Standort")
+                if showsSectionButton {
+                    MapControlButton(title: "Abschnitte", systemImage: "square.stack.3d.up.fill") {
+                        showsSectionList = true
+                    }
+                }
+            }
+            .padding(Spacing.m)
+        }
+        .overlay(alignment: .bottom) {
+            if let target { placingBar(for: target, mission: mission) }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let attribution = layer.attribution {
+                Text(attribution)
+                    .font(.caption2)
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, Spacing.s)
+                    .padding(.vertical, 4)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .padding(.trailing, Spacing.s)
+                    .padding(.bottom, 32)
+                    .accessibilityLabel("Quelle: \(attribution)")
+            }
+        }
+    }
+
     /// Einsatzort: hinspringen oder (neu) auf die Kartenmitte setzen.
     @ViewBuilder
     private func missionControl(_ mission: Mission) -> some View {
@@ -100,7 +167,7 @@ struct MissionMapView: View {
                 Button { focus = MapFocusRequest(target: .coordinate(coordinate)) } label: {
                     Label("Zum Einsatzort", systemImage: "flag.fill")
                 }
-                Button { placingMission = true } label: {
+                Button { placing = .mission } label: {
                     Label("Einsatzort verschieben", systemImage: "arrow.up.and.down.and.arrow.left.and.right")
                 }
             } label: {
@@ -117,24 +184,37 @@ struct MissionMapView: View {
         }
     }
 
-    /// Leiste unten, solange der Einsatzort gesetzt wird.
-    private func placingBar(hasCoordinate: Bool) -> some View {
-        VStack(spacing: Spacing.s) {
-            Text(hasCoordinate ? "Karte verschieben, bis das Kreuz auf dem Einsatzort liegt." : "Noch kein Einsatzort. Karte verschieben, bis das Kreuz darauf liegt.")
+    private func targetName(_ target: MapPlacingTarget) -> String {
+        switch target {
+        case .mission: "Einsatzort"
+        case .section(let id): "„\(store.state.activeSections.first { $0.id == id }?.name ?? "Abschnitt")“"
+        }
+    }
+
+    /// Leiste unten, solange etwas über das Fadenkreuz gesetzt wird.
+    private func placingBar(for target: MapPlacingTarget, mission: Mission) -> some View {
+        let name = targetName(target)
+        let canCancel = placing != nil && !(target == .mission && mission.coordinate == nil)
+        let hint = target == .mission && mission.coordinate == nil
+            ? "Noch kein Einsatzort. Karte verschieben, bis das Kreuz darauf liegt."
+            : "Karte verschieben, bis das Kreuz auf \(target == .mission ? "dem Einsatzort" : name) liegt."
+        return VStack(spacing: Spacing.s) {
+            Text(hint)
                 .font(.subheadline.weight(.semibold))
                 .multilineTextAlignment(.center)
             HStack(spacing: Spacing.s) {
-                if hasCoordinate {
-                    Button("Abbrechen") { placingMission = false }
+                if canCancel {
+                    Button("Abbrechen") { placing = nil }
                         .font(.headline)
                         .frame(minWidth: 120, minHeight: TouchTarget.comfortable)
                         .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .buttonStyle(.plain)
                 }
-                Button(action: placeMission) {
-                    Label("Einsatzort hier", systemImage: "flag.fill")
+                Button { place(target) } label: {
+                    Label("\(name) hier", systemImage: target == .mission ? "flag.fill" : "square.stack.3d.up.fill")
                         .font(.headline)
                         .foregroundStyle(.white)
+                        .lineLimit(1)
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)
                         .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -147,16 +227,40 @@ struct MissionMapView: View {
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding(.horizontal, Spacing.l)
         .padding(.bottom, 44)
-        .frame(maxWidth: 520)
+        .frame(maxWidth: 560)
     }
 
-    private func placeMission() {
+    private func place(_ target: MapPlacingTarget) {
         guard let center else { return }
+        let done: Bool
+        switch target {
+        case .mission: done = perform(SetMissionCoordinate(center))
+        case .section(let id): done = perform(SetSectionCoordinate(sectionID: id, coordinate: center))
+        }
+        if done { placing = nil }
+    }
+
+    /// Tipp in der Liste: platzierte Abschnitte anspringen, sonst Fadenkreuz.
+    private func select(_ pin: MapSectionPin) {
+        if let coordinate = pin.coordinate {
+            focus = MapFocusRequest(target: .coordinate(coordinate))
+        } else if canEdit {
+            placing = .section(pin.id)
+        }
+    }
+
+    private func removeFromMap(_ pin: MapSectionPin) {
+        perform(SetSectionCoordinate(sectionID: pin.id, coordinate: nil))
+    }
+
+    @discardableResult
+    private func perform<Command: MissionCommand>(_ command: Command) -> Bool {
         do {
-            try store.perform(SetMissionCoordinate(center))
-            placingMission = false
+            _ = try store.perform(command)
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
@@ -179,6 +283,83 @@ struct MissionMapView: View {
         case .unknown: location.request()
         case .denied: showsLocationDenied = true
         }
+    }
+}
+
+/// Liste der Abschnitte neben bzw. über der Karte. Tipp: anspringen oder setzen;
+/// auf großen iPads lassen sich Abschnitte direkt auf die Karte ziehen.
+struct MapSectionList: View {
+    let pins: [MapSectionPin]
+    let canEdit: Bool
+    let allowsDragging: Bool
+    let onSelect: (MapSectionPin) -> Void
+    let onRemove: (MapSectionPin) -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.s) {
+                Text("Abschnitte").font(.title3.weight(.bold))
+                if pins.isEmpty {
+                    Text("Noch keine Abschnitte. Im Bereich „Einheiten“ anlegen.")
+                        .foregroundStyle(.secondary)
+                } else if canEdit {
+                    Text(allowsDragging ? "Auf die Karte ziehen oder antippen." : "Antippen: anspringen oder setzen.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(pins) { pin in
+                    row(pin)
+                }
+            }
+            .padding(Spacing.l)
+        }
+    }
+
+    private func row(_ pin: MapSectionPin) -> some View {
+        Button { onSelect(pin) } label: {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: pin.coordinate == nil ? "mappin.slash" : "mappin.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(pin.coordinate == nil ? Color.secondary : Color.blue)
+                    .frame(width: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Spacing.xs) {
+                        Text(pin.name).font(.headline).foregroundStyle(.primary).lineLimit(2)
+                        if pin.isInitial {
+                            Text("Initial")
+                                .font(.caption2.weight(.heavy))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(ActionFill.primary, in: Capsule())
+                        }
+                    }
+                    Text(pin.coordinate == nil ? "nicht auf der Karte" : (pin.summary.isEmpty ? "keine Einheiten" : pin.summary))
+                        .font(.subheadline)
+                        .foregroundStyle(pin.coordinate == nil ? Color.orange : Color.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Spacing.m)
+            .frame(minHeight: 60)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            if canEdit, pin.coordinate != nil {
+                Button(role: .destructive) { onRemove(pin) } label: {
+                    Label("Von der Karte nehmen", systemImage: "mappin.slash")
+                }
+            }
+        }
+        .organisationDraggable(allowsDragging && canEdit ? .section(pin.id) : nil) {
+            Label(pin.name, systemImage: "square.stack.3d.up.fill")
+                .font(.headline)
+                .padding(Spacing.m)
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .accessibilityHint(pin.coordinate == nil ? "Setzt den Abschnitt über das Fadenkreuz." : "Zeigt den Abschnitt auf der Karte.")
     }
 }
 

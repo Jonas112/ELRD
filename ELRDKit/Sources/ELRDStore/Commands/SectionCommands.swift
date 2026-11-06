@@ -168,3 +168,24 @@ public struct MovePatient: MissionCommand {
         draft.log(.patient, "Patient \(patient.number) → \(targetText)", subject: .patient(patientID))
     }
 }
+
+/// Setzt die Position eines Abschnitts auf der Lagekarte (`nil`: von der Karte nehmen).
+public struct SetSectionCoordinate: MissionCommand {
+    public let sectionID: SectionID
+    public let coordinate: GeoCoordinate?
+
+    public init(sectionID: SectionID, coordinate: GeoCoordinate?) {
+        self.sectionID = sectionID
+        self.coordinate = coordinate
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let section = try activeSection(sectionID, in: draft)
+        guard section.coordinate != coordinate else { return }
+        let target = coordinate
+        try draft.update(MissionSection.self, id: sectionID) { $0.coordinate = target }
+        let text = target == nil ? "von der Karte genommen"
+            : section.coordinate == nil ? "auf der Karte gesetzt" : "auf der Karte verschoben"
+        draft.log(.section, "Abschnitt „\(section.name)“ \(text)", subject: .section(sectionID))
+    }
+}

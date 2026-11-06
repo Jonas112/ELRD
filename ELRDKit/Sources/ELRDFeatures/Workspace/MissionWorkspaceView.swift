@@ -600,6 +600,8 @@ struct WorkspaceDetail: View {
             PatientsView(store: store, query: $patientQuery, onQuickAdd: onQuickAdd)
         case .organisation:
             SectionsView(store: store, templates: masterData) { onTarget(.patient($0)) }
+        case .map:
+            MissionMapView(store: store)
         default:
             ContentUnavailableView {
                 Label(section.title, systemImage: section.systemImage)

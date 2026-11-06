@@ -353,6 +353,26 @@ public struct EditMission: MissionCommand {
     }
 }
 
+/// Setzt den Einsatzort auf der Karte (`nil`: entfernt ihn).
+public struct SetMissionCoordinate: MissionCommand {
+    public let coordinate: GeoCoordinate?
+
+    public init(_ coordinate: GeoCoordinate?) {
+        self.coordinate = coordinate
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let before = draft.mission.coordinate
+        guard before != coordinate else { return }
+        let target = coordinate
+        try draft.updateMission { $0.coordinate = target }
+        let missionID = draft.missionID
+        let text = target == nil ? "Einsatzort auf der Karte entfernt"
+            : before == nil ? "Einsatzort auf der Karte gesetzt" : "Einsatzort auf der Karte verschoben"
+        draft.log(.mission, text, subject: .mission(missionID))
+    }
+}
+
 /// Beendet den Einsatz und vermerkt das im Tagebuch (wie ELRDRG).
 public struct CloseMission: MissionCommand {
     public init() {}

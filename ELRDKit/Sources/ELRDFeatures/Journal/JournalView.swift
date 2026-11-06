@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import PhotosUI
 import ELRDDomain
 import ELRDPersistence
 import ELRDStore
@@ -19,6 +20,11 @@ struct JournalView: View {
     @State private var viewing: FileAttachment?
     @State private var errorMessage: String?
     @FocusState private var textFocused: Bool
+    @State private var pickedPhotos: [PhotosPickerItem] = []
+    @State private var showsCamera = false
+    @State private var isImporting = false
+    @StateObject private var recorder = VoiceRecorder()
+    @StateObject private var player = VoicePlayer()
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -47,6 +53,7 @@ struct JournalView: View {
                             entry: entry,
                             canEdit: canEdit && entry.origin != .automatic,
                             attachments: attachments,
+                            player: player,
                             onEdit: { editing = entry },
                             onShowImage: { viewing = $0 }
                         )
@@ -69,6 +76,18 @@ struct JournalView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage ?? "")
+        }
+        .onChange(of: pickedPhotos) { _, items in
+            guard !items.isEmpty else { return }
+            Task { await importPhotos(items) }
+        }
+        .fullScreenCover(isPresented: $showsCamera) {
+            CameraPicker(onImage: saveCameraPhoto, onFinish: { showsCamera = false })
+                .ignoresSafeArea()
+        }
+        .onDisappear {
+            player.stop()
+            if recorder.isRecording { recorder.cancel() }
         }
         .onAppear {
             if AppLaunchOptions.current.demoScreen == .journalEntry, editing == nil {
@@ -120,9 +139,141 @@ struct JournalView: View {
                 .buttonStyle(.plain)
                 .disabled(trimmed.isEmpty)
             }
+            mediaRow
             if let templates { templateChips(templates) }
         }
         .cardStyle()
+    }
+
+    // MARK: Fotos und Sprachnotizen
+
+    /// Foto, Kamera, Sprachnotiz – der getippte Text wird zur Bildunterschrift.
+    @ViewBuilder
+    private var mediaRow: some View {
+        if recorder.isRecording {
+            recordingBar
+        } else {
+            HStack(spacing: Spacing.s) {
+                PhotosPicker(selection: $pickedPhotos, maxSelectionCount: 6, matching: .images) {
+                    mediaLabel("Foto", systemImage: "photo.on.rectangle")
+                }
+                .buttonStyle(.plain)
+                .disabled(isImporting)
+                if CameraPicker.isAvailable {
+                    Button { showsCamera = true } label: { mediaLabel("Kamera", systemImage: "camera.fill") }
+                        .buttonStyle(.plain)
+                }
+                Button { Task { await recorder.start() } } label: { mediaLabel("Sprachnotiz", systemImage: "mic.fill") }
+                    .buttonStyle(.plain)
+                if isImporting { ProgressView().padding(.leading, Spacing.s) }
+            }
+            switch recorder.phase {
+            case .denied:
+                Text("Mikrofon nicht freigegeben (Einstellungen → ELRD → Mikrofon).")
+                    .font(.subheadline).foregroundStyle(.orange)
+            case .failed(let message):
+                Text(message).font(.subheadline).foregroundStyle(.orange)
+            default:
+                EmptyView()
+            }
+        }
+    }
+
+    private func mediaLabel(_ title: String, systemImage: String) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.headline)
+            .padding(.horizontal, Spacing.m)
+            .frame(minHeight: TouchTarget.comfortable)
+            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// Während der Aufnahme: Zeit, Abbrechen, großes „Fertig“.
+    private var recordingBar: some View {
+        HStack(spacing: Spacing.m) {
+            Circle().fill(Color.red).frame(width: 14, height: 14)
+            if case .recording(let since) = recorder.phase {
+                TimelineView(.periodic(from: since, by: 1)) { context in
+                    Text("Aufnahme \(DurationText.string(context.date.timeIntervalSince(since)))")
+                        .font(.title3.weight(.bold).monospacedDigit())
+                }
+            }
+            Spacer(minLength: Spacing.s)
+            Button("Abbrechen") { recorder.cancel() }
+                .font(.headline)
+                .frame(minHeight: TouchTarget.comfortable)
+            Button(action: finishRecording) {
+                Label("Fertig", systemImage: "stop.fill")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, Spacing.l)
+                    .frame(minHeight: TouchTarget.comfortable)
+                    .background(Color.red, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(Spacing.s)
+        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Aufnahme läuft")
+    }
+
+    private func finishRecording() {
+        guard let recording = recorder.stop() else {
+            errorMessage = "Die Aufnahme war zu kurz."
+            return
+        }
+        do {
+            let file = try attachments.save(recording.data, kind: .audio, createdAt: Date(), duration: recording.duration)
+            addMedia([file])
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func importPhotos(_ items: [PhotosPickerItem]) async {
+        isImporting = true
+        defer {
+            isImporting = false
+            pickedPhotos = []
+        }
+        var files: [FileAttachment] = []
+        for item in items {
+            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            do {
+                if let file = try PhotoImport.save(data, in: attachments) { files.append(file) }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+        if files.isEmpty {
+            errorMessage = errorMessage ?? "Die Fotos ließen sich nicht übernehmen."
+        } else {
+            addMedia(files)
+        }
+    }
+
+    private func saveCameraPhoto(_ image: UIImage) {
+        guard let jpeg = PhotoImport.jpeg(from: image) else {
+            errorMessage = "Das Foto ließ sich nicht übernehmen."
+            return
+        }
+        do {
+            let file = try attachments.save(jpeg.data, kind: .photo, createdAt: Date(), pixelWidth: jpeg.width, pixelHeight: jpeg.height)
+            addMedia([file])
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Eintrag mit Anhängen; getippter Text wird Bildunterschrift.
+    private func addMedia(_ files: [FileAttachment]) {
+        do {
+            _ = try store.perform(AddJournalMedia(attachments: files, text: trimmed, occurredAt: usesCustomTime ? occurredAt : nil))
+            text = ""
+            usesCustomTime = false
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private func templateChips(_ editor: JournalTemplateEditor) -> some View {
@@ -180,6 +331,7 @@ struct JournalEntryRow: View {
     let entry: JournalEntry
     let canEdit: Bool
     let attachments: AttachmentFileStore
+    @ObservedObject var player: VoicePlayer
     let onEdit: () -> Void
     let onShowImage: (FileAttachment) -> Void
 
@@ -210,12 +362,45 @@ struct JournalEntryRow: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                if let image = entry.firstImage {
+                let images = entry.attachments.filter { $0.kind == .photo || $0.kind == .drawing }
+                if images.count == 1, let image = images.first {
                     Button { onShowImage(image) } label: {
                         AttachmentThumbnail(file: image, attachments: attachments)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Bild öffnen")
+                } else if images.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: Spacing.s) {
+                            ForEach(images) { image in
+                                Button { onShowImage(image) } label: {
+                                    AttachmentThumbnail(file: image, attachments: attachments, height: 120)
+                                        .frame(width: 160)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("Bild öffnen")
+                            }
+                        }
+                    }
+                }
+                if entry.isMissionThumbnail {
+                    Label("Vorschaubild des Einsatzes", systemImage: "star.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(entry.attachments.filter { $0.kind == .audio }) { audio in
+                    Button { player.toggle(audio, in: attachments) } label: {
+                        Label(
+                            "Sprachnotiz \(DurationText.string(audio.duration ?? 0))",
+                            systemImage: player.playingID == audio.id ? "stop.circle.fill" : "play.circle.fill"
+                        )
+                        .font(.headline)
+                        .padding(.horizontal, Spacing.m)
+                        .frame(minHeight: TouchTarget.comfortable)
+                        .background(Surface.elevated, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(player.playingID == audio.id ? "Wiedergabe stoppen" : "Sprachnotiz abspielen, \(DurationText.string(audio.duration ?? 0))")
                 }
             }
             if canEdit {
@@ -239,6 +424,7 @@ struct JournalEntryRow: View {
 struct AttachmentThumbnail: View {
     let file: FileAttachment
     let attachments: AttachmentFileStore
+    var height: CGFloat? = nil
     @State private var image: UIImage?
 
     var body: some View {
@@ -254,7 +440,7 @@ struct AttachmentThumbnail: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(maxWidth: 360, minHeight: 120, maxHeight: 200)
+        .frame(maxWidth: 360, minHeight: height ?? 120, maxHeight: height ?? 200)
         .background(Surface.elevated)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .task(id: file.id) {
@@ -330,6 +516,19 @@ struct JournalEntryEditor: View {
                     Text("Zeitpunkt").font(.headline).foregroundStyle(.secondary)
                     DatePicker("Zeitpunkt", selection: $occurredAt, in: ...max(Date(), entry.occurredAt), displayedComponents: [.date, .hourAndMinute])
                         .labelsHidden()
+                    if entry.firstImage != nil {
+                        let isThumbnail = store.state.journal.first { $0.id == entry.id }?.isMissionThumbnail ?? false
+                        Toggle(isOn: Binding(
+                            get: { isThumbnail },
+                            set: { on in setThumbnail(on) }
+                        )) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Vorschaubild des Einsatzes").font(.headline)
+                                Text("Erscheint in der Einsatzliste und im Bericht.").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(minHeight: TouchTarget.comfortable)
+                    }
                     Text("Erfasst \(entry.metadata.createdAt.formatted(date: .abbreviated, time: .shortened)). Änderungen stehen im Protokoll.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -370,6 +569,14 @@ struct JournalEntryEditor: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+        }
+    }
+
+    private func setThumbnail(_ on: Bool) {
+        do {
+            try store.perform(SetMissionThumbnail(entryID: on ? entry.id : nil))
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

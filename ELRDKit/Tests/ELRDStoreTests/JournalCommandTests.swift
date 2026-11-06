@@ -72,3 +72,54 @@ struct JournalTemplateTests {
         #expect(JournalTemplateSet.defaults.templates.count >= 5)
     }
 }
+
+@Suite("Tagebuch: Fotos, Sprachnotizen, Vorschaubild")
+@MainActor
+struct JournalMediaCommandTests {
+    func file(_ kind: AttachmentKind, _ digit: Character, duration: TimeInterval? = nil) -> FileAttachment {
+        FileAttachment(kind: kind, byteCount: 10, sha256: String(repeating: digit, count: 64), createdAt: Date(), duration: duration)
+    }
+
+    @Test func photosAndVoiceNotesBecomeEntries() throws {
+        let fixture = try StoreFixture()
+        let store = try fixture.newMission()
+        let photos = try store.perform(AddJournalMedia(attachments: [file(.photo, "a"), file(.photo, "b")], text: " Unfallstelle von Norden "))
+        #expect(photos.kind == .photo)
+        #expect(photos.text == "Unfallstelle von Norden")
+        #expect(store.state.visibleLog.last?.message == "Fotoeintrag (2 Fotos) \(photos.number) erfasst")
+
+        let voice = try store.perform(AddJournalMedia(attachments: [file(.audio, "c", duration: 42)]))
+        #expect(voice.kind == .audio)
+        #expect(voice.text.isEmpty)
+        #expect(store.state.visibleLog.last?.message == "Sprachnotiz \(voice.number) erfasst")
+
+        #expect(throws: CommandError.invalid("Kein Foto und keine Aufnahme ausgewählt.")) {
+            try store.perform(AddJournalMedia(attachments: []))
+        }
+        #expect(throws: CommandError.invalid("Zeichnungen gehören auf die Karte.")) {
+            try store.perform(AddJournalMedia(attachments: [file(.drawing, "d")]))
+        }
+        // Ein Fotoeintrag ohne Text bleibt gültig.
+        try store.perform(EditJournalEntry(entryID: photos.id, text: ""))
+        #expect(store.state.journal.first { $0.id == photos.id }?.text == "")
+    }
+
+    @Test func onlyOneEntryIsMissionThumbnail() throws {
+        let fixture = try StoreFixture()
+        let store = try fixture.newMission()
+        let first = try store.perform(AddJournalMedia(attachments: [file(.photo, "a")]))
+        let second = try store.perform(AddJournalMedia(attachments: [file(.photo, "b")]))
+        let text = try store.perform(AddJournalText("ohne Bild"))
+        try store.perform(SetMissionThumbnail(entryID: second.id))
+        #expect(store.state.journal.filter(\.isMissionThumbnail).map(\.id) == [second.id])
+        #expect(JournalEntry.thumbnail(in: store.state.journal) == second.firstImage)
+        try store.perform(SetMissionThumbnail(entryID: first.id))
+        #expect(store.state.journal.filter(\.isMissionThumbnail).map(\.id) == [first.id])
+        #expect(throws: CommandError.invalid("Dieser Eintrag hat kein Bild.")) {
+            try store.perform(SetMissionThumbnail(entryID: text.id))
+        }
+        try store.perform(SetMissionThumbnail(entryID: nil))
+        #expect(store.state.journal.allSatisfy { !$0.isMissionThumbnail })
+        #expect(store.state.visibleLog.last?.message == "Vorschaubild des Einsatzes: automatisch")
+    }
+}

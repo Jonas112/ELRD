@@ -88,3 +88,69 @@ public struct DeleteJournalEntry: MissionCommand {
         draft.log(.journal, "Tagebucheintrag \(entry.number) gelöscht", subject: .journalEntry(entryID))
     }
 }
+
+/// Tagebucheintrag mit Fotos oder einer Sprachnotiz (Dateien liegen bereits in
+/// der Dateiablage). Der Text ist optional (Bildunterschrift, Stichwort).
+public struct AddJournalMedia: MissionCommand {
+    public let attachments: [FileAttachment]
+    public let text: String
+    public let occurredAt: Date?
+
+    public init(attachments: [FileAttachment], text: String = "", occurredAt: Date? = nil) {
+        self.attachments = attachments
+        self.text = text
+        self.occurredAt = occurredAt
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws -> JournalEntry {
+        guard !attachments.isEmpty else { throw CommandError.invalid("Kein Foto und keine Aufnahme ausgewählt.") }
+        guard attachments.allSatisfy({ $0.kind != .drawing }) else {
+            throw CommandError.invalid("Zeichnungen gehören auf die Karte.")
+        }
+        let entry = try draft.addJournalEntry(
+            text: text.trimmingCharacters(in: .whitespacesAndNewlines),
+            origin: .manual,
+            occurredAt: occurredAt,
+            attachments: attachments
+        )
+        let what: String
+        switch entry.kind {
+        case .photo: what = attachments.count == 1 ? "Fotoeintrag" : "Fotoeintrag (\(attachments.count) Fotos)"
+        case .audio: what = "Sprachnotiz"
+        case .video: what = "Videoeintrag"
+        case .text: what = "Tagebucheintrag"
+        }
+        draft.log(.journal, "\(what) \(entry.number) erfasst", subject: .journalEntry(entry.id))
+        return entry
+    }
+}
+
+/// Legt fest, welches Bild die Einsatzliste als Vorschau zeigt (`nil`: automatisch
+/// das erste Foto, wie ELRDRG).
+public struct SetMissionThumbnail: MissionCommand {
+    public let entryID: JournalEntryID?
+
+    public init(entryID: JournalEntryID?) {
+        self.entryID = entryID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        if let entryID {
+            let entry = try activeJournalEntry(entryID, in: draft)
+            guard entry.firstImage != nil else { throw CommandError.invalid("Dieser Eintrag hat kein Bild.") }
+        }
+        var changed = false
+        for entry in draft.active(JournalEntry.self) {
+            let shouldBe = entry.id == entryID
+            guard entry.isMissionThumbnail != shouldBe else { continue }
+            try draft.update(JournalEntry.self, id: entry.id) { $0.isMissionThumbnail = shouldBe }
+            changed = true
+        }
+        guard changed else { return }
+        if let entryID, let entry = draft.get(JournalEntry.self, id: entryID) {
+            draft.log(.journal, "Bild aus Eintrag \(entry.number) ist Vorschaubild des Einsatzes", subject: .journalEntry(entryID))
+        } else {
+            draft.log(.journal, "Vorschaubild des Einsatzes: automatisch")
+        }
+    }
+}

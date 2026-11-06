@@ -210,6 +210,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ELRD;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Zeigt deinen Standort auf der Lagekarte und hilft, den Einsatzort zu setzen.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Fotos für das Einsatztagebuch aufnehmen.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sprachnotizen für das Einsatztagebuch aufnehmen.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -243,6 +245,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ELRD;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Zeigt deinen Standort auf der Lagekarte und hilft, den Einsatzort zu setzen.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Fotos für das Einsatztagebuch aufnehmen.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sprachnotizen für das Einsatztagebuch aufnehmen.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

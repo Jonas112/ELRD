@@ -56,7 +56,12 @@ public extension MapShape {
         case let .circle(_, radius):
             return "Radius \(Self.metersText(radius))"
         case let .rectangle(bounds), let .drawing(bounds, _):
-            return "\(Self.metersText(bounds.widthMeters)) × \(Self.metersText(bounds.heightMeters))"
+            let width = bounds.widthMeters
+            let height = bounds.heightMeters
+            if width < 1000, height < 1000 {
+                return "\(Int(width.rounded())) × \(Int(height.rounded())) m"
+            }
+            return "\(Self.metersText(width)) × \(Self.metersText(height))"
         }
     }
 

@@ -31,11 +31,27 @@ struct MapCanvas: UIViewRepresentable {
     var onCenterChange: (GeoCoordinate) -> Void = { _ in }
     /// Abschnitt wurde auf der Karte verschoben.
     var onMoveSection: (SectionID, GeoCoordinate) -> Void = { _, _ in }
+    /// Kreise und Rechtecke (aktive).
+    var objects: [MapObject] = []
+    /// Beschriftung eines Kartenobjekts angetippt.
+    var onSelectObject: (MapObjectID) -> Void = { _ in }
 
-    /// Ausschnitt um den Einsatzort (ca. 800 m), sonst ganz Deutschland.
-    static func initialRegion(around coordinate: GeoCoordinate?) -> MKCoordinateRegion {
+    /// Ausschnitt um den Einsatzort (mindestens ca. 800 m) und alles, was schon
+    /// auf der Karte liegt (mit Rand); ohne Einsatzort ganz Deutschland.
+    static func initialRegion(around coordinate: GeoCoordinate?, including others: [GeoCoordinate] = []) -> MKCoordinateRegion {
         if let coordinate {
-            return MKCoordinateRegion(center: coordinate.clLocation, latitudinalMeters: 800, longitudinalMeters: 800)
+            let points = [coordinate] + others
+            let north = points.map(\.latitude).max() ?? coordinate.latitude
+            let south = points.map(\.latitude).min() ?? coordinate.latitude
+            let east = points.map(\.longitude).max() ?? coordinate.longitude
+            let west = points.map(\.longitude).min() ?? coordinate.longitude
+            let minimum = MKCoordinateRegion(center: coordinate.clLocation, latitudinalMeters: 800, longitudinalMeters: 800).span
+            let span = MKCoordinateSpan(
+                latitudeDelta: max((north - south) * 1.6, minimum.latitudeDelta),
+                longitudeDelta: max((east - west) * 1.6, minimum.longitudeDelta)
+            )
+            let middle = CLLocationCoordinate2D(latitude: (north + south) / 2, longitude: (east + west) / 2)
+            return MKCoordinateRegion(center: others.isEmpty ? coordinate.clLocation : middle, span: span)
         }
         return MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 51.16, longitude: 10.45),
@@ -66,10 +82,13 @@ struct MapCanvas: UIViewRepresentable {
         context.coordinator.onCenterChange = onCenterChange
         context.coordinator.onMoveSection = onMoveSection
         context.coordinator.canEdit = canEdit
-        map.setRegion(Self.initialRegion(around: missionCoordinate), animated: false)
+        let placed = sections.compactMap(\.coordinate) + objects.map(\.shape.center)
+        map.setRegion(Self.initialRegion(around: missionCoordinate, including: placed), animated: false)
         context.coordinator.apply(layer: layer, to: map)
         context.coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
+        context.coordinator.onSelectObject = onSelectObject
         context.coordinator.updateSections(sections, on: map)
+        context.coordinator.updateObjects(objects, on: map)
         return map
     }
 
@@ -81,7 +100,9 @@ struct MapCanvas: UIViewRepresentable {
         coordinator.canEdit = canEdit
         coordinator.apply(layer: layer, to: map)
         coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
+        coordinator.onSelectObject = onSelectObject
         coordinator.updateSections(sections, on: map)
+        coordinator.updateObjects(objects, on: map)
         if map.showsUserLocation != showsUserLocation { map.showsUserLocation = showsUserLocation }
         if let focus, focus.id != coordinator.lastFocusID {
             coordinator.lastFocusID = focus.id
@@ -106,6 +127,56 @@ struct MapCanvas: UIViewRepresentable {
         var onMoveSection: (SectionID, GeoCoordinate) -> Void = { _, _ in }
         var canEdit = false
         private var sectionAnnotations: [SectionID: SectionAnnotation] = [:]
+        var onSelectObject: (MapObjectID) -> Void = { _ in }
+        /// Gezeichnete Objekte: Stand, Fläche und Beschriftung je Kennung.
+        private var drawn: [MapObjectID: (object: MapObject, overlay: any MKOverlay, label: MapObjectAnnotation)] = [:]
+        /// Farbe je Fläche (für den Renderer).
+        private var overlayColors: [ObjectIdentifier: RGBColor] = [:]
+
+        /// Gleicht Kreise und Rechtecke ab; geänderte werden neu gezeichnet.
+        func updateObjects(_ objects: [MapObject], on map: MKMapView) {
+            let wanted = Dictionary(objects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for (id, entry) in drawn {
+                let current = wanted[id]
+                let unchanged = current.map { $0.shape == entry.object.shape && $0.color == entry.object.color && $0.displayName == entry.object.displayName } ?? false
+                guard !unchanged else { continue }
+                map.removeOverlay(entry.overlay)
+                map.removeAnnotation(entry.label)
+                overlayColors[ObjectIdentifier(entry.overlay)] = nil
+                drawn[id] = nil
+            }
+            for object in objects where drawn[object.id] == nil {
+                guard let overlay = Self.overlay(for: object.shape) else { continue }
+                let label = MapObjectAnnotation(object: object)
+                overlayColors[ObjectIdentifier(overlay)] = object.color
+                map.addOverlay(overlay, level: .aboveLabels)
+                map.addAnnotation(label)
+                drawn[object.id] = (object, overlay, label)
+            }
+        }
+
+        static func overlay(for shape: MapShape) -> (any MKOverlay)? {
+            switch shape {
+            case let .circle(center, radius):
+                return MKCircle(center: center.clLocation, radius: radius)
+            case let .rectangle(bounds):
+                var corners = [
+                    CLLocationCoordinate2D(latitude: bounds.north, longitude: bounds.west),
+                    CLLocationCoordinate2D(latitude: bounds.north, longitude: bounds.east),
+                    CLLocationCoordinate2D(latitude: bounds.south, longitude: bounds.east),
+                    CLLocationCoordinate2D(latitude: bounds.south, longitude: bounds.west),
+                ]
+                return MKPolygon(coordinates: &corners, count: corners.count)
+            case .drawing:
+                return nil // Schritt 31
+            }
+        }
+
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            guard let label = view.annotation as? MapObjectAnnotation else { return }
+            mapView.deselectAnnotation(label, animated: false)
+            onSelectObject(label.objectID)
+        }
 
         /// Gleicht die Abschnittsmarkierungen mit dem Stand ab (nur Änderungen).
         func updateSections(_ pins: [MapSectionPin], on map: MKMapView) {
@@ -200,10 +271,37 @@ struct MapCanvas: UIViewRepresentable {
             if let tiles = overlay as? MKTileOverlay {
                 return MKTileOverlayRenderer(tileOverlay: tiles)
             }
+            let color = UIColor(overlayColors[ObjectIdentifier(overlay)] ?? MapObject.defaultColor)
+            if let circle = overlay as? MKCircle {
+                let renderer = MKCircleRenderer(circle: circle)
+                renderer.fillColor = color.withAlphaComponent(0.18)
+                renderer.strokeColor = color
+                renderer.lineWidth = 3
+                return renderer
+            }
+            if let polygon = overlay as? MKPolygon {
+                let renderer = MKPolygonRenderer(polygon: polygon)
+                renderer.fillColor = color.withAlphaComponent(0.18)
+                renderer.strokeColor = color
+                renderer.lineWidth = 3
+                return renderer
+            }
             return MKOverlayRenderer(overlay: overlay)
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
+            if let label = annotation as? MapObjectAnnotation {
+                let identifier = "object"
+                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)
+                    ?? MKMarkerAnnotationView(annotation: label, reuseIdentifier: identifier)
+                view.annotation = label
+                view.markerTintColor = UIColor(label.color)
+                view.glyphImage = UIImage(systemName: "pencil")
+                view.titleVisibility = .visible
+                view.displayPriority = .defaultHigh
+                view.isDraggable = false
+                return view
+            }
             if let section = annotation as? SectionAnnotation {
                 let identifier = "section"
                 let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)

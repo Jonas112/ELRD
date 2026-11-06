@@ -136,7 +136,7 @@ jobs:
               done
             done
           }
-          shoot "$DEVICE_ID" "" "light dark" "setup login missions newMission workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo"
+          shoot "$DEVICE_ID" "" "light dark" "setup login missions newMission workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo mapObject"
           # iPad mini (hochkant): Leiste unten
           MINI_ID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
@@ -149,7 +149,7 @@ jobs:
             xcrun simctl boot "$MINI_ID" || true
             xcrun simctl bootstatus "$MINI_ID" -b
             xcrun simctl install "$MINI_ID" "$APP"
-            shoot "$MINI_ID" "mini-" "dark" "login missions workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo"
+            shoot "$MINI_ID" "mini-" "dark" "login missions workspace missionDetails patients patientTiles patientDetail injuries sections addUnit addPlaceholder replacePlaceholder map mapTopo mapObject"
           else
             echo "::warning title=Bildschirmfotos::Kein iPad-mini-Simulator gefunden"
           fi

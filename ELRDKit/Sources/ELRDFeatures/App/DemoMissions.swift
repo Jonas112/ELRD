@@ -142,6 +142,14 @@ enum DemoMissions {
         // Auf der Karte: Bereitstellungsraum und Einsatzstelle; die Patientenablage noch nicht.
         try running.perform(SetSectionCoordinate(sectionID: staging.id, coordinate: GeoCoordinate(latitude: 50.1032, longitude: 10.1752)))
         try running.perform(SetSectionCoordinate(sectionID: scene.id, coordinate: GeoCoordinate(latitude: 50.1001, longitude: 10.1806)))
+        // Markierungen: Gefahrenbereich um die Unfallstelle, Landeplatz für den RTH.
+        if let hazardCenter = GeoCoordinate(latitude: 50.1000, longitude: 10.1800) {
+            _ = try running.perform(AddMapObject(shape: .circle(center: hazardCenter, radiusMeters: 50), title: "Gefahrenbereich"))
+        }
+        if let padCenter = GeoCoordinate(latitude: 50.1022, longitude: 10.1830),
+           let pad = GeoBounds.around(padCenter, widthMeters: 50, heightMeters: 25) {
+            _ = try running.perform(AddMapObject(shape: .rectangle(bounds: pad), title: "Landeplatz RTH", color: RGBColor(hex: 0x1976D2)))
+        }
         if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }
         if let nef = running.state.activeUnits.first(where: { $0.type == .nef }) {
             try running.perform(MoveUnit(unitID: nef.id, to: staging.id))

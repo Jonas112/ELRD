@@ -23,6 +23,7 @@ struct MissionMapView: View {
     @State private var errorMessage: String?
     @State private var showsSectionList = false
     @State private var proxy = MapCanvasProxy()
+    @State private var editing: EditingMapObject?
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
 
@@ -38,10 +39,12 @@ struct MissionMapView: View {
                 if isWide {
                     MapSectionList(
                         pins: MapSectionPin.pins(for: store.state),
+                        objects: store.state.mapObjects.active,
                         canEdit: canEdit,
                         allowsDragging: true,
                         onSelect: select,
-                        onRemove: removeFromMap
+                        onRemove: removeFromMap,
+                        onSelectObject: selectObject
                     )
                     .frame(width: 300)
                     .background(Surface.canvas)
@@ -54,18 +57,25 @@ struct MissionMapView: View {
             NavigationStack {
                 MapSectionList(
                     pins: MapSectionPin.pins(for: store.state),
+                    objects: store.state.mapObjects.active,
                     canEdit: canEdit,
                     allowsDragging: false,
                     onSelect: { pin in showsSectionList = false; select(pin) },
-                    onRemove: removeFromMap
+                    onRemove: removeFromMap,
+                    onSelectObject: { object in showsSectionList = false; selectObject(object) }
                 )
-                .navigationTitle("Abschnitte")
+                .navigationTitle("Auf der Karte")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) { Button("Fertig") { showsSectionList = false } }
                 }
             }
             .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $editing) { item in
+            MapObjectEditor(store: store, objectID: item.id, mapCenter: center)
+                .presentationDetents([.medium, .large])
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         }
         .alert("Standort nicht freigegeben", isPresented: $showsLocationDenied) {
             Button("Einstellungen") {
@@ -89,6 +99,10 @@ struct MissionMapView: View {
                 center = GeoCoordinate(latitude: start.latitude, longitude: start.longitude)
             }
             if AppLaunchOptions.current.demoScreen == .mapTopo { layer = .openTopoMap }
+            if AppLaunchOptions.current.demoScreen == .mapObject, editing == nil,
+               let first = store.state.mapObjects.active.first {
+                editing = EditingMapObject(id: first.id)
+            }
         }
     }
 
@@ -106,7 +120,9 @@ struct MissionMapView: View {
                 canEdit: canEdit,
                 proxy: proxy,
                 onCenterChange: { center = $0 },
-                onMoveSection: { id, coordinate in perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate)) }
+                onMoveSection: { id, coordinate in perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate)) },
+                objects: store.state.mapObjects.active,
+                onSelectObject: { editing = EditingMapObject(id: $0) }
             )
             .dropDestination(for: String.self) { items, point in
                 guard canEdit,
@@ -133,10 +149,12 @@ struct MissionMapView: View {
                     locateMe()
                 }
                 .accessibilityLabel("Mein Standort")
+                if canEdit { drawMenu }
                 if showsSectionButton {
-                    MapControlButton(title: "Abschnitte", systemImage: "square.stack.3d.up.fill") {
+                    MapControlButton(title: "Liste", systemImage: "list.bullet") {
                         showsSectionList = true
                     }
+                    .accessibilityLabel("Abschnitte und Markierungen")
                 }
             }
             .padding(Spacing.m)
@@ -264,6 +282,36 @@ struct MissionMapView: View {
         }
     }
 
+    /// Kreis oder Rechteck in der Kartenmitte anlegen und gleich bearbeiten.
+    private var drawMenu: some View {
+        Menu {
+            Button { addObject(center.map(MapObjectPalette.newCircle(at:))) } label: {
+                Label("Kreis", systemImage: "circle")
+            }
+            Button { addObject(center.flatMap(MapObjectPalette.newRectangle(at:))) } label: {
+                Label("Rechteck", systemImage: "rectangle")
+            }
+        } label: {
+            MapControlLabel(title: "Zeichnen", systemImage: "pencil.and.outline")
+        }
+        .accessibilityLabel("Kreis oder Rechteck zeichnen")
+    }
+
+    private func addObject(_ shape: MapShape?) {
+        guard let shape else { return }
+        do {
+            let object = try store.perform(AddMapObject(shape: shape))
+            editing = EditingMapObject(id: object.id)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func selectObject(_ object: MapObject) {
+        focus = MapFocusRequest(target: .coordinate(object.shape.center))
+        editing = EditingMapObject(id: object.id)
+    }
+
     private var layerMenu: some View {
         Menu {
             Picker("Kartengrundlage", selection: $layer) {
@@ -290,10 +338,12 @@ struct MissionMapView: View {
 /// auf großen iPads lassen sich Abschnitte direkt auf die Karte ziehen.
 struct MapSectionList: View {
     let pins: [MapSectionPin]
+    let objects: [MapObject]
     let canEdit: Bool
     let allowsDragging: Bool
     let onSelect: (MapSectionPin) -> Void
     let onRemove: (MapSectionPin) -> Void
+    let onSelectObject: (MapObject) -> Void
 
     var body: some View {
         ScrollView {
@@ -310,9 +360,42 @@ struct MapSectionList: View {
                 ForEach(pins) { pin in
                     row(pin)
                 }
+
+                Text("Markierungen").font(.title3.weight(.bold)).padding(.top, Spacing.m)
+                if objects.isEmpty {
+                    Text(canEdit ? "Noch keine. Über „Zeichnen“ einen Kreis oder ein Rechteck anlegen." : "Keine Markierungen.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(objects) { object in
+                    objectRow(object)
+                }
             }
             .padding(Spacing.l)
         }
+    }
+
+    private func objectRow(_ object: MapObject) -> some View {
+        Button { onSelectObject(object) } label: {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: object.shape.isCircle ? "circle.fill" : "rectangle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color(object.color))
+                    .frame(width: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(object.displayName).font(.headline).foregroundStyle(.primary).lineLimit(2)
+                    Text(object.shape.sizeText).font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, Spacing.m)
+            .frame(minHeight: 60)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Zeigt die Markierung und öffnet sie zum Bearbeiten.")
     }
 
     private func row(_ pin: MapSectionPin) -> some View {

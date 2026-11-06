@@ -37,3 +37,16 @@ struct MapSectionTests {
         #expect(DropAction.actions(for: .section(section.id), onto: .section(nil), in: store.state).isEmpty)
     }
 }
+
+@Suite("Markierungen: Größe ändern")
+struct MapObjectPaletteTests {
+    @Test func scalingStaysInAllowedRange() throws {
+        let center = try #require(GeoCoordinate(latitude: 50.1, longitude: 10.18))
+        #expect(MapObjectPalette.scaled(.circle(center: center, radiusMeters: 100), by: 1.25) == .circle(center: center, radiusMeters: 125))
+        #expect(MapObjectPalette.scaled(.circle(center: center, radiusMeters: 1), by: 0.8) == .circle(center: center, radiusMeters: 1))
+        let rectangle = try #require(MapObjectPalette.newRectangle(at: center))
+        #expect(rectangle.sizeText == "100 × 50 m")
+        #expect(MapObjectPalette.scaled(rectangle, by: 2).sizeText == "200 × 100 m")
+        #expect(MapObjectPalette.newCircle(at: center).isCircle)
+    }
+}

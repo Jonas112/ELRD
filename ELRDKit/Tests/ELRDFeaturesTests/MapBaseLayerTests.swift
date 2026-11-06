@@ -28,6 +28,10 @@ struct MapBaseLayerTests {
         #expect(abs(region.center.latitude - 50.10) < 0.0001)
         #expect(region.span.latitudeDelta < 0.05, "Straßenebene")
         #expect(MapCanvas.initialRegion(around: nil).span.latitudeDelta > 5, "ganz Deutschland")
+        let far = try #require(GeoCoordinate(latitude: 50.12, longitude: 10.18))
+        let wide = MapCanvas.initialRegion(around: place, including: [far])
+        #expect(wide.span.latitudeDelta >= 0.02 * 1.6 - 0.0001, "alles im Bild")
+        #expect(abs(wide.center.latitude - 50.11) < 0.0001)
     }
 
     @Test func missionCoordinateIsSetMovedAndLogged() throws {

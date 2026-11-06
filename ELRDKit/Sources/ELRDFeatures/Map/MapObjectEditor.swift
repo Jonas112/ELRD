@@ -68,32 +68,10 @@ struct MapObjectEditor: View {
     private func form(_ object: MapObject) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.l) {
-                sizeSection(object)
-
-                Text("Farbe").font(.headline).foregroundStyle(.secondary)
-                HStack(spacing: Spacing.s) {
-                    ForEach(MapObjectPalette.colors.indices, id: \.self) { index in
-                        let entry = MapObjectPalette.colors[index]
-                        Button {
-                            perform(EditMapObject(objectID: objectID, color: entry.color))
-                        } label: {
-                            Circle()
-                                .fill(Color(entry.color))
-                                .frame(width: 44, height: 44)
-                                .overlay {
-                                    if object.color == entry.color {
-                                        Image(systemName: "checkmark").font(.headline.weight(.heavy))
-                                            .foregroundStyle(Color(entry.color.contrastingTextColor))
-                                    }
-                                }
-                                .frame(minWidth: TouchTarget.comfortable, minHeight: TouchTarget.comfortable)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(entry.name)
-                        .accessibilityAddTraits(object.color == entry.color ? .isSelected : [])
-                    }
+                if !object.shape.isDrawing {
+                    sizeSection(object)
+                    colorSection(object)
                 }
-                .disabled(!canEdit)
 
                 Text("Bezeichnung").font(.headline).foregroundStyle(.secondary)
                 TextField("z. B. Gefahrenbereich", text: $title)
@@ -143,6 +121,34 @@ struct MapObjectEditor: View {
             .padding(Spacing.xl)
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    @ViewBuilder
+    private func colorSection(_ object: MapObject) -> some View {
+        Text("Farbe").font(.headline).foregroundStyle(.secondary)
+                HStack(spacing: Spacing.s) {
+                    ForEach(MapObjectPalette.colors.indices, id: \.self) { index in
+                        let entry = MapObjectPalette.colors[index]
+                        Button {
+                            perform(EditMapObject(objectID: objectID, color: entry.color))
+                        } label: {
+                            Circle()
+                                .fill(Color(entry.color))
+                                .frame(width: 44, height: 44)
+                                .overlay {
+                                    if object.color == entry.color {
+                                        Image(systemName: "checkmark").font(.headline.weight(.heavy))
+                                            .foregroundStyle(Color(entry.color.contrastingTextColor))
+                                    }
+                                }
+                                .frame(minWidth: TouchTarget.comfortable, minHeight: TouchTarget.comfortable)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(entry.name)
+                        .accessibilityAddTraits(object.color == entry.color ? .isSelected : [])
+                    }
+                }
+                .disabled(!canEdit)
     }
 
     @ViewBuilder

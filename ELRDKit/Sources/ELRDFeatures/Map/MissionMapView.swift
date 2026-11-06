@@ -24,6 +24,12 @@ struct MissionMapView: View {
     @State private var showsSectionList = false
     @State private var proxy = MapCanvasProxy()
     @State private var editing: EditingMapObject?
+    @Environment(\.attachmentStore) private var attachments
+    /// Freihandzeichnen: Fläche über der Karte, Karte ruht solange.
+    @State private var isDrawing = AppLaunchOptions.current.demoScreen == .mapDrawing
+    @StateObject private var freehand = FreehandController()
+    @State private var freehandTool = FreehandTool()
+    @State private var confirmsDiscardDrawing = false
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
 
@@ -122,7 +128,8 @@ struct MissionMapView: View {
                 onCenterChange: { center = $0 },
                 onMoveSection: { id, coordinate in perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate)) },
                 objects: store.state.mapObjects.active,
-                onSelectObject: { editing = EditingMapObject(id: $0) }
+                onSelectObject: { editing = EditingMapObject(id: $0) },
+                attachments: attachments
             )
             .dropDestination(for: String.self) { items, point in
                 guard canEdit,
@@ -132,7 +139,12 @@ struct MissionMapView: View {
                 return true
             }
 
-            if target != nil {
+            if isDrawing {
+                FreehandCanvas(controller: freehand, tool: freehandTool)
+                    .accessibilityLabel("Zeichenfläche über der Karte")
+            }
+
+            if target != nil, !isDrawing {
                 Image(systemName: "plus")
                     .font(.system(size: 44, weight: .light))
                     .foregroundStyle(.red)
@@ -142,6 +154,42 @@ struct MissionMapView: View {
                     .accessibilityHidden(true)
             }
 
+            if !isDrawing { mapControls(mission, showsSectionButton: showsSectionButton) }
+        }
+        .overlay(alignment: .bottom) {
+            if isDrawing {
+                FreehandToolbar(
+                    tool: $freehandTool,
+                    strokeCount: freehand.strokeCount,
+                    onUndo: freehand.undo,
+                    onCancel: cancelDrawing,
+                    onDone: finishDrawing
+                )
+            } else if let target {
+                placingBar(for: target, mission: mission)
+            }
+        }
+        .overlay(alignment: .top) {
+            if isDrawing {
+                Label("Mit Finger oder Stift auf die Karte zeichnen", systemImage: "scribble")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, Spacing.m)
+                    .padding(.vertical, Spacing.s)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, Spacing.m)
+                    .allowsHitTesting(false)
+            }
+        }
+        .confirmationDialog("Zeichnung verwerfen?", isPresented: $confirmsDiscardDrawing, titleVisibility: .visible) {
+            Button("Verwerfen", role: .destructive) { endDrawing() }
+            Button("Weiterzeichnen", role: .cancel) {}
+        }
+        .overlay(alignment: .bottomTrailing) {
+            attributionLabel
+        }
+    }
+
+    private func mapControls(_ mission: Mission, showsSectionButton: Bool) -> some View {
             VStack(spacing: Spacing.s) {
                 layerMenu
                 missionControl(mission)
@@ -158,11 +206,10 @@ struct MissionMapView: View {
                 }
             }
             .padding(Spacing.m)
-        }
-        .overlay(alignment: .bottom) {
-            if let target { placingBar(for: target, mission: mission) }
-        }
-        .overlay(alignment: .bottomTrailing) {
+    }
+
+    @ViewBuilder
+    private var attributionLabel: some View {
             if let attribution = layer.attribution {
                 Text(attribution)
                     .font(.caption2)
@@ -174,6 +221,44 @@ struct MissionMapView: View {
                     .padding(.bottom, 32)
                     .accessibilityLabel("Quelle: \(attribution)")
             }
+    }
+
+    // MARK: Freihand
+
+    private func startDrawing() {
+        placing = nil
+        proxy.resetHeading()
+        freehandTool = FreehandTool()
+        isDrawing = true
+    }
+
+    private func cancelDrawing() {
+        if freehand.strokeCount > 0 { confirmsDiscardDrawing = true } else { endDrawing() }
+    }
+
+    private func endDrawing() {
+        freehand.clear()
+        isDrawing = false
+    }
+
+    /// Bild speichern und als Zeichnung über ihrem Kartenrechteck anlegen.
+    private func finishDrawing() {
+        guard let export = freehand.export(),
+              let topLeft = proxy.coordinate(at: CGPoint(x: export.rect.minX, y: export.rect.minY)),
+              let bottomRight = proxy.coordinate(at: CGPoint(x: export.rect.maxX, y: export.rect.maxY)) else { return }
+        do {
+            let file = try attachments.save(
+                export.png,
+                kind: .drawing,
+                createdAt: Date(),
+                pixelWidth: Int(export.pixelSize.width),
+                pixelHeight: Int(export.pixelSize.height)
+            )
+            let object = try store.perform(AddMapObject(shape: .drawing(bounds: GeoBounds(enclosing: topLeft, bottomRight), image: file)))
+            endDrawing()
+            editing = EditingMapObject(id: object.id)
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -291,10 +376,13 @@ struct MissionMapView: View {
             Button { addObject(center.flatMap(MapObjectPalette.newRectangle(at:))) } label: {
                 Label("Rechteck", systemImage: "rectangle")
             }
+            Button(action: startDrawing) {
+                Label("Freihand", systemImage: "scribble")
+            }
         } label: {
             MapControlLabel(title: "Zeichnen", systemImage: "pencil.and.outline")
         }
-        .accessibilityLabel("Kreis oder Rechteck zeichnen")
+        .accessibilityLabel("Kreis, Rechteck oder freihand zeichnen")
     }
 
     private func addObject(_ shape: MapShape?) {
@@ -378,7 +466,7 @@ struct MapSectionList: View {
     private func objectRow(_ object: MapObject) -> some View {
         Button { onSelectObject(object) } label: {
             HStack(spacing: Spacing.m) {
-                Image(systemName: object.shape.isCircle ? "circle.fill" : "rectangle.fill")
+                Image(systemName: object.shape.isDrawing ? "scribble" : object.shape.isCircle ? "circle.fill" : "rectangle.fill")
                     .font(.title3)
                     .foregroundStyle(Color(object.color))
                     .frame(width: 32)

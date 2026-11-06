@@ -17,6 +17,7 @@ public struct RootView: View {
         Group {
             if let environment {
                 AppFlowView(environment: environment)
+                    .environment(\.attachmentStore, environment.attachments)
             } else if let startupError {
                 ContentUnavailableView(
                     "ELRD konnte nicht starten",

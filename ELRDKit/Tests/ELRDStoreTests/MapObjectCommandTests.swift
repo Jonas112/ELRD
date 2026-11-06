@@ -50,3 +50,30 @@ struct MapObjectCommandTests {
         #expect(MapShape.metersText(2000) == "2 km")
     }
 }
+
+@Suite("Freihandzeichnung auf der Karte")
+@MainActor
+struct DrawingObjectTests {
+    @Test func drawingIsStoredWithImageAndCanBeMoved() throws {
+        let fixture = try StoreFixture()
+        let store = try fixture.newMission()
+        let center = try #require(GeoCoordinate(latitude: 50.10, longitude: 10.18))
+        let bounds = try #require(GeoBounds.around(center, widthMeters: 160, heightMeters: 90))
+        let image = FileAttachment(kind: .drawing, byteCount: 10, sha256: String(repeating: "a", count: 64), createdAt: Date())
+        let drawing = try store.perform(AddMapObject(shape: .drawing(bounds: bounds, image: image)))
+        #expect(drawing.displayName == "Zeichnung")
+        #expect(drawing.shape.isDrawing)
+        #expect(store.state.visibleLog.last?.message == "„Zeichnung“ auf der Karte angelegt (160 × 90 m)")
+
+        let photo = FileAttachment(kind: .photo, byteCount: 10, sha256: String(repeating: "b", count: 64), createdAt: Date())
+        #expect(throws: CommandError.self) {
+            try store.perform(AddMapObject(shape: .drawing(bounds: bounds, image: photo)))
+        }
+
+        let target = try #require(GeoCoordinate(latitude: 50.11, longitude: 10.19))
+        try store.perform(EditMapObject(objectID: drawing.id, shape: drawing.shape.moved(to: target)))
+        let moved = try #require(store.state.mapObjects.active.first)
+        #expect(moved.shape.sizeText == "160 × 90 m")
+        #expect(abs(moved.shape.center.latitude - 50.11) < 0.00001)
+    }
+}

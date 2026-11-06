@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import ELRDDomain
 import ELRDAuth
 import ELRDPersistence
@@ -150,6 +151,13 @@ enum DemoMissions {
            let pad = GeoBounds.around(padCenter, widthMeters: 50, heightMeters: 25) {
             _ = try running.perform(AddMapObject(shape: .rectangle(bounds: pad), title: "Landeplatz RTH", color: RGBColor(hex: 0x1976D2)))
         }
+        // Freihand: Anfahrtsweg als Pfeil von der B 19 zur Einsatzstelle.
+        if let arrowCenter = GeoCoordinate(latitude: 50.1012, longitude: 10.1785),
+           let arrowBounds = GeoBounds.around(arrowCenter, widthMeters: 160, heightMeters: 90),
+           let png = Self.demoArrowPNG() {
+            let file = try environment.attachments.save(png, kind: .drawing, createdAt: time.date, pixelWidth: 640, pixelHeight: 360)
+            _ = try running.perform(AddMapObject(shape: .drawing(bounds: arrowBounds, image: file), title: "Anfahrt"))
+        }
         if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }
         if let nef = running.state.activeUnits.first(where: { $0.type == .nef }) {
             try running.perform(MoveUnit(unitID: nef.id, to: staging.id))
@@ -164,5 +172,29 @@ enum DemoMissions {
         for patient in [added[4], added[5]] {
             try running.perform(EditPatient(patientID: patient.id) { $0.sectionID = casualties.id })
         }
+    }
+
+    /// Rot gezeichneter Pfeil (transparentes PNG) für die Beispielzeichnung.
+    static func demoArrowPNG() -> Data? {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 640, height: 360), format: format)
+        let image = renderer.image { context in
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: 40, y: 60))
+            path.addCurve(to: CGPoint(x: 560, y: 290), controlPoint1: CGPoint(x: 260, y: 40), controlPoint2: CGPoint(x: 360, y: 300))
+            path.move(to: CGPoint(x: 560, y: 290))
+            path.addLine(to: CGPoint(x: 500, y: 220))
+            path.move(to: CGPoint(x: 560, y: 290))
+            path.addLine(to: CGPoint(x: 470, y: 310))
+            UIColor(MapObject.defaultColor).setStroke()
+            path.lineWidth = 18
+            path.lineCapStyle = .round
+            path.lineJoinStyle = .round
+            path.stroke()
+            _ = context
+        }
+        return image.pngData()
     }
 }

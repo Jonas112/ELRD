@@ -1,6 +1,7 @@
 import SwiftUI
 import MapKit
 import ELRDDomain
+import ELRDPersistence
 
 /// Auftrag, die Karte auf ein Ziel zu bewegen. Jede Anfrage hat eine eigene
 /// Kennung, damit derselbe Knopf mehrmals wirkt.
@@ -35,6 +36,8 @@ struct MapCanvas: UIViewRepresentable {
     var objects: [MapObject] = []
     /// Beschriftung eines Kartenobjekts angetippt.
     var onSelectObject: (MapObjectID) -> Void = { _ in }
+    /// Dateiablage für Zeichnungen.
+    var attachments: AttachmentFileStore?
 
     /// Ausschnitt um den Einsatzort (mindestens ca. 800 m) und alles, was schon
     /// auf der Karte liegt (mit Rand); ohne Einsatzort ganz Deutschland.
@@ -87,6 +90,7 @@ struct MapCanvas: UIViewRepresentable {
         context.coordinator.apply(layer: layer, to: map)
         context.coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
         context.coordinator.onSelectObject = onSelectObject
+        context.coordinator.attachments = attachments
         context.coordinator.updateSections(sections, on: map)
         context.coordinator.updateObjects(objects, on: map)
         return map
@@ -101,6 +105,7 @@ struct MapCanvas: UIViewRepresentable {
         coordinator.apply(layer: layer, to: map)
         coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
         coordinator.onSelectObject = onSelectObject
+        coordinator.attachments = attachments
         coordinator.updateSections(sections, on: map)
         coordinator.updateObjects(objects, on: map)
         if map.showsUserLocation != showsUserLocation { map.showsUserLocation = showsUserLocation }
@@ -128,6 +133,7 @@ struct MapCanvas: UIViewRepresentable {
         var canEdit = false
         private var sectionAnnotations: [SectionID: SectionAnnotation] = [:]
         var onSelectObject: (MapObjectID) -> Void = { _ in }
+        var attachments: AttachmentFileStore?
         /// Gezeichnete Objekte: Stand, Fläche und Beschriftung je Kennung.
         private var drawn: [MapObjectID: (object: MapObject, overlay: any MKOverlay, label: MapObjectAnnotation)] = [:]
         /// Farbe je Fläche (für den Renderer).
@@ -146,16 +152,16 @@ struct MapCanvas: UIViewRepresentable {
                 drawn[id] = nil
             }
             for object in objects where drawn[object.id] == nil {
-                guard let overlay = Self.overlay(for: object.shape) else { continue }
+                guard let shapeOverlay = makeOverlay(for: object.shape) else { continue }
                 let label = MapObjectAnnotation(object: object)
-                overlayColors[ObjectIdentifier(overlay)] = object.color
-                map.addOverlay(overlay, level: .aboveLabels)
+                overlayColors[ObjectIdentifier(shapeOverlay)] = object.color
+                map.addOverlay(shapeOverlay, level: .aboveLabels)
                 map.addAnnotation(label)
-                drawn[object.id] = (object, overlay, label)
+                drawn[object.id] = (object, shapeOverlay, label)
             }
         }
 
-        static func overlay(for shape: MapShape) -> (any MKOverlay)? {
+        func makeOverlay(for shape: MapShape) -> (any MKOverlay)? {
             switch shape {
             case let .circle(center, radius):
                 return MKCircle(center: center.clLocation, radius: radius)
@@ -167,8 +173,9 @@ struct MapCanvas: UIViewRepresentable {
                     CLLocationCoordinate2D(latitude: bounds.south, longitude: bounds.west),
                 ]
                 return MKPolygon(coordinates: &corners, count: corners.count)
-            case .drawing:
-                return nil // Schritt 31
+            case let .drawing(bounds, file):
+                let image = attachments?.data(for: file).flatMap { UIImage(data: $0)?.cgImage }
+                return DrawingOverlay(bounds: bounds, image: image)
             }
         }
 
@@ -270,6 +277,9 @@ struct MapCanvas: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, rendererFor overlay: any MKOverlay) -> MKOverlayRenderer {
             if let tiles = overlay as? MKTileOverlay {
                 return MKTileOverlayRenderer(tileOverlay: tiles)
+            }
+            if let drawing = overlay as? DrawingOverlay {
+                return DrawingOverlayRenderer(drawing: drawing)
             }
             let color = UIColor(overlayColors[ObjectIdentifier(overlay)] ?? MapObject.defaultColor)
             if let circle = overlay as? MKCircle {

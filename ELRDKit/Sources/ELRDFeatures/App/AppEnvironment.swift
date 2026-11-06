@@ -13,7 +13,7 @@ import ELRDStore
 /// Beispieldaten im Arbeitsspeicher (nichts wird gespeichert, Keychain bleibt unberührt).
 public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
-        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapTopo, mapObject
+        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapTopo, mapObject, mapDrawing
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
@@ -24,7 +24,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {
             if [.patients, .patientTiles].contains(self) || opensPatient { return .patients }
-            if [.map, .mapTopo, .mapObject].contains(self) { return .map }
+            if [.map, .mapTopo, .mapObject, .mapDrawing].contains(self) { return .map }
             return [.sections, .addUnit, .addPlaceholder, .replacePlaceholder].contains(self) ? .organisation : .overview
         }
 
@@ -58,6 +58,8 @@ public final class AppEnvironment {
     public let device: DeviceIdentity
     public let deviceClock: DeviceClock
     public let entitlements: StaticEntitlements
+    /// Dateien zu Anhängen (Zeichnungen, Kartenausschnitte, Fotos).
+    public let attachments: AttachmentFileStore
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
     /// Gewünschter Beispielbildschirm (nur Demo).
@@ -68,10 +70,12 @@ public final class AppEnvironment {
         userService: UserService,
         device: DeviceIdentity,
         entitlements: StaticEntitlements,
+        attachments: AttachmentFileStore,
         isDemo: Bool,
         demoScreen: AppLaunchOptions.DemoScreen? = nil
     ) throws {
         self.repository = repository
+        self.attachments = attachments
         self.userService = userService
         self.device = device
         self.deviceClock = try DeviceClock(deviceID: device.deviceID, repository: repository)
@@ -98,6 +102,7 @@ public final class AppEnvironment {
             userService: users,
             device: device,
             entitlements: StaticEntitlements.development(),
+            attachments: try AttachmentFileStore.standard(),
             isDemo: false
         )
     }
@@ -128,6 +133,7 @@ public final class AppEnvironment {
             userService: users,
             device: device,
             entitlements: StaticEntitlements.development(),
+            attachments: .temporary(),
             isDemo: true,
             demoScreen: screen
         )

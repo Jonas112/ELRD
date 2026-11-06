@@ -36,6 +36,11 @@ public extension MapShape {
         return false
     }
 
+    var isDrawing: Bool {
+        if case .drawing = self { return true }
+        return false
+    }
+
     /// Dieselbe Form mit neuem Mittelpunkt (Größe bleibt).
     func moved(to newCenter: GeoCoordinate) -> MapShape {
         switch self {

@@ -51,6 +51,18 @@ final class SectionAnnotation: NSObject, MKAnnotation {
 final class MapCanvasProxy {
     weak var map: MKMapView?
 
+    /// Norden oben und ohne Neigung – sonst passt eine Freihandzeichnung nicht auf ihr Rechteck.
+    func resetHeading() {
+        guard let map, map.camera.heading != 0 || map.camera.pitch != 0 else { return }
+        let camera = MKMapCamera(
+            lookingAtCenter: map.camera.centerCoordinate,
+            fromDistance: map.camera.centerCoordinateDistance,
+            pitch: 0,
+            heading: 0
+        )
+        map.setCamera(camera, animated: false)
+    }
+
     func coordinate(at point: CGPoint) -> GeoCoordinate? {
         guard let map else { return nil }
         let location = map.convert(point, toCoordinateFrom: map)

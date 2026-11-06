@@ -8,7 +8,8 @@ struct EditingMapObject: Identifiable, Equatable {
 }
 
 /// Kreis oder Rechteck bearbeiten. Jede Auswahl gilt sofort – die Karte dahinter
-/// zeigt das Ergebnis (Blatt halbhoch).
+/// zeigt das Ergebnis (Blatt halbhoch). Größe und Farbe stehen oben, weil man
+/// sie direkt nach dem Zeichnen braucht.
 struct MapObjectEditor: View {
     let store: MissionStore
     let objectID: MapObjectID
@@ -67,22 +68,7 @@ struct MapObjectEditor: View {
     private func form(_ object: MapObject) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.l) {
-                Text("Bezeichnung").font(.headline).foregroundStyle(.secondary)
-                TextField("z. B. Gefahrenbereich", text: $title)
-                    .font(.title3)
-                    .submitLabel(.done)
-                    .onSubmit(commitText)
-                    .inputBox()
-                    .disabled(!canEdit)
-                FlowLayout(spacing: Spacing.s) {
-                    ForEach(MapObjectPalette.titles, id: \.self) { suggestion in
-                        ChoiceChip(suggestion, isSelected: object.title == suggestion, minHeight: 48) {
-                            title = suggestion
-                            commitText()
-                        }
-                    }
-                }
-                .disabled(!canEdit)
+                sizeSection(object)
 
                 Text("Farbe").font(.headline).foregroundStyle(.secondary)
                 HStack(spacing: Spacing.s) {
@@ -109,7 +95,22 @@ struct MapObjectEditor: View {
                 }
                 .disabled(!canEdit)
 
-                sizeSection(object)
+                Text("Bezeichnung").font(.headline).foregroundStyle(.secondary)
+                TextField("z. B. Gefahrenbereich", text: $title)
+                    .font(.title3)
+                    .submitLabel(.done)
+                    .onSubmit(commitText)
+                    .inputBox()
+                    .disabled(!canEdit)
+                FlowLayout(spacing: Spacing.s) {
+                    ForEach(MapObjectPalette.titles, id: \.self) { suggestion in
+                        ChoiceChip(suggestion, isSelected: object.title == suggestion, minHeight: 48) {
+                            title = suggestion
+                            commitText()
+                        }
+                    }
+                }
+                .disabled(!canEdit)
 
                 HStack(spacing: Spacing.s) {
                     Button {

@@ -451,17 +451,17 @@ public struct AddAlarmstichwort: MissionCommand {
     }
 
     public func execute(_ draft: inout MissionDraft) throws -> [MissionUnit] {
-        let targetSection = sectionID ?? MissionSection.initialSection(in: draft.all(MissionSection.self))?.id
+        let section = try unitTargetSection(sectionID, in: draft)
         let units = MissionUnit.placeholders(
             for: stichwort,
             missionID: draft.missionID,
-            sectionID: targetSection,
+            sectionID: section?.id,
             existing: draft.all(MissionUnit.self),
             author: draft.context.session.userID,
             at: draft.context.now
         )
         for unit in units { try draft.insert(unit) }
-        draft.log(.unit, "Alarmstichwort \(stichwort.rawValue) hinzugefügt: \(stichwort.summary)")
+        draft.log(.unit, "Alarmstichwort \(stichwort.rawValue) hinzugefügt: \(stichwort.summary)\(AddMasterUnits.placeText(section))")
         return units
     }
 }

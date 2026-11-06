@@ -11,9 +11,10 @@ struct SectionsView: View {
     let onOpenPatient: (PatientID) -> Void
 
     @State private var showsAddSection = false
-    @State private var showsAddUnit = AppLaunchOptions.current.demoScreen == .addUnit
+    @State private var showsAddUnit = [.addUnit, .addPlaceholder].contains(AppLaunchOptions.current.demoScreen)
     @State private var filter = UnitFilter()
     @State private var removing: MissionUnit?
+    @State private var replacing: MissionUnit?
     @State private var renaming: MissionSection?
     @State private var newName = ""
     @State private var deleting: MissionSection?
@@ -57,7 +58,8 @@ struct SectionsView: View {
                                     onRename: { section in newName = section.name; renaming = section },
                                     onMakeInitial: { perform(SetInitialSection(sectionID: $0)) },
                                     onDelete: { deleting = $0 },
-                                    onRemoveUnit: { removing = $0 }
+                                    onRemoveUnit: { removing = $0 },
+                                    onReplace: { replacing = $0 }
                                 )
                             }
                         }
@@ -69,8 +71,21 @@ struct SectionsView: View {
             }
         }
         .sheet(isPresented: $showsAddUnit) {
-            AddUnitSheet(store: store, masterData: templates)
+            AddUnitSheet(
+                store: store,
+                masterData: templates,
+                initialSource: AppLaunchOptions.current.demoScreen == .addPlaceholder ? .placeholder : nil
+            )
+            .largeSheet()
+        }
+        .sheet(item: $replacing) { unit in
+            ReplacePlaceholderSheet(store: store, masterData: templates, placeholder: unit)
                 .largeSheet()
+        }
+        .onAppear {
+            if AppLaunchOptions.current.demoScreen == .replacePlaceholder, replacing == nil {
+                replacing = MissionUnit.sorted(store.state.activeUnits).first(where: \.isPlaceholder)
+            }
         }
         .confirmationDialog(
             removing.map { "\($0.displayName) aus dem Einsatz entfernen?" } ?? "",
@@ -228,6 +243,7 @@ struct SectionCard: View {
     let onMakeInitial: (SectionID?) -> Void
     let onDelete: (MissionSection) -> Void
     let onRemoveUnit: (MissionUnit) -> Void
+    let onReplace: (MissionUnit) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
@@ -301,12 +317,16 @@ struct SectionCard: View {
         }
     }
 
-    /// Einheit als Zeile; Tipp öffnet „Verschieben nach …“.
+    /// Einheit als Zeile; Tipp öffnet „Verschieben nach …“ (Platzhalter: zuerst
+    /// „Fahrzeug eintragen“).
     @ViewBuilder
     private func unitRow(_ entry: UnitEntry) -> some View {
         let row = UnitRowLabel(entry: entry, showsMoveHint: canEdit)
         if canEdit {
             Menu {
+                if entry.unit.isPlaceholder {
+                    Button { onReplace(entry.unit) } label: { Label("Fahrzeug eintragen", systemImage: "car.fill") }
+                }
                 Section("\(entry.unit.displayName) verschieben nach") {
                     ForEach(sections.filter { $0.id != entry.unit.sectionID }) { target in
                         Button(target.name) { onMove(entry.unit.id, target.id) }
@@ -355,6 +375,11 @@ struct UnitRowLabel: View {
                     .font(.headline)
                     .foregroundStyle(entry.unit.isPlaceholder ? .secondary : .primary)
                     .lineLimit(1)
+                if entry.unit.isPlaceholder, showsMoveHint {
+                    Text("Tippen: Fahrzeug eintragen")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.orange)
+                }
                 if !entry.patients.isEmpty {
                     HStack(spacing: Spacing.xs) {
                         ForEach(entry.patients.prefix(4)) { badge in PatientBadgeView(badge: badge) }
@@ -375,6 +400,12 @@ struct UnitRowLabel: View {
         .padding(.horizontal, Spacing.m)
         .frame(minHeight: 60)
         .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            if entry.unit.isPlaceholder {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.secondary.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+            }
+        }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }

@@ -5,7 +5,7 @@ import ELRDDomain
 
 /// Zielabschnitt: angegeben (muss aktiv sein) oder der Initialabschnitt.
 @MainActor
-private func targetSection(_ requested: SectionID?, in draft: MissionDraft) throws -> MissionSection? {
+func unitTargetSection(_ requested: SectionID?, in draft: MissionDraft) throws -> MissionSection? {
     if let requested {
         guard let section = draft.get(MissionSection.self, id: requested), !section.metadata.isDeleted else {
             throw CommandError.notFound(.section)
@@ -28,7 +28,7 @@ public struct AddMasterUnits: MissionCommand {
     }
 
     public func execute(_ draft: inout MissionDraft) throws -> [MissionUnit] {
-        let section = try targetSection(sectionID, in: draft)
+        let section = try unitTargetSection(sectionID, in: draft)
         var used = Set(draft.active(MissionUnit.self).compactMap(\.masterUnitID))
         var added: [MissionUnit] = []
         for master in units {
@@ -60,7 +60,7 @@ public struct AddTemporaryUnit: MissionCommand {
     }
 
     public func execute(_ draft: inout MissionDraft) throws -> MissionUnit {
-        let section = try targetSection(sectionID, in: draft)
+        let section = try unitTargetSection(sectionID, in: draft)
         let unit = MissionUnit(
             missionID: draft.missionID,
             metadata: draft.context.newMetadata(),
@@ -98,5 +98,100 @@ public struct RemoveUnit: MissionCommand {
         }
         try draft.delete(MissionUnit.self, id: unitID)
         draft.log(.unit, "\(unit.displayName) aus dem Einsatz entfernt", subject: .unit(unitID))
+    }
+}
+
+// MARK: - Platzhalter
+
+/// Legt einen Platzhalter an (Schnellanlage RTW/KTW/NEF, wie in ELRDRG):
+/// Ein Fahrzeug ist alarmiert, aber noch nicht bekannt, welches.
+public struct AddPlaceholder: MissionCommand {
+    public let type: UnitType
+    /// `nil`: Initialabschnitt.
+    public let sectionID: SectionID?
+
+    public init(type: UnitType, sectionID: SectionID? = nil) {
+        self.type = type
+        self.sectionID = sectionID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws -> MissionUnit {
+        let section = try unitTargetSection(sectionID, in: draft)
+        let unit = MissionUnit(
+            missionID: draft.missionID,
+            metadata: draft.context.newMetadata(),
+            placeholderType: type,
+            number: MissionUnit.nextPlaceholderNumber(existing: draft.all(MissionUnit.self)),
+            sectionID: section?.id
+        )
+        try draft.insert(unit)
+        draft.log(.unit, "\(unit.displayName) angelegt\(AddMasterUnits.placeText(section))", subject: .unit(unit.id))
+        return unit
+    }
+}
+
+/// Ersetzt einen Platzhalter durch das tatsächliche Fahrzeug – aus den Stammdaten
+/// oder mit eingegebenem Funkrufnamen. Kennung, Abschnitt und Patienten bleiben.
+public struct ReplacePlaceholder: MissionCommand {
+    public enum Replacement: Sendable {
+        case master(MasterUnit)
+        case temporary(callsign: String, type: UnitType)
+    }
+
+    public let unitID: UnitID
+    public let replacement: Replacement
+
+    public init(unitID: UnitID, with replacement: Replacement) {
+        self.unitID = unitID
+        self.replacement = replacement
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws -> MissionUnit {
+        guard let before = draft.get(MissionUnit.self, id: unitID), !before.metadata.isDeleted else {
+            throw CommandError.notFound(.unit)
+        }
+        guard before.isPlaceholder else {
+            throw CommandError.invalid("\(before.displayName) ist kein Platzhalter mehr.")
+        }
+        let others = draft.active(MissionUnit.self).filter { $0.id != unitID }
+        let newCallsign: String
+        let newType: UnitType
+        let newLabel: String?
+        let newCrew: Int?
+        let newMaster: MasterUnitID?
+        switch replacement {
+        case .master(let master):
+            if others.contains(where: { $0.masterUnitID == master.id }) {
+                throw CommandError.invalid("„\(master.callsign)“ ist schon im Einsatz.")
+            }
+            newCallsign = master.callsign
+            newType = master.type
+            newLabel = master.typeLabel
+            newCrew = master.crewCount
+            newMaster = master.id
+        case .temporary(let enteredCallsign, let enteredType):
+            newCallsign = enteredCallsign.trimmingCharacters(in: .whitespacesAndNewlines)
+            newType = enteredType
+            newLabel = nil
+            newCrew = nil
+            newMaster = nil
+        }
+        guard !newCallsign.isEmpty else { throw CommandError.invalid("Bitte einen Funkrufnamen eingeben.") }
+        let key = MasterDataMatching.key(newCallsign)
+        if others.contains(where: { $0.matchKey == key }) {
+            throw CommandError.invalid("„\(newCallsign)“ ist schon im Einsatz.")
+        }
+        try draft.update(MissionUnit.self, id: unitID) {
+            _ = $0.replacePlaceholder(
+                callsign: newCallsign,
+                type: newType,
+                typeLabel: newLabel,
+                crewCount: newCrew,
+                masterUnitID: newMaster
+            )
+        }
+        let after = draft.get(MissionUnit.self, id: unitID) ?? before
+        draft.log(.unit, "\(before.displayName) ist \(after.displayName)", subject: .unit(unitID))
+        return after
     }
 }

@@ -18,6 +18,11 @@ enum UnitTypeFilter: Hashable, CaseIterable, Identifiable {
         }
     }
 
+    /// Engster Filter für einen Typ (z. B. KTW-KatS → KTW).
+    static func matching(_ unitType: UnitType) -> UnitTypeFilter {
+        allCases.first { $0 != .all && $0.matches(unitType) } ?? .all
+    }
+
     func matches(_ type: UnitType) -> Bool {
         switch self {
         case .all: true

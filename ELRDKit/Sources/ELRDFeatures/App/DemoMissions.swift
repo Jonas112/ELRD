@@ -148,6 +148,8 @@ enum DemoMissions {
         let picked = ["RK SWFT 71/1", "RK SWFT 76/1"].compactMap { name in masterUnits.first { $0.callsign == name } }
         _ = try running.perform(AddMasterUnits(picked, sectionID: staging.id))
         _ = try running.perform(AddTemporaryUnit(callsign: "HvO Musterdorf", type: .sonstiges, sectionID: scene.id))
+        // Nachalarmierter KTW, Fahrzeug noch unbekannt.
+        _ = try running.perform(AddPlaceholder(type: .ktw, sectionID: staging.id))
         for patient in [added[4], added[5]] {
             try running.perform(EditPatient(patientID: patient.id) { $0.sectionID = casualties.id })
         }

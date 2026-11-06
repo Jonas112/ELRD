@@ -57,4 +57,10 @@ struct UnitFilterTests {
         #expect(editor.containsUnit("florian musterstadt 1"))
         #expect(try repository.document(MasterDataSet.self, key: .masterData)?.units.count == 2)
     }
+
+    @Test func placeholderTypePicksNarrowestFilter() {
+        #expect(UnitTypeFilter.matching(.rtw) == .rtw)
+        #expect(UnitTypeFilter.matching(.ktwKatS) == .ktw)
+        #expect(UnitTypeFilter.matching(.elw) == .other)
+    }
 }

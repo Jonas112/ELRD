@@ -123,6 +123,7 @@ public extension MissionUnit {
     mutating func replacePlaceholder(
         callsign: String,
         type: UnitType,
+        typeLabel: String? = nil,
         crewCount: Int?,
         masterUnitID: MasterUnitID?
     ) -> Bool {
@@ -130,6 +131,7 @@ public extension MissionUnit {
         self.placeholderNumber = nil
         self.callsign = MissionUnit.normalizedCallsign(callsign)
         self.type = type
+        self.typeLabel = typeLabel
         self.crewCount = MissionUnit.normalizedCrewCount(crewCount)
         self.masterUnitID = masterUnitID
         return true

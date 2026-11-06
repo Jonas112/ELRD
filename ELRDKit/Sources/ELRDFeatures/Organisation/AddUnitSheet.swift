@@ -3,9 +3,10 @@ import ELRDDomain
 import ELRDStore
 
 /// Einheiten hinzufügen: oben der Zielabschnitt, darunter Stammdaten (Tipp =
-/// hinzugefügt, mehrere nacheinander) oder eine neue, temporäre Einheit.
+/// hinzugefügt, mehrere nacheinander), eine neue, temporäre Einheit oder
+/// Platzhalter (einzeln oder per Alarmstichwort).
 struct AddUnitSheet: View {
-    enum Source: Hashable { case masterData, temporary }
+    enum Source: Hashable { case masterData, temporary, placeholder }
 
     let store: MissionStore
     let masterData: MasterDataEditor?
@@ -20,11 +21,11 @@ struct AddUnitSheet: View {
     @State private var lastAdded: String?
     @State private var errorMessage: String?
 
-    init(store: MissionStore, masterData: MasterDataEditor?) {
+    init(store: MissionStore, masterData: MasterDataEditor?, initialSource: Source? = nil) {
         self.store = store
         self.masterData = masterData
         _targetID = State(initialValue: MissionSection.initialSection(in: store.state.sections)?.id)
-        _source = State(initialValue: (masterData?.units.isEmpty ?? true) ? .temporary : .masterData)
+        _source = State(initialValue: initialSource ?? ((masterData?.units.isEmpty ?? true) ? .temporary : .masterData))
     }
 
     private var trimmedCallsign: String { callsign.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -35,7 +36,7 @@ struct AddUnitSheet: View {
                 VStack(alignment: .leading, spacing: Spacing.xl) {
                     targetPicker
                     SegmentedChoice(
-                        options: [(Source.masterData, "Aus Stammdaten"), (.temporary, "Neue Einheit")],
+                        options: [(Source.masterData, "Stammdaten"), (.temporary, "Neue Einheit"), (.placeholder, "Platzhalter")],
                         selection: $source
                     )
                     if let lastAdded {
@@ -52,6 +53,7 @@ struct AddUnitSheet: View {
                     switch source {
                     case .masterData: masterList
                     case .temporary: temporaryForm
+                    case .placeholder: placeholderPanel
                     }
                 }
                 .padding(Spacing.xl)
@@ -168,6 +170,45 @@ struct AddUnitSheet: View {
         }
     }
 
+    // MARK: Platzhalter
+
+    /// Schnellanlage und Alarmstichworte: Fahrzeuge sind alarmiert, aber noch nicht
+    /// bekannt. Später über „Fahrzeug eintragen“ ersetzen.
+    private var placeholderPanel: some View {
+        VStack(alignment: .leading, spacing: Spacing.l) {
+            Text("Alarmiert, aber noch unbekannt – später das Fahrzeug eintragen.")
+                .foregroundStyle(.secondary)
+            Text("Einzeln").font(.headline).foregroundStyle(.secondary)
+            HStack(spacing: Spacing.s) {
+                ForEach(UnitType.placeholderQuickAddTypes) { candidate in
+                    Button { addPlaceholder(candidate) } label: {
+                        Label(candidate.shortName, systemImage: "plus")
+                            .font(.title3.weight(.heavy))
+                            .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(candidate.displayName) als Platzhalter")
+                }
+            }
+            Text("Alarmstichwort").font(.headline).foregroundStyle(.secondary)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Spacing.s)], spacing: Spacing.s) {
+                ForEach(Alarmstichwort.allCases) { stichwort in
+                    Button { addStichwort(stichwort) } label: {
+                        VStack(spacing: 2) {
+                            Text(stichwort.rawValue).font(.title3.weight(.heavy))
+                            Text(stichwort.summary).font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: TouchTarget.large + 8)
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(stichwort.rawValue): \(stichwort.summary) als Platzhalter")
+                }
+            }
+        }
+    }
+
     // MARK: Aktionen
 
     private var targetName: String {
@@ -179,6 +220,26 @@ struct AddUnitSheet: View {
             _ = try store.perform(AddMasterUnits([unit], sectionID: targetID))
             errorMessage = nil
             lastAdded = "\(unit.callsign) → \(targetName)"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func addPlaceholder(_ placeholderType: UnitType) {
+        do {
+            let unit = try store.perform(AddPlaceholder(type: placeholderType, sectionID: targetID))
+            errorMessage = nil
+            lastAdded = "\(unit.displayName) → \(targetName)"
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func addStichwort(_ stichwort: Alarmstichwort) {
+        do {
+            _ = try store.perform(AddAlarmstichwort(stichwort, sectionID: targetID))
+            errorMessage = nil
+            lastAdded = "\(stichwort.rawValue): \(stichwort.summary) → \(targetName)"
         } catch {
             errorMessage = error.localizedDescription
         }

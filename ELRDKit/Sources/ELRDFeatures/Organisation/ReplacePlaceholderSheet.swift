@@ -90,6 +90,8 @@ struct ReplacePlaceholderSheet: View {
                                     .buttonStyle(.plain)
                             }
                         }
+                    } else if let masterData, masterData.units.isEmpty {
+                        LoadRegionHint(masterData: masterData)
                     } else if typed.isEmpty {
                         Text("Funkrufname des Fahrzeugs eintippen.").foregroundStyle(.secondary)
                     }

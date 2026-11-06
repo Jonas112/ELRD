@@ -360,35 +360,44 @@ struct SectionCard: View {
     private func unitRowContent(_ entry: UnitEntry) -> some View {
         let row = UnitRowLabel(entry: entry, showsMoveHint: canEdit)
         if canEdit {
-            Menu {
-                if entry.unit.isPlaceholder {
-                    Button { onReplace(entry.unit) } label: { Label("Fahrzeug eintragen", systemImage: "car.fill") }
-                }
-                Section("\(entry.unit.displayName) verschieben nach") {
-                    ForEach(sections.filter { $0.id != entry.unit.sectionID }) { target in
-                        Button(target.name) { onMove(entry.unit.id, target.id) }
-                    }
-                    if column.section != nil {
-                        Button("Ohne Abschnitt") { onMove(entry.unit.id, nil) }
-                    }
-                }
-                if !entry.patients.isEmpty {
-                    Section("Patient öffnen") {
-                        ForEach(entry.patients) { badge in
-                            Button("Patient \(badge.number) · \(badge.triage.shortName)") { onOpenPatient(badge.id) }
-                        }
-                    }
-                }
-                Section {
-                    Button(role: .destructive) { onRemoveUnit(entry.unit) } label: {
-                        Label("Aus dem Einsatz entfernen", systemImage: "minus.circle")
-                    }
-                    .disabled(!entry.patients.isEmpty)
-                }
-            } label: { row }
-            .buttonStyle(.plain)
+            if entry.unit.isPlaceholder {
+                // Tipp: gleich „Fahrzeug eintragen“; langes Drücken: Verschieben usw.
+                Menu { unitMenu(entry) } label: { row } primaryAction: { onReplace(entry.unit) }
+                    .buttonStyle(.plain)
+            } else {
+                Menu { unitMenu(entry) } label: { row }
+                    .buttonStyle(.plain)
+            }
         } else {
             row
+        }
+    }
+
+    @ViewBuilder
+    private func unitMenu(_ entry: UnitEntry) -> some View {
+        if entry.unit.isPlaceholder {
+            Button { onReplace(entry.unit) } label: { Label("Fahrzeug eintragen", systemImage: "car.fill") }
+        }
+        Section("\(entry.unit.displayName) verschieben nach") {
+            ForEach(sections.filter { $0.id != entry.unit.sectionID }) { target in
+                Button(target.name) { onMove(entry.unit.id, target.id) }
+            }
+            if column.section != nil {
+                Button("Ohne Abschnitt") { onMove(entry.unit.id, nil) }
+            }
+        }
+        if !entry.patients.isEmpty {
+            Section("Patient öffnen") {
+                ForEach(entry.patients) { badge in
+                    Button("Patient \(badge.number) · \(badge.triage.shortName)") { onOpenPatient(badge.id) }
+                }
+            }
+        }
+        Section {
+            Button(role: .destructive) { onRemoveUnit(entry.unit) } label: {
+                Label("Aus dem Einsatz entfernen", systemImage: "minus.circle")
+            }
+            .disabled(!entry.patients.isEmpty)
         }
     }
 }

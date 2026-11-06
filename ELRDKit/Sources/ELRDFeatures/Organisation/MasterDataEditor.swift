@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import ELRDDomain
 import ELRDPersistence
+import ELRDStammdaten
 
 /// Stammdaten für den Einsatz: Abschnitts-Vorlagen und Einheiten. Neue Abschnitte
 /// und temporäre Einheiten lassen sich für künftige Einsätze übernehmen.
@@ -14,6 +15,10 @@ public final class MasterDataEditor {
     private let repository: (any DocumentRepository)?
     public private(set) var sections: [MasterSection] = []
     public private(set) var units: [MasterUnit] = []
+    /// Steigt bei jeder Änderung – z. B. um Klinikauswahl neu zu laden.
+    public private(set) var revision = 0
+    /// Mitgelieferte Regionen, die schon geladen wurden.
+    public private(set) var loadedRegionIDs: Set<String> = []
 
     public init(repository: (any DocumentRepository)?) {
         self.repository = repository
@@ -24,6 +29,23 @@ public final class MasterDataEditor {
     private func apply(_ master: MasterDataSet) {
         sections = master.sections.sorted { $0.sortIndex < $1.sortIndex }
         units = master.sortedUnits
+        loadedRegionIDs = Set(master.units.compactMap(\.origin.regionID) + master.hospitals.compactMap(\.origin.regionID))
+    }
+
+    // MARK: Regionen
+
+    /// Lädt ein mitgeliefertes Regionspaket (Fahrzeuge, Kliniken) in die Stammdaten.
+    /// Vorhandene Einträge bleiben, doppelte werden übersprungen.
+    @discardableResult
+    func importRegion(_ region: RegionDefinition, at date: Date = Date()) throws -> MasterDataMergeReport {
+        guard let repository else { return MasterDataMergeReport() }
+        let loaded = try BundledMasterData.package(for: region)
+        var master = try repository.document(MasterDataSet.self, key: .masterData) ?? MasterDataSet()
+        let report = master.merge(loaded.package)
+        try repository.saveDocument(master, key: .masterData, at: date)
+        apply(master)
+        revision += 1
+        return report
     }
 
     private func change(at date: Date, _ edit: (inout MasterDataSet) -> Bool) throws {
@@ -32,6 +54,7 @@ public final class MasterDataEditor {
         guard edit(&master) else { return }
         try repository.saveDocument(master, key: .masterData, at: date)
         apply(master)
+        revision += 1
     }
 
     // MARK: Abschnitte

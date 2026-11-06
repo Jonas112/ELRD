@@ -455,32 +455,13 @@ struct PatientDetailView: View {
         }
     }
 
-    /// Einheiten als große Knöpfe: Tipp ordnet zu bzw. löst die Zuordnung.
+    /// Einheiten gegliedert (zugeordnet, freie Transportmittel, weitere, belegte).
     private func unitSection(_ patient: Patient) -> some View {
-        let choices = UnitChoice.ordered(units: store.state.units, patients: store.state.patients, for: patientID)
-        let hasUnit = choices.contains(where: \.isAssigned)
-        return VStack(alignment: .leading, spacing: Spacing.s) {
-            Text(hasUnit ? "Einheit" : "Einheit – noch keine zugewiesen")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(hasUnit ? Color.secondary : Color.orange)
-            if choices.isEmpty {
-                Text("Im Einsatz sind noch keine Einheiten. Unter „Einheiten“ hinzufügen.")
-                    .font(.callout).foregroundStyle(.secondary)
-            } else {
-                FlowLayout(spacing: Spacing.s) {
-                    ForEach(choices) { choice in
-                        ChoiceChip(choice.label, isSelected: choice.isAssigned, minHeight: 52, background: Surface.elevated) {
-                            if choice.isAssigned {
-                                perform(UnassignUnit(patientID: patientID, unitID: choice.id))
-                            } else {
-                                perform(AssignUnit(patientID: patientID, unitID: choice.id))
-                            }
-                        }
-                        .opacity(choice.isFree || choice.isAssigned ? 1 : 0.75)
-                    }
-                }
-            }
-        }
+        UnitAssignmentSection(
+            choices: UnitChoice.ordered(units: store.state.units, patients: store.state.patients, for: patientID),
+            onAssign: { perform(AssignUnit(patientID: patientID, unitID: $0)) },
+            onUnassign: { perform(UnassignUnit(patientID: patientID, unitID: $0)) }
+        )
     }
 
     /// Zielklinik: gewählte mit „ändern“, sonst die ersten Vorschläge und „Alle …“.

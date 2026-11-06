@@ -96,6 +96,10 @@ struct SignedInView: View {
                 ProgressView()
             }
         }
+        // Nach „Region laden“ stehen neue Kliniken gleich in der Klinikauswahl.
+        .onChange(of: masterData?.revision) {
+            catalogs = PatientCatalogs.load(from: environment.repository)
+        }
         .task(id: user.id) {
             openStore = nil
             catalogs = PatientCatalogs.load(from: environment.repository)

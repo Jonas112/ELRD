@@ -112,10 +112,10 @@ struct AddUnitSheet: View {
                     }
                 }
             }
-            if available.isEmpty {
-                Text((masterData?.units.isEmpty ?? true)
-                     ? "Keine Einheiten in den Stammdaten. Unter „Neue Einheit“ anlegen; Regionen lassen sich unter Einstellungen → Stammdaten importieren (Schritt 48)."
-                     : "Alle Einheiten aus den Stammdaten sind schon im Einsatz.")
+            if let masterData, masterData.units.isEmpty {
+                LoadRegionHint(masterData: masterData)
+            } else if available.isEmpty {
+                Text("Alle Einheiten aus den Stammdaten sind schon im Einsatz.")
                     .foregroundStyle(.secondary)
             } else if matching.isEmpty {
                 Text("Keine Einheit passt. Unter „Neue Einheit“ lässt sie sich anlegen.")

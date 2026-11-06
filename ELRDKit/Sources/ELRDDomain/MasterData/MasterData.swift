@@ -11,6 +11,14 @@ public enum MasterDataOrigin: Hashable, Codable, Sendable {
     case fromMission
 }
 
+public extension MasterDataOrigin {
+    /// Kennung der Region, falls aus einem Regionspaket.
+    var regionID: String? {
+        if case .region(let id) = self { return id }
+        return nil
+    }
+}
+
 /// Einheit in den Stammdaten (Vorlage für Einsatzeinheiten).
 public struct MasterUnit: Identifiable, Hashable, Codable, Sendable {
     public let id: MasterUnitID

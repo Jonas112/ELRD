@@ -120,7 +120,9 @@ public struct MissionWorkspaceView: View {
             account: account,
             canAddPatients: !store.state.mission.isClosed && store.isEnabled(.missionEditing),
             showsQuickAdd: $showsQuickAdd,
-            onClose: onClose,
+            // Solange ein Patient offen ist, zeigt nur dessen Leiste „Zurück“ – zwei
+            // Zurück-Knöpfe übereinander führten zum versehentlichen Verlassen des Einsatzes.
+            onClose: path.isEmpty ? onClose : nil,
             onDetails: { showsDetails = true },
             onMessages: { showsMessages = true },
             onTriage: { category in

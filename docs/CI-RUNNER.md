@@ -1,3 +1,5 @@
+> **Nicht mehr in Gebrauch (E72):** Das Repo ist öffentlich, die CI läuft wieder auf GitHub-Runnern. Ein eigener Runner an einem öffentlichen Repo ist unsicher. Nur verwenden, falls das Repo wieder privat wird.
+
 # CI auf dem eigenen Mac (Self-hosted Runner)
 
 Seit 2026-11-05 laufen Build, Tests und Bildschirmfotos auf Jonas' Mac statt auf GitHub-Servern (E71). Grund: Die freien macOS-Minuten waren aufgebraucht, denn macOS-Läufe zählen bei GitHub mehrfach.

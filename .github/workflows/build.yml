@@ -1,9 +1,9 @@
 name: Build
 
 # Läuft nur bei Code-Änderungen (nicht bei reinen Doku-Commits).
-# Seit 2026-11-05 auf Jonas' Mac als eigener Runner (E71), weil die freien
-# macOS-Minuten von GitHub aufgebraucht waren. Zurück auf GitHub-Runner:
-# `runs-on: macos-26` setzen.
+# GitHub-Runner (macOS): seit das Repo öffentlich ist, kostenlos (E72).
+# Kein eigener Runner bei öffentlichem Repo – fremde Pull Requests könnten
+# sonst Code auf dem Rechner ausführen.
 # Bildschirmfotos nur, wenn die letzte Commit-Nachricht „[fotos]“ enthält oder
 # der Lauf manuell gestartet wird (spart Zeit).
 # Fehler werden zusätzlich als Annotationen ausgegeben, damit sie in der
@@ -32,10 +32,9 @@ permissions:
 
 jobs:
   build:
-    runs-on: [self-hosted, macOS]
+    runs-on: macos-26
     timeout-minutes: 45
     env:
-      # Bleibt zwischen den Läufen erhalten: schnellere, inkrementelle Builds.
       DERIVED: ${{ github.workspace }}/../ELRD-DerivedData
     steps:
       - uses: actions/checkout@v4

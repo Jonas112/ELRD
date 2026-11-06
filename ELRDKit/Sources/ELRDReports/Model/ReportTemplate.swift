@@ -1,0 +1,141 @@
+import Foundation
+import ELRDDomain
+
+/// Berichtsvorlage (Schritt 40): geordnete Kapitel mit Optionen plus Gestaltung.
+/// Codable, damit sich Vorlagen speichern und teilen lassen (Schritt 45).
+public struct ReportTemplate: Codable, Hashable, Sendable, Identifiable {
+    public var id: UUID
+    public var name: String
+    public var chapters: [ReportChapter]
+    public var theme: ReportTheme
+
+    public init(id: UUID = UUID(), name: String, chapters: [ReportChapter], theme: ReportTheme = .standard) {
+        self.id = id
+        self.name = name
+        self.chapters = chapters
+        self.theme = theme
+    }
+
+    /// Eingeschaltete Kapitel in ihrer Reihenfolge.
+    public var enabledChapters: [ReportChapter] { chapters.filter(\.isEnabled) }
+
+    /// Gesamtbericht: alle Kapitel (Standard bis Schritt 45 die Vorlagen verwaltet).
+    public static var full: ReportTemplate {
+        ReportTemplate(name: "Gesamtbericht", chapters: ReportChapter.Kind.allCases.map { ReportChapter(kind: $0) })
+    }
+}
+
+/// Ein Kapitel: Art, an/aus, Optionen.
+public struct ReportChapter: Codable, Hashable, Sendable, Identifiable {
+    public enum Kind: String, Codable, Sendable, CaseIterable {
+        case missionInfo
+        case organisation
+        case patients
+        case journal
+        case log
+
+        public var displayName: String {
+            switch self {
+            case .missionInfo: "Einsatzdaten"
+            case .organisation: "Organisation"
+            case .patients: "Patienten"
+            case .journal: "Tagebuch"
+            case .log: "Protokoll"
+            }
+        }
+    }
+
+    public var id: Kind { kind }
+    public let kind: Kind
+    public var isEnabled: Bool
+    public var options: ReportChapterOptions
+
+    public init(kind: Kind, isEnabled: Bool = true, options: ReportChapterOptions = ReportChapterOptions()) {
+        self.kind = kind
+        self.isEnabled = isEnabled
+        self.options = options
+    }
+}
+
+/// Optionen aller Kapitel an einer Stelle (jedes Kapitel liest nur seine).
+/// Neue Optionen nur mit Standardwert ergänzen – gespeicherte Vorlagen bleiben lesbar.
+public struct ReportChapterOptions: Codable, Hashable, Sendable {
+    // Einsatzdaten
+    /// Kennzahlen (Sichtung, Patienten nach Stand) oben im Kapitel.
+    public var showsSummary: Bool = true
+    /// Kartenausschnitt (Vorschaubild oder letzter Kartenausschnitt).
+    public var showsMapImage: Bool = true
+
+    // Organisation
+    /// Platzhalter (Fahrzeug unbekannt) mit aufführen.
+    public var includesPlaceholders: Bool = true
+    /// Zugeordnete Patienten je Einheit nennen.
+    public var showsPatientAssignment: Bool = true
+
+    // Patienten (Schritt 42)
+    /// Nur diese Sichtungskategorien (leer = alle).
+    public var triageFilter: Set<Sichtungskategorie> = []
+    /// Einzelbogen je Patient statt Tabelle.
+    public var usesPatientSheets: Bool = false
+    /// Namen im Bericht zeigen (Datenschutz: aus = nur Nummer, Alter, Geschlecht).
+    public var showsPatientNames: Bool = true
+
+    // Tagebuch und Protokoll (Schritt 43)
+    /// Bilder im Tagebuch (Größe in Punkt; 0 = keine Bilder).
+    public var journalImageHeight: Double = 220
+
+    public init() {}
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = ReportChapterOptions()
+        showsSummary = try container.decodeIfPresent(Bool.self, forKey: .showsSummary) ?? defaults.showsSummary
+        showsMapImage = try container.decodeIfPresent(Bool.self, forKey: .showsMapImage) ?? defaults.showsMapImage
+        includesPlaceholders = try container.decodeIfPresent(Bool.self, forKey: .includesPlaceholders) ?? defaults.includesPlaceholders
+        showsPatientAssignment = try container.decodeIfPresent(Bool.self, forKey: .showsPatientAssignment) ?? defaults.showsPatientAssignment
+        triageFilter = try container.decodeIfPresent(Set<Sichtungskategorie>.self, forKey: .triageFilter) ?? defaults.triageFilter
+        usesPatientSheets = try container.decodeIfPresent(Bool.self, forKey: .usesPatientSheets) ?? defaults.usesPatientSheets
+        showsPatientNames = try container.decodeIfPresent(Bool.self, forKey: .showsPatientNames) ?? defaults.showsPatientNames
+        journalImageHeight = try container.decodeIfPresent(Double.self, forKey: .journalImageHeight) ?? defaults.journalImageHeight
+    }
+}
+
+/// Alles, was ein Bericht braucht – als Werte, damit im Hintergrund gerendert
+/// werden kann. Bilder kommen über `imageData` aus der Dateiablage.
+public struct ReportInput: Sendable {
+    public let mission: Mission
+    public let patients: [Patient]
+    public let units: [MissionUnit]
+    public let sections: [MissionSection]
+    public let journal: [JournalEntry]
+    public let log: [MissionLogEntry]
+    /// Namen der Benutzer (Einsatzleiter, Autoren).
+    public let people: [UserID: String]
+    public let createdAt: Date
+    public let createdBy: String
+    public let imageData: @Sendable (FileAttachment) -> Data?
+
+    public init(
+        mission: Mission,
+        patients: [Patient],
+        units: [MissionUnit],
+        sections: [MissionSection],
+        journal: [JournalEntry],
+        log: [MissionLogEntry],
+        people: [UserID: String] = [:],
+        createdAt: Date = Date(),
+        createdBy: String = "",
+        imageData: @escaping @Sendable (FileAttachment) -> Data? = { _ in nil }
+    ) {
+        self.mission = mission
+        self.patients = patients.active
+        self.units = units.active
+        self.sections = sections.active
+        self.journal = journal.active
+        self.log = log
+        self.people = people
+        self.createdAt = createdAt
+        self.createdBy = createdBy
+        self.imageData = imageData
+    }
+}

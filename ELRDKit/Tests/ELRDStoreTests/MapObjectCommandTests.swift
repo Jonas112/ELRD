@@ -77,3 +77,27 @@ struct DrawingObjectTests {
         #expect(abs(moved.shape.center.latitude - 50.11) < 0.00001)
     }
 }
+
+@Suite("Kartenausschnitt ins Tagebuch")
+@MainActor
+struct MapSnapshotCommandTests {
+    @Test func snapshotBecomesJournalEntryWithImage() throws {
+        let fixture = try StoreFixture()
+        let store = try fixture.newMission()
+        let image = FileAttachment(kind: .photo, byteCount: 100, sha256: String(repeating: "c", count: 64), createdAt: Date(), pixelWidth: 2048, pixelHeight: 1536)
+        let entry = try store.perform(AddMapSnapshot(image: image, note: "  nach Eintreffen RTH "))
+        #expect(entry.origin == .mapSnapshot)
+        #expect(entry.text == "Lagekarte: nach Eintreffen RTH")
+        #expect(entry.firstImage == image)
+        #expect(entry.kind == .photo)
+        #expect(store.state.visibleLog.last?.message == "Kartenausschnitt als Tagebucheintrag \(entry.number) gespeichert")
+
+        let plain = try store.perform(AddMapSnapshot(image: FileAttachment(kind: .photo, byteCount: 1, sha256: String(repeating: "d", count: 64), createdAt: Date())))
+        #expect(plain.text == "Lagekarte")
+
+        let audio = FileAttachment(kind: .audio, byteCount: 1, sha256: String(repeating: "e", count: 64), createdAt: Date())
+        #expect(throws: CommandError.invalid("Ein Kartenausschnitt muss ein Bild sein.")) {
+            try store.perform(AddMapSnapshot(image: audio))
+        }
+    }
+}

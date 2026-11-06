@@ -30,6 +30,8 @@ struct MissionMapView: View {
     @StateObject private var freehand = FreehandController()
     @State private var freehandTool = FreehandTool()
     @State private var confirmsDiscardDrawing = false
+    /// Kurze Bestätigung oben (z. B. „Als Eintrag A-4 im Tagebuch“).
+    @State private var notice: String?
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
 
@@ -170,6 +172,17 @@ struct MissionMapView: View {
             }
         }
         .overlay(alignment: .top) {
+            if let notice, !isDrawing {
+                Label(notice, systemImage: "checkmark.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, Spacing.l)
+                    .padding(.vertical, Spacing.s)
+                    .background(Color.green.opacity(0.9), in: Capsule())
+                    .padding(.top, Spacing.m)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .accessibilityAddTraits(.isStaticText)
+            }
             if isDrawing {
                 Label("Mit Finger oder Stift auf die Karte zeichnen", systemImage: "scribble")
                     .font(.subheadline.weight(.semibold))
@@ -198,6 +211,7 @@ struct MissionMapView: View {
                 }
                 .accessibilityLabel("Mein Standort")
                 if canEdit { drawMenu }
+                snapshotMenu
                 if showsSectionButton {
                     MapControlButton(title: "Liste", systemImage: "list.bullet") {
                         showsSectionList = true
@@ -221,6 +235,62 @@ struct MissionMapView: View {
                     .padding(.bottom, 32)
                     .accessibilityLabel("Quelle: \(attribution)")
             }
+    }
+
+    // MARK: Kartenausschnitt
+
+    /// Ausschnitt ins Tagebuch oder drucken (ELRDRG: Karte drucken).
+    private var snapshotMenu: some View {
+        Menu {
+            if canEdit {
+                Button(action: saveSnapshotToJournal) {
+                    Label("Ins Tagebuch", systemImage: "book.pages")
+                }
+            }
+            Button(action: printSnapshot) {
+                Label("Drucken", systemImage: "printer")
+            }
+        } label: {
+            MapControlLabel(title: "Ausschnitt", systemImage: "camera.viewfinder")
+        }
+        .accessibilityLabel("Kartenausschnitt ins Tagebuch oder drucken")
+    }
+
+    private func saveSnapshotToJournal() {
+        guard let image = proxy.snapshot(), let jpeg = image.jpegData(compressionQuality: 0.85) else {
+            errorMessage = "Der Kartenausschnitt ließ sich nicht erzeugen."
+            return
+        }
+        do {
+            let file = try attachments.save(
+                jpeg,
+                kind: .photo,
+                createdAt: Date(),
+                pixelWidth: Int(image.size.width * image.scale),
+                pixelHeight: Int(image.size.height * image.scale)
+            )
+            let entry = try store.perform(AddMapSnapshot(image: file))
+            show("Als Eintrag \(entry.number) im Tagebuch")
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func printSnapshot() {
+        guard let image = proxy.snapshot() else {
+            errorMessage = "Der Kartenausschnitt ließ sich nicht erzeugen."
+            return
+        }
+        let mission = store.state.mission
+        MapPrinting.print(image, jobName: "Lagekarte \(mission.reason.isEmpty ? "Einsatz" : mission.reason)")
+    }
+
+    private func show(_ message: String) {
+        withAnimation { notice = message }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if notice == message { withAnimation { notice = nil } }
+        }
     }
 
     // MARK: Freihand

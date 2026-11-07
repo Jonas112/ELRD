@@ -201,22 +201,10 @@ jobs:
             done
           }
           shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions newMission workspace missionDetails patients patientTiles patientDetail injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry protocolLog messages report settings masterData onboarding}"
-          # iPad mini (hochkant): Leiste unten
-          MINI_ID=$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          ios = [d for runtime, lst in devices.items() if "iOS" in runtime for d in lst]
-          pick = next((d for d in ios if "iPad mini" in d["name"]), None)
-          print(pick["udid"] if pick else "")
-          ')
-          if [ -n "$MINI_ID" ]; then
-            xcrun simctl boot "$MINI_ID" || true
-            xcrun simctl bootstatus "$MINI_ID" -b
-            xcrun simctl install "$MINI_ID" "$APP"
-            shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry protocolLog messages report settings masterData onboarding}"
-          else
-            echo "::warning title=Bildschirmfotos::Kein iPad-mini-Simulator gefunden"
-          fi
+          # Jedes Gerät nach seinen Fotos herunterfahren: mehrere laufende Simulatoren
+          # bremsen den Runner so stark, dass der Lauf das Zeitlimit reißt.
+          xcrun simctl shutdown "$DEVICE_ID" || true
+          over_budget() { [ $SECONDS -gt 2100 ]; } # nach 35 min keine weiteren Geräte
           # iPhone (hochkant): kleinste Breite
           PHONE_ID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
@@ -225,13 +213,35 @@ jobs:
           pick = next((d for d in ios if d["name"].startswith("iPhone") and "Pro" in d["name"] and "Max" not in d["name"]), next((d for d in ios if d["name"].startswith("iPhone")), None))
           print(pick["udid"] if pick else "")
           ')
-          if [ -n "$PHONE_ID" ]; then
+          if [ -n "$PHONE_ID" ] && ! over_budget; then
             xcrun simctl boot "$PHONE_ID" || true
             xcrun simctl bootstatus "$PHONE_ID" -b
             xcrun simctl install "$PHONE_ID" "$APP"
             shoot "$PHONE_ID" "phone-" "light" "${ONLY:-login missions newMission workspace missionDetails patients patientDetail injuries unitPicker sections addUnit map journal report settings onboarding}"
+            xcrun simctl shutdown "$PHONE_ID" || true
+          elif [ -n "$PHONE_ID" ]; then
+            echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPhone übersprungen"
           else
             echo "::warning title=Bildschirmfotos::Kein iPhone-Simulator gefunden"
+          fi
+          # iPad mini (hochkant): Leiste unten
+          MINI_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = [d for runtime, lst in devices.items() if "iOS" in runtime for d in lst]
+          pick = next((d for d in ios if "iPad mini" in d["name"]), None)
+          print(pick["udid"] if pick else "")
+          ')
+          if [ -n "$MINI_ID" ] && ! over_budget; then
+            xcrun simctl boot "$MINI_ID" || true
+            xcrun simctl bootstatus "$MINI_ID" -b
+            xcrun simctl install "$MINI_ID" "$APP"
+            shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry protocolLog messages report settings masterData onboarding}"
+            xcrun simctl shutdown "$MINI_ID" || true
+          elif [ -n "$MINI_ID" ]; then
+            echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPad mini übersprungen"
+          else
+            echo "::warning title=Bildschirmfotos::Kein iPad-mini-Simulator gefunden"
           fi
           cd shots
           git init -q -b ci-screenshots

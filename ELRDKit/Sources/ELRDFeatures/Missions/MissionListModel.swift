@@ -178,6 +178,11 @@ final class MissionListModel {
         return result
     }
 
+    /// Einsatz von einem iPad in der Nähe übernehmen (Schritt 66).
+    func makeNearbyExchange(_ missionID: MissionID) -> NearbyExchange {
+        NearbyExchange(missionID: missionID, repository: repository, clock: clock, files: files)
+    }
+
     /// Entfernt einen gelöschten Einsatz endgültig (Datenschutz).
     func purge(_ missionID: MissionID) throws {
         try MissionPurge.purge(missionID, repository: repository, files: files)

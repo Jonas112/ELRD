@@ -26,6 +26,7 @@ struct MissionListView: View {
     @State private var showsImporter = false
     @State private var pendingPurge: MissionSummary?
     @State private var importNotice: String?
+    @State private var showsNearby = false
     @AppStorage("missionList.showsAllYears") private var showsAllYears = false
 
     init(
@@ -66,12 +67,15 @@ struct MissionListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showsImporter = true } label: {
+                    Menu {
+                        Button("Einsatz aus Datei öffnen …", systemImage: "doc") { showsImporter = true }
+                        Button("Einsatz von iPad in der Nähe übernehmen …", systemImage: "arrow.triangle.2.circlepath") { showsNearby = true }
+                    } label: {
                         Image(systemName: "square.and.arrow.down")
                             .font(.title3.weight(.semibold))
                             .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
                     }
-                    .accessibilityLabel("Einsatz aus Datei öffnen")
+                    .accessibilityLabel("Einsatz übernehmen")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showsSettings = true } label: {
@@ -118,6 +122,9 @@ struct MissionListView: View {
         .sheet(item: $exportURL) { file in
             ActivityView(items: [file.url])
         }
+        .sheet(isPresented: $showsNearby) {
+            NearbySyncView(session: makeNearbySession())
+        }
         .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.data, .json]) { result in
             switch result {
             case .success(let url): importArchive(url)
@@ -147,6 +154,18 @@ struct MissionListView: View {
     private var purgeTitle: String {
         guard let pendingPurge else { return "Endgültig löschen?" }
         return "Einsatz \(pendingPurge.displayNumber) endgültig löschen?"
+    }
+
+    /// Einsatz von einem iPad in der Nähe übernehmen (Schritt 66).
+    private func makeNearbySession() -> NearbySyncSession {
+        let session = NearbySyncSession(
+            displayName: model.session.displayName,
+            missionID: nil,
+            missionTitle: "",
+            makeExchange: { [model] id in model.makeNearbyExchange(id) }
+        )
+        session.onImported = { [model] in model.reload() }
+        return session
     }
 
     private func exportArchive(_ summary: MissionSummary) {

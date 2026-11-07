@@ -10,14 +10,30 @@
 		E1D000000000000000000101 /* ELRDKit in Frameworks */ = {isa = PBXBuildFile; productRef = E1D000000000000000000201 /* ELRDKit */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		E1D000000000000000000408 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1D000000000000000000009 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E1D000000000000000000004;
+			remoteInfo = ELRD;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		E1D000000000000000000003 /* ELRD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ELRD.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1D000000000000000000401 /* ELRDUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ELRDUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E1D000000000000000000005 /* ELRD */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ELRD;
+			sourceTree = "<group>";
+		};
+		E1D000000000000000000402 /* ELRDUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ELRDUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -31,6 +47,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E1D000000000000000000403 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -38,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				E1D000000000000000000005 /* ELRD */,
+				E1D000000000000000000402 /* ELRDUITests */,
 				E1D000000000000000000002 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				E1D000000000000000000003 /* ELRD.app */,
+				E1D000000000000000000401 /* ELRDUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -76,6 +101,29 @@
 			productReference = E1D000000000000000000003 /* ELRD.app */;
 			productType = "com.apple.product-type.application";
 		};
+		E1D000000000000000000406 /* ELRDUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E1D000000000000000000411 /* Build configuration list for PBXNativeTarget "ELRDUITests" */;
+			buildPhases = (
+				E1D000000000000000000404 /* Sources */,
+				E1D000000000000000000403 /* Frameworks */,
+				E1D000000000000000000405 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E1D000000000000000000407 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E1D000000000000000000402 /* ELRDUITests */,
+			);
+			name = ELRDUITests;
+			packageProductDependencies = (
+			);
+			productName = ELRDUITests;
+			productReference = E1D000000000000000000401 /* ELRDUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -88,6 +136,10 @@
 				TargetAttributes = {
 					E1D000000000000000000004 = {
 						CreatedOnToolsVersion = 26.0;
+					};
+					E1D000000000000000000406 = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = E1D000000000000000000004;
 					};
 				};
 			};
@@ -109,12 +161,20 @@
 			projectRoot = "";
 			targets = (
 				E1D000000000000000000004 /* ELRD */,
+				E1D000000000000000000406 /* ELRDUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		E1D000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E1D000000000000000000405 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -131,7 +191,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E1D000000000000000000404 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E1D000000000000000000407 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E1D000000000000000000004 /* ELRD */;
+			targetProxy = E1D000000000000000000408 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		E1D000000000000000000013 /* Debug */ = {
@@ -271,6 +346,42 @@
 			};
 			name = Release;
 		};
+		E1D000000000000000000409 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ELRD.App.UITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+				TEST_TARGET_NAME = ELRD;
+			};
+			name = Debug;
+		};
+		E1D000000000000000000410 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ELRD.App.UITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 2;
+				TEST_TARGET_NAME = ELRD;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -288,6 +399,15 @@
 			buildConfigurations = (
 				E1D000000000000000000015 /* Debug */,
 				E1D000000000000000000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E1D000000000000000000411 /* Build configuration list for PBXNativeTarget "ELRDUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1D000000000000000000409 /* Debug */,
+				E1D000000000000000000410 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

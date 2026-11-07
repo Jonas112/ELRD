@@ -16,6 +16,7 @@ on:
       - "ELRD/**"
       - "ELRDKit/**"
       - "ELRD.xcodeproj/**"
+      - "ELRDUITests/**"
       - ".github/workflows/**"
   workflow_dispatch:
     inputs:
@@ -23,6 +24,10 @@ on:
         description: "Bildschirmfotos erstellen"
         type: boolean
         default: true
+      uitests:
+        description: "Oberflächentests ausführen"
+        type: boolean
+        default: false
 
 concurrency:
   group: build-${{ github.ref }}
@@ -34,7 +39,7 @@ permissions:
 jobs:
   build:
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       DERIVED: ${{ github.workspace }}/../ELRD-DerivedData
     steps:
@@ -54,7 +59,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" != "push" ] || [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
             echo "APP_CHANGED=true" >> "$GITHUB_ENV"
-          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(ELRD/|ELRD\.xcodeproj/)'; then
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(ELRD/|ELRD\.xcodeproj/|ELRDUITests/)'; then
             echo "APP_CHANGED=true" >> "$GITHUB_ENV"
           else
             echo "APP_CHANGED=false" >> "$GITHUB_ENV"
@@ -125,6 +130,40 @@ jobs:
           fi
           grep -E 'Test run with' test.log | sort -u | while IFS= read -r line; do
             echo "::notice title=Tests::$line"
+          done
+
+      # Oberflächentests (Schritt 65) nur mit „[uitests]“ in der Commit-Nachricht oder
+      # manuell – sie brauchen einige Minuten (sparsam, Jonas).
+      - name: Oberflächentests (iPad Simulator)
+        if: success() && (contains(github.event.head_commit.message, '[uitests]') || (github.event_name == 'workflow_dispatch' && inputs.uitests))
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = [d for runtime, lst in devices.items() if "iOS" in runtime for d in lst]
+          pick = next((d for d in ios if "iPad Pro" in d["name"]), next((d for d in ios if "iPad" in d["name"]), None))
+          print(pick["udid"] if pick else "")
+          ')
+          if [ -z "$DEVICE_ID" ]; then echo "::error title=Oberflächentests::Kein iPad-Simulator"; exit 1; fi
+          xcodebuild \
+            -project ELRD.xcodeproj \
+            -scheme ELRD \
+            -destination "id=$DEVICE_ID" \
+            -derivedDataPath "$DERIVED" \
+            -only-testing:ELRDUITests \
+            CODE_SIGNING_ALLOWED=NO \
+            test > uitest.log 2>&1 || true
+          grep -E "error: |failed|XCTAssert" uitest.log | grep -v "^\s*/Applications" | sort -u | head -25 | while IFS= read -r line; do
+            echo "::error title=Oberflächentest::$(echo "$line" | cut -c1-400)"
+          done
+          if ! grep -q "TEST SUCCEEDED" uitest.log; then
+            grep -v '^\s*$' uitest.log | tail -25 | while IFS= read -r line; do
+              echo "::warning title=Protokoll (Ende)::$line"
+            done
+            exit 1
+          fi
+          grep -E "Executed [0-9]+ tests?" uitest.log | tail -1 | while IFS= read -r line; do
+            echo "::notice title=Oberflächentests::$line"
           done
 
       - name: Bildschirmfotos (iPad Simulator)

@@ -13,6 +13,8 @@ struct MissionDetailsView: View {
     @State private var form: MissionEditForm
     @State private var errorMessage: String?
     @State private var confirmsClose = false
+    @State private var showsNearby = false
+    @Environment(\.attachmentStore) private var attachments
 
     init(store: MissionStore, people: [PersonChoice]) {
         self.store = store
@@ -51,10 +53,23 @@ struct MissionDetailsView: View {
 
                 if !mission.isClosed { closeSection }
                 if !store.state.trash.isEmpty { trashSection(store.state.trash, canRestore: !mission.isClosed) }
+                Section {
+                    Button { showsNearby = true } label: {
+                        Label("Mit iPad in der Nähe abgleichen", systemImage: "arrow.triangle.2.circlepath")
+                            .frame(minHeight: TouchTarget.minimum)
+                    }
+                } header: {
+                    Text("Abgleich vor Ort")
+                } footer: {
+                    Text("Ohne Internet und ohne Server: beide iPads tauschen alle Daten dieses Einsatzes aus.")
+                }
             }
             .environment(\.defaultMinListRowHeight, TouchTarget.comfortable)
             .navigationTitle("Einsatzdaten")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showsNearby) {
+                NearbySyncView(session: makeNearbySession())
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") { dismiss() }
@@ -162,6 +177,18 @@ struct MissionDetailsView: View {
         } footer: {
             Text("Danach ist der Einsatz schreibgeschützt. Er kann jederzeit wieder geöffnet werden.")
         }
+    }
+
+    private func makeNearbySession() -> NearbySyncSession {
+        let mission = store.state.mission
+        let session = NearbySyncSession(
+            displayName: store.sessionDisplayName,
+            missionID: store.missionID,
+            missionTitle: "\(mission.displayNumber()) \(mission.title)",
+            makeExchange: { [store, attachments] _ in store.makeNearbyExchange(files: attachments) }
+        )
+        session.onImported = { [store] in try? store.reload() }
+        return session
     }
 
     /// Papierkorb (Schritt 54): gelöschte Patienten, Tagebucheinträge, Kartenobjekte.

@@ -58,10 +58,11 @@ public struct RemoteChangeImporter {
             }
             guard !fresh.isEmpty else { continue }
 
-            let all = known + fresh
+            // Einmal nach Entität gruppieren (große Einsätze: Tausende Ereignisse, Schritt 64).
+            let byEntity = Dictionary(grouping: known + fresh, by: \.entityID)
             let touched = Set(fresh.map(\.entityID))
             for entityID in touched.sorted(by: { $0.uuidString < $1.uuidString }) {
-                let history = EntityHistory(all.filter { $0.entityID == entityID })
+                let history = EntityHistory(byEntity[entityID] ?? [])
                 if try merge(history, into: &changeSet) { result.changedEntities += 1 }
             }
             for event in fresh { changeSet.record(event) }

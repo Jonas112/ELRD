@@ -49,6 +49,11 @@ public final class MissionStore {
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let entitlements: any EntitlementProvider
 
+    /// Abgleich dieses Einsatzes mit einem iPad in der Nähe (Schritt 66).
+    public func makeNearbyExchange(files: AttachmentFileStore?) -> NearbyExchange {
+        NearbyExchange(missionID: missionID, repository: repository, clock: deviceClock, files: files)
+    }
+
     /// Lädt einen vorhandenen Einsatz.
     public init(
         missionID: MissionID,

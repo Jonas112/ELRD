@@ -84,7 +84,7 @@ let package = Package(
         .testTarget(name: "ELRDAuthTests", dependencies: ["ELRDAuth", "ELRDPersistence", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDEntitlementsTests", dependencies: ["ELRDEntitlements"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDFeaturesTests", dependencies: ["ELRDFeatures", "ELRDStore", "ELRDDomain"], swiftSettings: commonSettings),
-        .testTarget(name: "ELRDReportsTests", dependencies: ["ELRDReports", "ELRDStore", "ELRDDomain"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDReportsTests", dependencies: ["ELRDReports", "ELRDStore", "ELRDDomain", "ELRDPersistence", "ELRDSync"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDStoreTests", dependencies: ["ELRDStore", "ELRDPersistence", "ELRDSync", "ELRDDomain", "ELRDEntitlements"], swiftSettings: commonSettings),
     ],
     swiftLanguageModes: [.v5]

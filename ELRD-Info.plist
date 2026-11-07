@@ -45,5 +45,13 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
+	<!-- Abgleich vor Ort (Schritt 66, MultipeerConnectivity). -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Gleicht Einsätze mit iPads in der Nähe ab – ohne Internet und ohne Server.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_elrd-sync._tcp</string>
+		<string>_elrd-sync._udp</string>
+	</array>
 </dict>
 </plist>

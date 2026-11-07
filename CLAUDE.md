@@ -12,6 +12,7 @@ Neubau der iPad-App ELRDRG (Einsatzleiter Rettungsdienst) in SwiftUI. Altes Proj
 - In der Cloud-Umgebung gibt es kein Xcode. Nach jedem Push den CI-Lauf prüfen: `gh run list -R Jonas112/ELRD`, `gh run watch <id> --exit-status`, `gh run view <id>` (Fehler stehen als Annotationen). Erst bei grünem Build ist ein Schritt fertig.
 - CI läuft auf GitHub-Runnern (`macos-26`, Repo ist öffentlich, E72). Keinen Self-hosted Runner verwenden, solange das Repo öffentlich ist.
 - Oberflächen per Bildschirmfoto prüfen: Fotos entstehen nur mit `[fotos]` (alle, ca. 35 min) oder `[fotos: map journal]` (nur diese Bildschirme, deutlich schneller; der Branch `ci-screenshots` enthält dann nur diese) in der (letzten) Commit-Nachricht – bei jeder Änderung an Oberflächen anhängen. Laden mit `gh api -H "Accept: application/vnd.github.raw" "repos/Jonas112/ELRD/contents/<name>.png?ref=ci-screenshots"` (hell und dunkel).
+- Oberflächentests (`ELRDUITests`, Kernabläufe mit Beispieldaten) laufen nur mit `[uitests]` in der Commit-Nachricht oder manuell (Workflow-Eingabe `uitests`) – bei Änderungen an Abläufen der Oberfläche anhängen.
 - Kommunikation, Kommentare und Dokumentation auf Deutsch. Bezeichner im Code auf Englisch, Fachbegriffe (Sichtungskategorie, Alarmstichwort) dürfen deutsch bleiben, wenn sie keine gute Übersetzung haben.
 
 ## Regeln im Code

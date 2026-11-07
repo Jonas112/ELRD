@@ -332,3 +332,84 @@ struct MissionArchiveTests {
         #expect(try MissionOverview.loadDeleted(from: a.repository).isEmpty)
     }
 }
+
+@Suite("Abgleich vor Ort zwischen iPads (Schritt 66)")
+@MainActor
+struct NearbyExchangeTests {
+    let server = InMemorySyncServer()
+    let clock = TestClock()
+
+    /// Liefert Nachrichten hin und her, bis nichts mehr zu tun ist (wie MultipeerConnectivity).
+    func run(_ first: NearbyExchange, _ second: NearbyExchange) throws {
+        var queue: [(to: NearbyExchange, message: NearbyMessage, from: NearbyExchange)] = []
+        if let message = try first.snapshot() { queue.append((second, message, first)) }
+        if let message = try second.snapshot() { queue.append((first, message, second)) }
+        var rounds = 0
+        while !queue.isEmpty, rounds < 100 {
+            rounds += 1
+            let next = queue.removeFirst()
+            // Über das „Netz“: kodieren und wieder lesen.
+            let delivered = try NearbyMessage.decode(next.message.encoded())
+            for reply in try next.to.handle(delivered) {
+                queue.append((next.from, reply, next.to))
+            }
+        }
+    }
+
+    @Test func secondIPadTakesOverMissionWithPhotos() throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let store = try a.createMission()
+        try store.perform(AddPatient(triage: .sk1))
+        let photo = try a.files.save(Data("Foto".utf8), kind: .photo, createdAt: clock.now)
+        try store.perform(AddJournalMedia(attachments: [photo], text: "Lage"))
+
+        let onA = store.makeNearbyExchange(files: a.files)
+        let onB = NearbyExchange(missionID: store.missionID, repository: b.repository, clock: b.deviceClock, files: b.files)
+        #expect(try onB.snapshot() == nil, "B kennt den Einsatz noch nicht")
+        try run(onA, onB)
+
+        #expect(onB.progress.importedEvents > 0)
+        #expect(onB.progress.filesReceived == 1)
+        #expect(onA.progress.filesSent == 1)
+        #expect(b.files.isIntact(photo))
+        #expect(try onB.missingFiles().isEmpty)
+        let copy = try b.open(store.missionID)
+        #expect(copy.state.activePatients.count == 1)
+    }
+
+    @Test func bothSidesExchangeTheirChanges() throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let storeA = try a.createMission()
+        let onA = storeA.makeNearbyExchange(files: a.files)
+        let onB = NearbyExchange(missionID: storeA.missionID, repository: b.repository, clock: b.deviceClock, files: b.files)
+        try run(onA, onB)
+        let storeB = try b.open(storeA.missionID)
+
+        try storeA.perform(AddJournalText("Von A"))
+        try storeB.perform(AddJournalText("Von B"))
+        try run(onA, storeB.makeNearbyExchange(files: b.files))
+        try storeA.reload()
+        try storeB.reload()
+        for store in [storeA, storeB] {
+            let texts = store.state.journal.active.map(\.text)
+            #expect(texts.contains("Von A") && texts.contains("Von B"))
+        }
+        // Nochmal: nichts Neues.
+        let again = storeA.makeNearbyExchange(files: a.files)
+        try run(again, storeB.makeNearbyExchange(files: b.files))
+        #expect(again.progress.importedEvents == 0)
+    }
+
+    @Test func otherMissionIsIgnored() throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let storeA = try a.createMission()
+        let storeB = try b.createMission()
+        let onB = storeB.makeNearbyExchange(files: b.files)
+        let message = try #require(try storeA.makeNearbyExchange(files: a.files).snapshot())
+        #expect(try onB.handle(message).isEmpty)
+        #expect(onB.progress.importedEvents == 0)
+    }
+}

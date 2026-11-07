@@ -78,7 +78,7 @@ struct ReportEditorView: View {
         .sheet(isPresented: $showsMail) {
             if let pdf {
                 MailComposer(
-                    recipient: settings?.settings.ilsEmail.trimmingCharacters(in: .whitespaces) ?? "",
+                    recipient: mailRecipient,
                     subject: "\(reportTitle) Einsatz \(store.state.mission.displayNumber()) – \(store.state.mission.title)",
                     body: "Im Anhang der \(reportTitle) zum Einsatz \(store.state.mission.displayNumber()).\n\n\(store.sessionDisplayName)",
                     attachment: pdf,
@@ -257,15 +257,27 @@ struct ReportEditorView: View {
         }
         .disabled(pdf == nil)
         Button { sendMail() } label: {
-            Label("An ILS", systemImage: "envelope")
+            Label(hospitalFilter == nil ? "An ILS" : "An Klinik", systemImage: "envelope")
         }
         .disabled(pdf == nil)
     }
 
+    /// Zielklinik, auf die das Patientenkapitel beschränkt ist (Schritt 56).
+    private var hospitalFilter: String? {
+        template.chapters.first { $0.kind == .patients && $0.isEnabled }?.options.destinationFilter
+    }
+
+    /// Klinikbericht an die Klinik (E-Mail aus den Stammdaten, Schritt 62), sonst an die ILS.
+    private var mailRecipient: String {
+        if let hospitalFilter {
+            return ReportDestination.email(for: hospitalFilter, in: store.state.patients) ?? ""
+        }
+        return settings?.settings.ilsEmail.trimmingCharacters(in: .whitespaces) ?? ""
+    }
+
     /// Vorlagenname, beim Bericht für eine Klinik mit deren Namen.
     private var reportTitle: String {
-        let destination = template.chapters.first { $0.kind == .patients && $0.isEnabled }?.options.destinationFilter
-        return destination.map { "\(template.name) \($0)" } ?? template.name
+        hospitalFilter.map { "\(template.name) \($0)" } ?? template.name
     }
 
     private var fileName: String {

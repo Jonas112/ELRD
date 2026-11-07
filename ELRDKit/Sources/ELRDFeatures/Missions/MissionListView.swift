@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 import ELRDDomain
 import ELRDStore
 
@@ -20,6 +21,11 @@ struct MissionListView: View {
     @State private var pendingDelete: MissionSummary?
     @State private var actionError: String?
     @State private var showsDeleted = false
+    /// Einsatzdatei zum Teilen (Schritt 63).
+    @State private var exportURL: ExportedFile?
+    @State private var showsImporter = false
+    @State private var pendingPurge: MissionSummary?
+    @State private var importNotice: String?
     @AppStorage("missionList.showsAllYears") private var showsAllYears = false
 
     init(
@@ -60,6 +66,14 @@ struct MissionListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button { showsImporter = true } label: {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.title3.weight(.semibold))
+                            .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
+                    }
+                    .accessibilityLabel("Einsatz aus Datei öffnen")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { showsSettings = true } label: {
                         Image(systemName: "gearshape")
                             .font(.title3.weight(.semibold))
@@ -99,6 +113,69 @@ struct MissionListView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(actionError ?? "")
+        }
+        // Schritt 63: Einsatz als Datei teilen, öffnen, endgültig löschen.
+        .sheet(item: $exportURL) { file in
+            ActivityView(items: [file.url])
+        }
+        .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.data, .json]) { result in
+            switch result {
+            case .success(let url): importArchive(url)
+            case .failure(let error): actionError = ErrorText.message(for: error)
+            }
+        }
+        .onOpenURL { url in
+            if url.pathExtension == MissionArchive.fileExtension { importArchive(url) }
+        }
+        .alert("Einsatz übernommen", isPresented: Binding(get: { importNotice != nil }, set: { if !$0 { importNotice = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(importNotice ?? "")
+        }
+        .confirmationDialog(
+            purgeTitle,
+            isPresented: Binding(get: { pendingPurge != nil }, set: { if !$0 { pendingPurge = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingPurge
+        ) { summary in
+            Button("Endgültig löschen", role: .destructive) { purge(summary) }
+        } message: { _ in
+            Text("Alle Daten, Fotos und Sprachnotizen dieses Einsatzes werden von diesem iPad entfernt. Das lässt sich nicht rückgängig machen.")
+        }
+    }
+
+    private var purgeTitle: String {
+        guard let pendingPurge else { return "Endgültig löschen?" }
+        return "Einsatz \(pendingPurge.displayNumber) endgültig löschen?"
+    }
+
+    private func exportArchive(_ summary: MissionSummary) {
+        do {
+            exportURL = ExportedFile(url: try model.exportFile(summary.id))
+        } catch {
+            actionError = ErrorText.message(for: error)
+        }
+    }
+
+    private func importArchive(_ url: URL) {
+        do {
+            let result = try model.importFile(url)
+            let title = model.missions.first { $0.id == result.missionID }.map { "\($0.displayNumber) „\($0.title)“" } ?? "Der Einsatz"
+            var text = result.imported.newEvents == 0
+                ? "\(title) war schon auf dem neuesten Stand."
+                : "\(title) ist jetzt auf diesem iPad."
+            if result.filesRejected > 0 { text += " \(result.filesRejected) Datei(en) waren beschädigt und fehlen." }
+            importNotice = text
+        } catch {
+            actionError = ErrorText.message(for: error)
+        }
+    }
+
+    private func purge(_ summary: MissionSummary) {
+        do {
+            try model.purge(summary.id)
+        } catch {
+            actionError = ErrorText.message(for: error)
         }
     }
 
@@ -144,6 +221,10 @@ struct MissionListView: View {
             VStack(spacing: Spacing.l) {
                 ForEach(running) { summary in
                     RunningMissionCard(summary: summary, now: model.now) { open(summary.id) }
+                        .contextMenu {
+                            // Übergabe an ein anderes iPad ohne Server (Schritt 63).
+                            Button("Als Datei teilen …", systemImage: "square.and.arrow.up") { exportArchive(summary) }
+                        }
                 }
             }
         }
@@ -178,6 +259,7 @@ struct MissionListView: View {
                         if index > 0 { Divider().padding(.leading, Spacing.xl) }
                         FinishedMissionRow(summary: summary, now: model.now) { open(summary.id) }
                             .contextMenu {
+                                Button("Als Datei teilen …", systemImage: "square.and.arrow.up") { exportArchive(summary) }
                                 if model.canCreate {
                                     Button("Löschen …", systemImage: "trash", role: .destructive) { pendingDelete = summary }
                                 }
@@ -207,6 +289,12 @@ struct MissionListView: View {
                             Button("Wiederherstellen") { restore(summary) }
                                 .font(.headline)
                                 .frame(minHeight: TouchTarget.comfortable)
+                            Button(role: .destructive) { pendingPurge = summary } label: {
+                                Image(systemName: "trash.slash")
+                                    .font(.headline)
+                                    .frame(width: TouchTarget.comfortable, height: TouchTarget.comfortable)
+                            }
+                            .accessibilityLabel("Endgültig löschen")
                         }
                     }
                     .padding(.horizontal, Spacing.l)
@@ -516,5 +604,22 @@ struct MissionThumbnailView: View {
             image = scale < 1 ? (loaded.preparingThumbnail(of: target) ?? loaded) : loaded
         }
     }
+}
+
+/// Datei zum Teilen (eindeutig für `sheet(item:)`).
+struct ExportedFile: Identifiable {
+    let url: URL
+    var id: URL { url }
+}
+
+/// Teilen-Menü (AirDrop, Dateien, Mail …).
+struct ActivityView: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 

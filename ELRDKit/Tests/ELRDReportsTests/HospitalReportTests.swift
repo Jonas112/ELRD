@@ -60,3 +60,17 @@ struct HospitalReportTests {
         #expect(ReportDestination.sameHospital("Leopoldina ", "leopoldina"))
     }
 }
+
+@Suite("Klinikbericht an die Klinik (Schritt 62)")
+@MainActor
+struct HospitalMailTests {
+    @Test func emailComesFromAssignedHospital() throws {
+        let store = try PreviewData.makeStore()
+        let patients = store.state.activePatients
+        try #require(patients.count >= 2)
+        try store.perform(SetDestination(patientID: patients[0].id, hospital: HospitalSnapshot(name: "Leopoldina", email: " notaufnahme@leopoldina.de ")))
+        try store.perform(SetDestination(patientID: patients[1].id, hospital: HospitalSnapshot(name: "St. Josef")))
+        #expect(ReportDestination.email(for: "leopoldina", in: store.state.patients) == "notaufnahme@leopoldina.de")
+        #expect(ReportDestination.email(for: "St. Josef", in: store.state.patients) == nil, "keine Adresse hinterlegt")
+    }
+}

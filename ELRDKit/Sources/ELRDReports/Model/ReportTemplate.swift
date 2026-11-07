@@ -170,6 +170,15 @@ public struct ReportDestination: Hashable, Sendable, Identifiable {
         return key(name) == key(filter)
     }
 
+    /// E-Mail-Adresse der Klinik aus den Zuweisungen (Schritt 62); `nil`, wenn keine
+    /// hinterlegt ist. Bei mehreren Schreibweisen gilt die zuerst gefundene Adresse.
+    public static func email(for filter: String, in patients: [Patient]) -> String? {
+        patients
+            .filter { !$0.isDeleted && matches($0, filter: filter) }
+            .compactMap { $0.destination?.email.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { $0.contains("@") }
+    }
+
     /// Kliniken mit mindestens einem (nicht gelöschten) Patienten, meiste zuerst.
     public static func all(in patients: [Patient]) -> [ReportDestination] {
         var names: [String: String] = [:]

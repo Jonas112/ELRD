@@ -70,6 +70,7 @@ final class MissionListModel {
     @ObservationIgnored private let clock: DeviceClock
     @ObservationIgnored private let entitlements: any EntitlementProvider
     @ObservationIgnored private let automaticSections: () -> [MasterSection]
+    @ObservationIgnored private let files: AttachmentFileStore?
     @ObservationIgnored let now: () -> Date
 
     init(
@@ -78,6 +79,7 @@ final class MissionListModel {
         clock: DeviceClock,
         entitlements: any EntitlementProvider,
         automaticSections: @escaping () -> [MasterSection] = { [] },
+        files: AttachmentFileStore? = nil,
         now: @escaping () -> Date = Date.init
     ) {
         self.repository = repository
@@ -85,6 +87,7 @@ final class MissionListModel {
         self.clock = clock
         self.entitlements = entitlements
         self.automaticSections = automaticSections
+        self.files = files
         self.now = now
         reload()
     }
@@ -98,7 +101,8 @@ final class MissionListModel {
             entitlements: environment.entitlements,
             automaticSections: {
                 (try? repository.document(MasterDataSet.self, key: .masterData))?.automaticSections ?? []
-            }
+            },
+            files: environment.attachments
         )
     }
 
@@ -148,6 +152,35 @@ final class MissionListModel {
 
     func restore(_ missionID: MissionID) throws {
         try open(missionID).perform(RestoreMission())
+        reload()
+    }
+
+    // MARK: Einsatz als Datei (Schritt 63)
+
+    /// Schreibt den Einsatz als Datei in einen temporären Ordner (zum Teilen).
+    func exportFile(_ missionID: MissionID) throws -> URL {
+        let archive = try MissionArchive.make(mission: missionID, repository: repository, files: files, now: now())
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Export-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appendingPathComponent(archive.suggestedFileName)
+        try archive.encoded().write(to: url, options: [.atomic, .completeFileProtection])
+        return url
+    }
+
+    /// Öffnet eine Einsatzdatei (Teilen, AirDrop, Dateien-App).
+    @discardableResult
+    func importFile(_ url: URL) throws -> MissionArchiveImport {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let archive = try MissionArchive.decode(Data(contentsOf: url))
+        let result = try archive.importInto(repository: repository, clock: clock, files: files)
+        reload()
+        return result
+    }
+
+    /// Entfernt einen gelöschten Einsatz endgültig (Datenschutz).
+    func purge(_ missionID: MissionID) throws {
+        try MissionPurge.purge(missionID, repository: repository, files: files)
         reload()
     }
 }

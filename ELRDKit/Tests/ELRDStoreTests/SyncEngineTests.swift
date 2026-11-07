@@ -261,3 +261,74 @@ struct SyncEngineTests {
         #expect(SyncError.notConnected.errorDescription?.contains("bleibt auf diesem Gerät") == true)
     }
 }
+
+@Suite("Einsatz als Datei und endgültig löschen (Schritt 63)")
+@MainActor
+struct MissionArchiveTests {
+    let server = InMemorySyncServer()
+    let clock = TestClock()
+
+    @Test func archiveMovesMissionToAnotherDevice() throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let store = try a.createMission()
+        let patient = try store.perform(AddPatient(triage: .sk1))
+        let photo = try a.files.save(Data("Foto".utf8), kind: .photo, createdAt: clock.now)
+        try store.perform(AddJournalMedia(attachments: [photo], text: "Lage"))
+        let deleted = try store.perform(AddPatient(triage: .sk3))
+        try store.perform(DeletePatient(patientID: deleted.id))
+
+        let archive = try MissionArchive.make(mission: store.missionID, repository: a.repository, files: a.files, now: clock.now)
+        #expect(archive.suggestedFileName.hasSuffix(".elrdeinsatz"))
+        #expect(!archive.suggestedFileName.contains("/"))
+        let data = try archive.encoded()
+
+        let opened = try MissionArchive.decode(data)
+        let result = try opened.importInto(repository: b.repository, clock: b.deviceClock, files: b.files)
+        #expect(result.missionID == store.missionID)
+        #expect(result.imported.newEvents == archive.events.count)
+        #expect(result.filesStored == 1)
+        #expect(b.files.isIntact(photo))
+
+        let copy = try b.open(store.missionID)
+        #expect(copy.state.activePatients.map(\.id) == [patient.id])
+        #expect(copy.state.trash.count == 1, "Gelöschtes bleibt gelöscht und wiederherstellbar")
+
+        let again = try opened.importInto(repository: b.repository, clock: b.deviceClock, files: b.files)
+        #expect(again.imported.newEvents == 0, "zweites Öffnen ändert nichts")
+        #expect(again.filesStored == 0)
+    }
+
+    @Test func brokenOrNewerFilesAreRejected() throws {
+        #expect(throws: MissionArchiveError.unreadable) {
+            try MissionArchive.decode(Data("kein Einsatz".utf8))
+        }
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let store = try a.createMission()
+        let archive = try MissionArchive.make(mission: store.missionID, repository: a.repository, files: nil)
+        var json = try #require(try JSONSerialization.jsonObject(with: archive.encoded()) as? [String: Any])
+        json["format"] = MissionArchive.currentFormat + 1
+        let newer = try JSONSerialization.data(withJSONObject: json)
+        #expect(throws: MissionArchiveError.newerFormat) {
+            try MissionArchive.decode(newer)
+        }
+    }
+
+    @Test func purgeRemovesOnlyDeletedMissionsCompletely() throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let store = try a.createMission()
+        let photo = try a.files.save(Data("Foto".utf8), kind: .photo, createdAt: clock.now)
+        try store.perform(AddJournalMedia(attachments: [photo], text: ""))
+
+        #expect(throws: MissionPurge.Failure.notDeleted) {
+            try MissionPurge.purge(store.missionID, repository: a.repository, files: a.files)
+        }
+        try store.perform(DeleteMission())
+        let removed = try MissionPurge.purge(store.missionID, repository: a.repository, files: a.files)
+        #expect(removed == 1)
+        #expect(!a.files.isIntact(photo))
+        #expect(try a.repository.entity(Mission.self, id: store.missionID.rawValue) == nil)
+        #expect(try a.repository.changeEvents(in: store.missionID).isEmpty)
+        #expect(try MissionOverview.loadDeleted(from: a.repository).isEmpty)
+    }
+}

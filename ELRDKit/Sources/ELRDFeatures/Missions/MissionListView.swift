@@ -244,7 +244,7 @@ struct MissionListView: View {
         do {
             onOpen(try model.open(missionID))
         } catch {
-            actionError = error.localizedDescription
+            actionError = ErrorText.message(for: error)
         }
     }
 
@@ -252,7 +252,7 @@ struct MissionListView: View {
         do {
             try model.delete(summary.id)
         } catch {
-            actionError = error.localizedDescription
+            actionError = ErrorText.message(for: error)
         }
     }
 }

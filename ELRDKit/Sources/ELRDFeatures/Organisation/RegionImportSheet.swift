@@ -74,7 +74,7 @@ struct RegionImportSheet: View {
             if region.hasHospitals { parts.append("\(report.hospitalsAdded) Kliniken") }
             result = "\(region.name): \(parts.joined(separator: ", ")) übernommen"
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

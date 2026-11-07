@@ -67,6 +67,7 @@ struct MessagesView: View {
                 .submitLabel(.send)
                 .onSubmit(send)
                 .inputBox()
+                .draftSync($text, field: .message, mission: store.missionID)
             HStack(spacing: Spacing.s) {
                 ChoiceChip("Information", isSelected: !isWarning, minHeight: TouchTarget.minimum + 4) { isWarning = false }
                 ChoiceChip("Warnung", isSelected: isWarning, minHeight: TouchTarget.minimum + 4) { isWarning = true }
@@ -82,6 +83,7 @@ struct MessagesView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(trimmed.isEmpty)
+                .keyboardShortcut(.return, modifiers: .command)
             }
         }
         .cardStyle()
@@ -101,7 +103,7 @@ struct MessagesView: View {
             _ = try store.perform(command)
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
             return false
         }
     }

@@ -110,7 +110,7 @@ final class MissionListModel {
             missions = try MissionOverview.load(from: repository)
             loadError = nil
         } catch {
-            loadError = error.localizedDescription
+            loadError = ErrorText.message(for: error)
         }
     }
 

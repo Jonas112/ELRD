@@ -226,7 +226,7 @@ struct AddUnitSheet: View {
             errorMessage = nil
             lastAdded = "\(unit.callsign) → \(targetName)"
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -236,7 +236,7 @@ struct AddUnitSheet: View {
             errorMessage = nil
             lastAdded = "\(unit.displayName) → \(targetName)"
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -246,7 +246,7 @@ struct AddUnitSheet: View {
             errorMessage = nil
             lastAdded = "\(stichwort.rawValue): \(stichwort.summary) → \(targetName)"
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -260,7 +260,7 @@ struct AddUnitSheet: View {
             callsign = ""
             saveToMasterData = false
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

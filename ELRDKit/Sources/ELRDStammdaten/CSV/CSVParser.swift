@@ -110,3 +110,12 @@ public enum CSVError: Error, Equatable, Sendable {
     case unreadableEncoding
     case missingColumn(String)
 }
+
+extension CSVError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .unreadableEncoding: "Die Datei ließ sich nicht lesen (Zeichensatz unbekannt)."
+        case .missingColumn(let name): "In der Datei fehlt die Spalte „\(name)“."
+        }
+    }
+}

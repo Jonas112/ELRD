@@ -146,7 +146,7 @@ struct LoginView: View {
             do {
                 try await userService.login(user.id, password: entered)
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = ErrorText.message(for: error)
                 password = ""
                 passwordFocused = user.hasPassword
             }

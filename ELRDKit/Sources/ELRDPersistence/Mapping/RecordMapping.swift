@@ -150,3 +150,17 @@ public enum RecordMapping {
         try JSONDecoder().decode(ChangeEvent.self, from: record.payload)
     }
 }
+
+extension PersistenceError: LocalizedError {
+    /// Text für Hinweise in der Oberfläche (Schritt 52).
+    public var errorDescription: String? {
+        switch self {
+        case .typeMismatch, .unknownEntityType:
+            "Gespeicherte Daten sind beschädigt oder unbekannt. Bitte die App aktualisieren."
+        case .unsupportedPayloadVersion:
+            "Die Daten wurden mit einer neueren App-Version gespeichert. Bitte die App aktualisieren."
+        case .staleWrite:
+            "Ein anderes Fenster hat gerade dasselbe geändert. Bitte noch einmal versuchen."
+        }
+    }
+}

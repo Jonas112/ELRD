@@ -314,7 +314,7 @@ struct ReportEditorView: View {
         do {
             if let stored = try library?.save(candidate) { template = stored }
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -330,7 +330,7 @@ struct ReportEditorView: View {
             try library?.delete(template.id)
             template = withSettings(ReportTemplateLibrary.full)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

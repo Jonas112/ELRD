@@ -15,6 +15,8 @@ public struct DocumentKey: Hashable, Sendable, RawRepresentable {
     public static let appSettings = DocumentKey(rawValue: "appSettings")
     /// Eigene Berichtsvorlagen (`ReportTemplateLibrary`).
     public static let reportTemplates = DocumentKey(rawValue: "reportTemplates")
+    /// Ungesendete Texte (Tagebuch, Nachrichten) je Einsatz (`TextDraftSet`).
+    public static let textDrafts = DocumentKey(rawValue: "textDrafts")
 }
 
 /// Speichert einzelne, als Ganzes behandelte Dokumente (Stammdaten, später Einstellungen).

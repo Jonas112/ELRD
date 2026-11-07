@@ -209,14 +209,14 @@ struct OnboardingView: View {
                     settings.acceptedAgreementAt = Date()
                 }
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = ErrorText.message(for: error)
                 return
             }
             if onlyAgreements { onFinish() } else { step = .region }
         case .region:
             step = .done
         case .done:
-            do { try store?.update { $0.hasCompletedOnboarding = true } } catch { errorMessage = error.localizedDescription }
+            do { try store?.update { $0.hasCompletedOnboarding = true } } catch { errorMessage = ErrorText.message(for: error) }
             onFinish()
         }
     }

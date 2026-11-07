@@ -203,7 +203,7 @@ struct GeneralSettingsView: View {
     }
 
     private func save(_ change: (inout AppSettings) -> Void) {
-        do { try store?.update(change) } catch { errorMessage = error.localizedDescription }
+        do { try store?.update(change) } catch { errorMessage = ErrorText.message(for: error) }
     }
 }
 
@@ -285,7 +285,7 @@ struct VehicleImagesView: View {
     }
 
     private func save(_ change: (inout AppSettings) -> Void) {
-        do { try store?.update(change) } catch { errorMessage = error.localizedDescription }
+        do { try store?.update(change) } catch { errorMessage = ErrorText.message(for: error) }
     }
 }
 
@@ -321,7 +321,7 @@ struct IVENASettingsView: View {
             Section("RMI-Katalog") {
                 ForEach(BundledMasterData.ivenaCatalogs, id: \.id) { entry in
                     Button {
-                        do { try masterData?.setIVENACatalog(entry.id) } catch { errorMessage = error.localizedDescription }
+                        do { try masterData?.setIVENACatalog(entry.id) } catch { errorMessage = ErrorText.message(for: error) }
                     } label: {
                         HStack {
                             Text(entry.name).foregroundStyle(.primary)
@@ -361,6 +361,6 @@ struct IVENASettingsView: View {
     }
 
     private func save(_ change: (inout AppSettings) -> Void) {
-        do { try store?.update(change) } catch { errorMessage = error.localizedDescription }
+        do { try store?.update(change) } catch { errorMessage = ErrorText.message(for: error) }
     }
 }

@@ -254,6 +254,7 @@ struct SituationOverview: View {
                     .focused($journalFocused)
                     .submitLabel(.send)
                     .onSubmit(addJournalEntry)
+                    .draftSync($journalText, field: .journal, mission: store.missionID)
                     .padding(.horizontal, Spacing.m)
                     .frame(minHeight: TouchTarget.comfortable)
                     .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -292,7 +293,7 @@ struct SituationOverview: View {
             journalText = ""
             journalError = nil
         } catch {
-            journalError = error.localizedDescription
+            journalError = ErrorText.message(for: error)
         }
     }
 }

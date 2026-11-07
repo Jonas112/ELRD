@@ -98,3 +98,11 @@ public enum BundledMasterData {
 public enum BundledDataError: Error, Equatable, Sendable {
     case missingResource(String)
 }
+
+extension BundledDataError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .missingResource(let name): "Die mitgelieferten Daten „\(name)“ fehlen. Bitte die App neu installieren."
+        }
+    }
+}

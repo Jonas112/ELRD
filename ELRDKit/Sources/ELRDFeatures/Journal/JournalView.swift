@@ -13,6 +13,8 @@ struct JournalView: View {
     let store: MissionStore
     let templates: JournalTemplateEditor?
     var people: [PersonChoice] = []
+    /// ⌘J aus dem Menü: Eingabe fokussieren (wird danach zurückgesetzt).
+    var focusComposer: Binding<Bool> = .constant(false)
 
     @State private var mode: Mode = AppLaunchOptions.current.demoScreen == .protocolLog ? .log : .journal
     @State private var protocolFilter = ProtocolFilter()
@@ -84,6 +86,12 @@ struct JournalView: View {
             CameraPicker(onImage: saveCameraPhoto, onFinish: { showsCamera = false })
                 .ignoresSafeArea()
         }
+        .task(id: focusComposer.wrappedValue) {
+            guard focusComposer.wrappedValue else { return }
+            mode = .journal
+            textFocused = true
+            focusComposer.wrappedValue = false
+        }
         .onDisappear {
             player.stop()
             if recorder.isRecording { recorder.cancel() }
@@ -126,6 +134,7 @@ struct JournalView: View {
                 .lineLimit(2...6)
                 .focused($textFocused)
                 .inputBox()
+                .draftSync($text, field: .journal, mission: store.missionID)
             HStack(spacing: Spacing.s) {
                 if usesCustomTime {
                     DatePicker("Zeitpunkt", selection: $occurredAt, in: ...Date(), displayedComponents: [.date, .hourAndMinute])
@@ -159,6 +168,7 @@ struct JournalView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(trimmed.isEmpty)
+                .keyboardShortcut(.return, modifiers: .command)
             }
             mediaRow
             if let templates { templateChips(templates) }
@@ -247,7 +257,7 @@ struct JournalView: View {
             let file = try attachments.save(recording.data, kind: .audio, createdAt: Date(), duration: recording.duration)
             addMedia([file])
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -263,7 +273,7 @@ struct JournalView: View {
             do {
                 if let file = try PhotoImport.save(data, in: attachments) { files.append(file) }
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = ErrorText.message(for: error)
             }
         }
         if files.isEmpty {
@@ -282,7 +292,7 @@ struct JournalView: View {
             let file = try attachments.save(jpeg.data, kind: .photo, createdAt: Date(), pixelWidth: jpeg.width, pixelHeight: jpeg.height)
             addMedia([file])
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -293,7 +303,7 @@ struct JournalView: View {
             text = ""
             usesCustomTime = false
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -309,7 +319,7 @@ struct JournalView: View {
                     }
                     .contextMenu {
                         Button(role: .destructive) {
-                            do { try editor.remove(template) } catch { errorMessage = error.localizedDescription }
+                            do { try editor.remove(template) } catch { errorMessage = ErrorText.message(for: error) }
                         } label: {
                             Label("Baustein löschen", systemImage: "trash")
                         }
@@ -320,7 +330,7 @@ struct JournalView: View {
                 }
                 if !trimmed.isEmpty, !editor.contains(trimmed) {
                     ChoiceChip("+ Als Baustein", isSelected: false, minHeight: 48) {
-                        do { try editor.add(trimmed) } catch { errorMessage = error.localizedDescription }
+                        do { try editor.add(trimmed) } catch { errorMessage = ErrorText.message(for: error) }
                     }
                 }
             }
@@ -342,7 +352,7 @@ struct JournalView: View {
             text = ""
             usesCustomTime = false
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }
@@ -579,7 +589,7 @@ struct JournalEntryEditor: View {
                         try store.perform(DeleteJournalEntry(entryID: entry.id))
                         dismiss()
                     } catch {
-                        errorMessage = error.localizedDescription
+                        errorMessage = ErrorText.message(for: error)
                     }
                 }
             } message: {
@@ -597,7 +607,7 @@ struct JournalEntryEditor: View {
         do {
             try store.perform(SetMissionThumbnail(entryID: on ? entry.id : nil))
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -606,7 +616,7 @@ struct JournalEntryEditor: View {
             try store.perform(EditJournalEntry(entryID: entry.id, text: text, occurredAt: occurredAt))
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

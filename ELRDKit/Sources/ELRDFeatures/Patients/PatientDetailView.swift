@@ -372,7 +372,7 @@ struct PatientDetailView: View {
         do {
             try store.perform(EditPatient(patientID: patientID, change))
         } catch {
-            saveState = .failed(error.localizedDescription)
+            saveState = .failed(ErrorText.message(for: error))
         }
     }
 
@@ -566,7 +566,7 @@ struct PatientDetailView: View {
         do {
             _ = try store.perform(command)
         } catch {
-            saveState = .failed(error.localizedDescription)
+            saveState = .failed(ErrorText.message(for: error))
         }
     }
 
@@ -600,7 +600,7 @@ struct PatientDetailView: View {
             form = current
             saveState = .saved
         } catch {
-            saveState = .failed(error.localizedDescription)
+            saveState = .failed(ErrorText.message(for: error))
         }
     }
 
@@ -608,7 +608,7 @@ struct PatientDetailView: View {
         do {
             try store.perform(AddInjury(patientID: patientID, injury: injury))
         } catch {
-            saveState = .failed(error.localizedDescription)
+            saveState = .failed(ErrorText.message(for: error))
         }
     }
 
@@ -616,7 +616,7 @@ struct PatientDetailView: View {
         do {
             try store.perform(RemoveInjury(patientID: patientID, injuryID: id))
         } catch {
-            saveState = .failed(error.localizedDescription)
+            saveState = .failed(ErrorText.message(for: error))
         }
     }
 
@@ -624,7 +624,7 @@ struct PatientDetailView: View {
         do {
             try store.perform(SetTriage(patientID: patientID, triage: category))
         } catch {
-            saveState = .failed(error.localizedDescription)
+            saveState = .failed(ErrorText.message(for: error))
         }
     }
 
@@ -640,7 +640,7 @@ struct PatientDetailView: View {
             form = nil
             dismiss()
         } catch {
-            saveState = .failed(error.localizedDescription)
+            saveState = .failed(ErrorText.message(for: error))
         }
     }
 }

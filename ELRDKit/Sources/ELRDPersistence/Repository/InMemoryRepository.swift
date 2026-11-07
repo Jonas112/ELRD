@@ -77,3 +77,7 @@ public final class InMemoryRepository: EntityRepository {
 public enum InMemoryRepositoryError: Error, Sendable {
     case simulatedFailure
 }
+
+extension InMemoryRepositoryError: LocalizedError {
+    public var errorDescription: String? { "Speichern fehlgeschlagen (Test)." }
+}

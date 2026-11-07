@@ -96,10 +96,32 @@ public extension FocusedValues {
     }
 }
 
-/// Menü „Einsatz“ mit ⌘1 … ⌘5 (Hardware-Tastatur, Magic Keyboard).
-/// Wirkt auf das jeweils aktive Fenster.
+/// Aktionen des Arbeitsbereichs für das Menü (Schritt 52).
+public struct WorkspaceActions {
+    let newJournalEntry: () -> Void
+    let openMessages: () -> Void
+    let openReport: () -> Void
+    let openDetails: () -> Void
+}
+
+public struct WorkspaceActionsKey: FocusedValueKey {
+    public typealias Value = WorkspaceActions
+}
+
+public extension FocusedValues {
+    /// Aktionen des Einsatzes im aktiven Fenster.
+    var workspaceActions: WorkspaceActions? {
+        get { self[WorkspaceActionsKey.self] }
+        set { self[WorkspaceActionsKey.self] = newValue }
+    }
+}
+
+/// Menü „Einsatz“ (Hardware-Tastatur, Magic Keyboard): ⌘1 … ⌘5 für die Bereiche,
+/// dazu Tagebuch, Nachrichten, Bericht und Einsatzdaten. ⌘ gedrückt halten zeigt
+/// die Übersicht. Wirkt auf das jeweils aktive Fenster.
 public struct WorkspaceCommands: Commands {
     @FocusedBinding(\.workspaceSelection) private var selection
+    @FocusedValue(\.workspaceActions) private var actions
 
     public init() {}
 
@@ -110,6 +132,19 @@ public struct WorkspaceCommands: Commands {
                     .keyboardShortcut(section.shortcut, modifiers: .command)
                     .disabled(selection == nil)
             }
+            Divider()
+            Button("Tagebucheintrag schreiben") { actions?.newJournalEntry() }
+                .keyboardShortcut("j", modifiers: .command)
+                .disabled(actions == nil)
+            Button("Nachrichten") { actions?.openMessages() }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+                .disabled(actions == nil)
+            Button("Bericht erstellen") { actions?.openReport() }
+                .keyboardShortcut("r", modifiers: .command)
+                .disabled(actions == nil)
+            Button("Einsatzdaten") { actions?.openDetails() }
+                .keyboardShortcut("e", modifiers: .command)
+                .disabled(actions == nil)
         }
     }
 }

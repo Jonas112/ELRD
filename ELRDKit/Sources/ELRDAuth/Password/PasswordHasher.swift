@@ -101,3 +101,9 @@ public enum PasswordPolicy {
         }
     }
 }
+
+extension PasswordHashError: LocalizedError {
+    public var errorDescription: String? {
+        "Das Passwort konnte nicht sicher verarbeitet werden. Bitte erneut versuchen."
+    }
+}

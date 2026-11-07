@@ -66,6 +66,8 @@ public final class AppEnvironment {
     /// Geräteeinstellungen (Schritt 47) und Berichtsvorlagen (Schritt 45).
     public let settings: AppSettingsStore
     public let reportLibrary: ReportLibraryStore
+    /// Ungesendete Texte (Schritt 52).
+    public let drafts: TextDraftStore
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
     /// Gewünschter Beispielbildschirm (nur Demo).
@@ -84,6 +86,7 @@ public final class AppEnvironment {
         self.attachments = attachments
         self.settings = AppSettingsStore(repository: repository)
         self.reportLibrary = ReportLibraryStore(repository: repository)
+        self.drafts = TextDraftStore(repository: repository)
         self.userService = userService
         self.device = device
         self.deviceClock = try DeviceClock(deviceID: device.deviceID, repository: repository)

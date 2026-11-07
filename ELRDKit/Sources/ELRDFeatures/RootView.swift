@@ -8,6 +8,8 @@ public struct RootView: View {
 
     @State private var environment: AppEnvironment?
     @State private var startupError: String?
+    @State private var startAttempt = 0
+    @Environment(\.scenePhase) private var scenePhase
 
     public init(options: AppLaunchOptions = .current) {
         self.options = options
@@ -21,23 +23,37 @@ public struct RootView: View {
                     .environment(environment.settings)
                     .environment(environment.reportLibrary)
                     .environment(environment.subscriptions)
+                    .environment(environment.drafts)
             } else if let startupError {
-                ContentUnavailableView(
-                    "ELRD konnte nicht starten",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(startupError)
-                )
+                ContentUnavailableView {
+                    Label("ELRD konnte nicht starten", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(startupError)
+                } actions: {
+                    Button("Erneut versuchen") {
+                        self.startupError = nil
+                        startAttempt += 1
+                    }
+                    .font(.headline)
+                    .frame(minHeight: TouchTarget.comfortable)
+                }
             } else {
                 ProgressView("ELRD wird gestartet …")
             }
         }
-        .task {
+        // Sehr große Schrift ja, aber nicht so groß, dass Leisten und Kacheln zerfallen.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
+        .task(id: startAttempt) {
             guard environment == nil else { return }
             do {
                 environment = try await AppEnvironment.make(options: options)
             } catch {
-                startupError = error.localizedDescription
+                startupError = ErrorText.message(for: error)
             }
+        }
+        // Entwürfe sichern, bevor die App in den Hintergrund geht oder gesperrt wird.
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { environment?.drafts.flush() }
         }
     }
 }

@@ -215,7 +215,7 @@ struct MapObjectEditor: View {
             _ = try store.perform(command)
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
             return false
         }
     }

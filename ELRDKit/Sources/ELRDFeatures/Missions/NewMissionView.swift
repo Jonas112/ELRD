@@ -170,7 +170,7 @@ struct NewMissionView: View {
         do {
             try start(form)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

@@ -203,7 +203,7 @@ struct MissionDetailsView: View {
             errorMessage = nil
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
             return false
         }
     }
@@ -214,7 +214,7 @@ struct MissionDetailsView: View {
             try store.perform(CloseMission())
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -224,7 +224,7 @@ struct MissionDetailsView: View {
             form = MissionEditForm(mission: store.state.mission)
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

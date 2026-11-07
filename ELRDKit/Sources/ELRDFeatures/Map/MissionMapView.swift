@@ -272,7 +272,7 @@ struct MissionMapView: View {
             let entry = try store.perform(AddMapSnapshot(image: file))
             show("Als Eintrag \(entry.number) im Tagebuch")
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -328,7 +328,7 @@ struct MissionMapView: View {
             endDrawing()
             editing = EditingMapObject(id: object.id)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -432,7 +432,7 @@ struct MissionMapView: View {
             _ = try store.perform(command)
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
             return false
         }
     }
@@ -461,7 +461,7 @@ struct MissionMapView: View {
             let object = try store.perform(AddMapObject(shape: shape))
             editing = EditingMapObject(id: object.id)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 

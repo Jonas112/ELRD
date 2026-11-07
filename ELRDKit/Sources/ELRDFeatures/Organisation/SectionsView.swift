@@ -220,7 +220,7 @@ struct SectionsView: View {
     private func addSection(_ request: AddSectionSheet.Request) {
         perform(AddSection(name: request.name, masterSectionID: request.masterSectionID, makeInitial: request.makeInitial))
         if request.saveAsTemplate {
-            do { try templates?.save(request.name) } catch { errorMessage = "Vorlage nicht gespeichert: \(error.localizedDescription)" }
+            do { try templates?.save(request.name) } catch { errorMessage = "Vorlage nicht gespeichert: \(ErrorText.message(for: error))" }
         }
     }
 
@@ -241,7 +241,7 @@ struct SectionsView: View {
             }
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
             return false
         }
     }
@@ -250,7 +250,7 @@ struct SectionsView: View {
         do {
             _ = try store.perform(command)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

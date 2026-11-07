@@ -100,3 +100,12 @@ public struct HybridLogicalClock: Sendable {
 public enum HybridClockError: Error, Equatable, Sendable {
     case remoteClockTooFarAhead(remote: Date, local: Date)
 }
+
+extension HybridClockError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .remoteClockTooFarAhead:
+            "Die Uhr eines anderen Geräts geht mehr als eine Stunde vor. Bitte Datum und Uhrzeit prüfen."
+        }
+    }
+}

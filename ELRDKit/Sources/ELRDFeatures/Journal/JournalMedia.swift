@@ -127,7 +127,7 @@ final class VoiceRecorder: NSObject, ObservableObject {
             fileURL = url
             phase = .recording(since: Date())
         } catch {
-            phase = .failed(error.localizedDescription)
+            phase = .failed(ErrorText.message(for: error))
         }
     }
 

@@ -119,7 +119,7 @@ struct ReplacePlaceholderSheet: View {
             _ = try store.perform(ReplacePlaceholder(unitID: placeholder.id, with: replacement))
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

@@ -26,6 +26,9 @@ public struct MissionWorkspaceView: View {
     @State private var patientQuery = PatientListQuery()
     /// Geöffnete Patienten im Bereich (Navigation per Wert).
     @State private var path: [PatientID] = []
+    /// ⌘J: Tagebuch öffnen und Eingabe fokussieren.
+    @State private var focusJournal = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(
         store: MissionStore,
@@ -95,10 +98,20 @@ public struct MissionWorkspaceView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .animation(.snappy, value: lastAdded?.id)
+            .animation(reduceMotion ? nil : .snappy, value: lastAdded?.id)
         }
         .background(Surface.canvas)
         .focusedSceneValue(\.workspaceSelection, $selection)
+        .focusedSceneValue(\.workspaceActions, WorkspaceActions(
+            newJournalEntry: {
+                path = []
+                selection = .journal
+                focusJournal = true
+            },
+            openMessages: { showsMessages = true },
+            openReport: { showsReport = true },
+            openDetails: { showsDetails = true }
+        ))
         .task(id: lastAdded?.id) {
             guard lastAdded != nil else { return }
             try? await Task.sleep(for: .seconds(6))
@@ -172,13 +185,13 @@ public struct MissionWorkspaceView: View {
         do {
             try store.perform(ReopenMission())
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
     private var content: some View {
         NavigationStack(path: $path) {
-            WorkspaceDetail(section: selection, store: store, masterData: masterData, journalTemplates: journalTemplates, people: people, patientQuery: $patientQuery, onQuickAdd: addPatient) { target in
+            WorkspaceDetail(section: selection, store: store, masterData: masterData, journalTemplates: journalTemplates, people: people, patientQuery: $patientQuery, focusJournal: $focusJournal, onQuickAdd: addPatient) { target in
                 switch target {
                 case .section(let section): selection = section
                 case .patient(let id): open(id)
@@ -222,9 +235,13 @@ public struct MissionWorkspaceView: View {
     private func addPatient(_ triage: Sichtungskategorie) {
         showsQuickAdd = false
         do {
-            lastAdded = try store.perform(AddPatient(triage: triage))
+            let added = try store.perform(AddPatient(triage: triage))
+            lastAdded = added
+            // VoiceOver: der Hinweis unten verschwindet nach 6 s, daher ansagen.
+            let announcement: String = "Patient \(added.number), \(added.triage.displayName) angelegt"
+            AccessibilityNotification.Announcement(announcement).post()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 
@@ -233,7 +250,7 @@ public struct MissionWorkspaceView: View {
         do {
             try store.perform(DeletePatient(patientID: patient.id))
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }
@@ -605,6 +622,7 @@ struct WorkspaceDetail: View {
     let journalTemplates: JournalTemplateEditor?
     let people: [PersonChoice]
     @Binding var patientQuery: PatientListQuery
+    @Binding var focusJournal: Bool
     let onQuickAdd: (Sichtungskategorie) -> Void
     let onTarget: (OpenItem.Target) -> Void
 
@@ -619,7 +637,7 @@ struct WorkspaceDetail: View {
         case .map:
             MissionMapView(store: store)
         case .journal:
-            JournalView(store: store, templates: journalTemplates, people: people)
+            JournalView(store: store, templates: journalTemplates, people: people, focusComposer: $focusJournal)
         }
     }
 }

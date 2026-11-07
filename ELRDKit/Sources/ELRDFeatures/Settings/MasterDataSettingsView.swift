@@ -186,7 +186,7 @@ struct MasterDataSettingsView: View {
     }
 
     private func run(_ action: () throws -> Void) {
-        do { try action() } catch { errorMessage = error.localizedDescription }
+        do { try action() } catch { errorMessage = ErrorText.message(for: error) }
     }
 }
 
@@ -245,7 +245,7 @@ struct MasterUnitEditor: View {
             try onSave(edited)
             dismiss()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }
@@ -288,7 +288,7 @@ struct MasterHospitalEditor: View {
                             try onSave(hospital)
                             dismiss()
                         } catch {
-                            errorMessage = error.localizedDescription
+                            errorMessage = ErrorText.message(for: error)
                         }
                     }
                     .fontWeight(.bold)

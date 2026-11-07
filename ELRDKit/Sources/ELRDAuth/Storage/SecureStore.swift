@@ -82,3 +82,12 @@ public final class InMemorySecureStore: SecureStore {
     public func data(for key: String) throws -> Data? { values[key] }
     public func set(_ data: Data?, for key: String) throws { values[key] = data }
 }
+
+extension SecureStoreError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .keychain(let status):
+            "Zugriff auf den geschützten Speicher des Geräts fehlgeschlagen (Code \(status)). iPad entsperren und erneut versuchen."
+        }
+    }
+}

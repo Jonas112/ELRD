@@ -147,7 +147,7 @@ struct InitialSetupView: View {
                     password: form.password
                 )
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = ErrorText.message(for: error)
             }
             isSaving = false
         }

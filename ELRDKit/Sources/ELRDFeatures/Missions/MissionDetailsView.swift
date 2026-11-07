@@ -50,6 +50,7 @@ struct MissionDetailsView: View {
                 }
 
                 if !mission.isClosed { closeSection }
+                if !store.state.trash.isEmpty { trashSection(store.state.trash, canRestore: !mission.isClosed) }
             }
             .environment(\.defaultMinListRowHeight, TouchTarget.comfortable)
             .navigationTitle("Einsatzdaten")
@@ -160,6 +161,45 @@ struct MissionDetailsView: View {
             .listRowBackground(ActionFill.primary)
         } footer: {
             Text("Danach ist der Einsatz schreibgeschützt. Er kann jederzeit wieder geöffnet werden.")
+        }
+    }
+
+    /// Papierkorb (Schritt 54): gelöschte Patienten, Tagebucheinträge, Kartenobjekte.
+    private func trashSection(_ items: [TrashItem], canRestore: Bool) -> some View {
+        Section {
+            ForEach(items) { item in
+                HStack(spacing: Spacing.m) {
+                    Image(systemName: item.kind.systemImage)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.title).lineLimit(2)
+                        Text("\(item.kind.displayName) · gelöscht \(item.deletedAt.formatted(date: .omitted, time: .shortened))")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: Spacing.s)
+                    if canRestore {
+                        Button("Wiederherstellen") { restore(item) }
+                            .buttonStyle(.borderless)
+                            .font(.headline)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+            }
+        } header: {
+            Text("Papierkorb")
+        } footer: {
+            Text("Gelöschtes bleibt im Einsatz gespeichert. Wiederherstellen wird im Protokoll vermerkt.")
+        }
+    }
+
+    private func restore(_ item: TrashItem) {
+        do {
+            try store.perform(RestoreDeleted(item))
+            errorMessage = nil
+        } catch {
+            errorMessage = ErrorText.message(for: error)
         }
     }
 

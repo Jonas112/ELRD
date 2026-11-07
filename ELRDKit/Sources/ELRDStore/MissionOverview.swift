@@ -95,4 +95,11 @@ public enum MissionOverview {
             MissionSummary(mission: mission, patients: try repository.entities(Patient.self, in: mission.id), calendar: calendar)
         }
     }
+
+    /// Gelöschte Einsätze (Papierkorb der Einsatzliste), zuletzt begonnene zuerst.
+    public static func loadDeleted(from repository: any EntityRepository, calendar: Calendar = .current) throws -> [MissionSummary] {
+        try repository.missions(includeDeleted: true).filter(\.isDeleted).map { mission in
+            MissionSummary(mission: mission, patients: try repository.entities(Patient.self, in: mission.id), calendar: calendar)
+        }
+    }
 }

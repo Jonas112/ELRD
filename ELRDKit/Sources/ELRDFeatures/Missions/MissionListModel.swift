@@ -60,6 +60,8 @@ extension MissionType {
 @Observable
 final class MissionListModel {
     private(set) var missions: [MissionSummary] = []
+    /// Gelöschte Einsätze (wiederherstellbar, Schritt 54).
+    private(set) var deletedMissions: [MissionSummary] = []
     var filter = MissionListFilter()
     private(set) var loadError: String?
 
@@ -108,6 +110,7 @@ final class MissionListModel {
     func reload() {
         do {
             missions = try MissionOverview.load(from: repository)
+            deletedMissions = try MissionOverview.loadDeleted(from: repository)
             loadError = nil
         } catch {
             loadError = ErrorText.message(for: error)
@@ -140,6 +143,11 @@ final class MissionListModel {
 
     func delete(_ missionID: MissionID) throws {
         try open(missionID).perform(DeleteMission())
+        reload()
+    }
+
+    func restore(_ missionID: MissionID) throws {
+        try open(missionID).perform(RestoreMission())
         reload()
     }
 }

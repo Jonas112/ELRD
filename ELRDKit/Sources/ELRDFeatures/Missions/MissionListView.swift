@@ -18,6 +18,7 @@ struct MissionListView: View {
     @State private var showsNewMission: Bool
     @State private var pendingDelete: MissionSummary?
     @State private var actionError: String?
+    @State private var showsDeleted = false
     @AppStorage("missionList.showsAllYears") private var showsAllYears = false
 
     init(
@@ -46,6 +47,7 @@ struct MissionListView: View {
                 VStack(alignment: .leading, spacing: Spacing.xxl) {
                     topRow(running: result.running)
                     finishedSection(result)
+                    if !model.deletedMissions.isEmpty { deletedSection }
                 }
                 .padding(.horizontal, Spacing.xl)
                 .padding(.vertical, Spacing.l)
@@ -89,7 +91,7 @@ struct MissionListView: View {
         ) { summary in
             Button("Einsatz löschen", role: .destructive) { delete(summary) }
         } message: { _ in
-            Text("Der Einsatz verschwindet aus der Liste. Die Daten bleiben für die Synchronisation erhalten.")
+            Text("Der Einsatz verschwindet aus der Liste und lässt sich unter „Gelöscht“ wiederherstellen.")
         }
         .alert("Aktion nicht möglich", isPresented: Binding(get: { actionError != nil }, set: { if !$0 { actionError = nil } })) {
             Button("OK", role: .cancel) {}
@@ -185,6 +187,40 @@ struct MissionListView: View {
         }
     }
 
+    // MARK: Gelöschte Einsätze (Schritt 54)
+
+    private var deletedSection: some View {
+        DisclosureGroup(isExpanded: $showsDeleted) {
+            VStack(spacing: 0) {
+                ForEach(Array(model.deletedMissions.enumerated()), id: \.element.id) { index, summary in
+                    if index > 0 { Divider().padding(.leading, Spacing.l) }
+                    HStack(spacing: Spacing.m) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(summary.displayNumber) · \(summary.title)").font(.headline)
+                            Text(summary.startedAt.formatted(date: .numeric, time: .shortened))
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: Spacing.m)
+                        if model.canCreate {
+                            Button("Wiederherstellen") { restore(summary) }
+                                .font(.headline)
+                                .frame(minHeight: TouchTarget.comfortable)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.l)
+                    .frame(minHeight: TouchTarget.comfortable)
+                }
+            }
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .padding(.top, Spacing.s)
+        } label: {
+            Label("Gelöscht (\(model.deletedMissions.count))", systemImage: "trash")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+                .frame(minHeight: TouchTarget.minimum)
+        }
+    }
+
     private var sectionTitle: some View {
         Text("Frühere Einsätze").font(.title2.weight(.bold))
     }
@@ -243,6 +279,14 @@ struct MissionListView: View {
     private func open(_ missionID: MissionID) {
         do {
             onOpen(try model.open(missionID))
+        } catch {
+            actionError = ErrorText.message(for: error)
+        }
+    }
+
+    private func restore(_ summary: MissionSummary) {
+        do {
+            try model.restore(summary.id)
         } catch {
             actionError = ErrorText.message(for: error)
         }

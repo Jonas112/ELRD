@@ -62,6 +62,14 @@ public struct EntityCollection<Entity: SyncEntity>: Sendable {
         markTouched(id)
     }
 
+    /// Hebt eine Löschung auf (Papierkorb, Schritt 54).
+    mutating func restore(_ id: UUID, context: CommandContext) throws {
+        guard var entity = items[id], entity.isDeleted else { throw CommandError.notFound(Entity.syncEntityType) }
+        entity.metadata.restore(by: context.session.userID, at: context.now)
+        items[id] = entity
+        markTouched(id)
+    }
+
     private mutating func markTouched(_ id: UUID) {
         if !touched.contains(id) { touched.append(id) }
     }

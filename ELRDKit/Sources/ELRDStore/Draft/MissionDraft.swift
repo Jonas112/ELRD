@@ -168,6 +168,13 @@ public struct MissionDraft: Sendable {
         try self[keyPath: path].delete(id.rawValue, context: context)
     }
 
+    /// Hebt eine Löschung auf (nur gelöschte Entitäten).
+    public mutating func restore<Entity: SyncEntity, Tag>(_ type: Entity.Type, id: EntityID<Tag>) throws {
+        let context = context
+        let path = path(for: type)
+        try self[keyPath: path].restore(id.rawValue, context: context)
+    }
+
     // MARK: Protokoll und Tagebuch
 
     /// Schreibt einen Protokolleintrag. Patienten nur über ihre Nummer nennen (E25).

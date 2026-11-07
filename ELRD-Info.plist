@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Ergänzt die von Xcode erzeugte Info.plist (GENERATE_INFOPLIST_FILE). Liegt bewusst
+	     außerhalb des Ordners ELRD/, sonst würde sie als Ressource mitkopiert. -->
+	<!-- Nur Standard-Verschlüsselung von Apple (HTTPS, Dateischutz, CryptoKit): keine Exportanmeldung nötig. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+</dict>
+</plist>

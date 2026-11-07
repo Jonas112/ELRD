@@ -205,9 +205,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 133;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ELRD-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ELRD;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Zeigt deinen Standort auf der Lagekarte und hilft, den Einsatzort zu setzen.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fotos für das Einsatztagebuch aufnehmen.";
@@ -220,7 +221,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ELRD.App;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -240,9 +241,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 133;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ELRD-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ELRD;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Zeigt deinen Standort auf der Lagekarte und hilft, den Einsatzort zu setzen.";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fotos für das Einsatztagebuch aufnehmen.";
@@ -255,7 +257,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = ELRD.App;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

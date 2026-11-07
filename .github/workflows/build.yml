@@ -39,7 +39,7 @@ permissions:
 jobs:
   build:
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       DERIVED: ${{ github.workspace }}/../ELRD-DerivedData
     steps:

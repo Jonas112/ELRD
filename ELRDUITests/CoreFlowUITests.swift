@@ -17,7 +17,16 @@ final class CoreFlowUITests: XCTestCase {
     }
 
     private func button(_ app: XCUIApplication, containing text: String) -> XCUIElement {
-        app.buttons.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", text)).firstMatch
+    }
+
+    /// Scrollt, bis das Element antippbar ist (lange Ansichten, kleine Bildschirme).
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
+        var attempts = 0
+        while !element.isHittable, attempts < 6 {
+            app.swipeUp()
+            attempts += 1
+        }
     }
 
     func testContinueRunningMissionFromList() {
@@ -42,8 +51,10 @@ final class CoreFlowUITests: XCTestCase {
 
     func testAssignTransportFromList() {
         let app = launch("patientDetail")
-        let open = button(app, containing: "Einheit")
+        // Nicht der Bereich „Einheiten“ in der Leiste, sondern der Knopf am Patienten.
+        let open = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Alle Einheiten' OR label BEGINSWITH 'Einheit wählen'")).firstMatch
         XCTAssertTrue(open.waitForExistence(timeout: 30))
+        reveal(open, in: app)
         open.tap()
         XCTAssertTrue(app.navigationBars["Transportmittel"].waitForExistence(timeout: 10))
         let rtw = button(app, containing: "RK SWFT 71/1")

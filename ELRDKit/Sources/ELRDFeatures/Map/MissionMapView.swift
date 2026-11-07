@@ -104,6 +104,9 @@ struct MissionMapView: View {
                 center = GeoCoordinate(latitude: start.latitude, longitude: start.longitude)
             }
             if AppLaunchOptions.current.demoScreen == .mapTopo { layer = .openTopoMap }
+            if let screen = AppLaunchOptions.current.demoScreen, [.map, .mapCollapsed].contains(screen) {
+                sidePanelCollapsed = screen == .mapCollapsed
+            }
             if AppLaunchOptions.current.demoScreen == .mapObject, editing == nil,
                let first = store.state.mapObjects.active.first {
                 editing = EditingMapObject(id: first.id)

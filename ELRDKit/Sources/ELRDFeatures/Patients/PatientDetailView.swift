@@ -59,6 +59,7 @@ struct PatientDetailView: View {
                 injuryStartSpot = BodySpot(.unterschenkel, .rechts)
                 showsInjuries = true
             }
+            if AppLaunchOptions.current.demoScreen == .unitPicker { showsUnits = true }
         }
         // Automatisch speichern, kurz nachdem nicht mehr getippt wird.
         .task(id: form) {

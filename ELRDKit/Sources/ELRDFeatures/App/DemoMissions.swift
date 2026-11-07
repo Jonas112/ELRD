@@ -131,6 +131,9 @@ enum DemoMissions {
             try running.perform(SetRegistration(patientID: added[1].id, state: .angefragt))
             try running.perform(SetDestination(patientID: added[3].id, hospital: leo))
             try running.perform(SetRegistration(patientID: added[3].id, state: .angemeldet))
+            // A-1: Schockraum angefragt (zeigt die Statusfarben in den Bildschirmfotos).
+            try running.perform(SetDestination(patientID: added[0].id, hospital: leo))
+            try running.perform(SetRegistration(patientID: added[0].id, state: .angefragt))
         }
         time.date = start.addingTimeInterval(30 * 60)
         if rtws.count >= 2 { try running.perform(StartTransport(patientID: added[3].id)) }

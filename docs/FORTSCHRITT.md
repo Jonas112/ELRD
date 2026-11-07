@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** Plan abgeschlossen (1–56). Offen sind Rückfragen an Jonas (siehe „Offene Fragen“ unten und `SYNC.md`) und Tests auf dem Gerät.
+**Nächster Schritt:** 57 – TestFlight vorbereiten (Reihenfolge noch mit Jonas abstimmen; ohne Rückfragen machbar: 57, 59, 60, 61).
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -107,6 +107,33 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 55 | Dateien (Fotos, Sprachnotizen, Zeichnungen) beim Abgleich übertragen | ✅ |
 | 56 | Bericht nur für eine Zielklinik | ✅ |
 
+## L – Vorbereitung und Robustheit (vorgeschlagen 2026-11-07)
+| # | Schritt | Status |
+|---|---|---|
+| 57 | TestFlight vorbereiten: Version/Build-Nummer, App-Symbol, App-Store-Datenschutzangaben, Export-Angaben, Archiv/Upload | ⬜ |
+| 58 | Testrunde auf dem Gerät auswerten und Fehler beheben | ⬜ |
+| 59 | Offline-Karte: geladene Kacheln zwischenspeichern, Hinweis „Karte offline“ | ⬜ |
+| 60 | Kreise und Rechtecke direkt auf der Karte verschieben und in der Größe ändern | ⬜ |
+| 61 | Einsatzort aus dem eigenen Standort übernehmen („Hier“) | ⬜ |
+| 62 | Klinikbericht direkt an die Klinik senden (E-Mail aus Stammdaten) | ⬜ |
+| 63 | Einsatz als Datei sichern und auf anderem iPad öffnen; endgültig löschen | ⬜ |
+| 64 | Belastungstest großer MANV (150+ Patienten) | ⬜ |
+| 65 | Oberflächentests der Kernabläufe | ⬜ |
+| 66 | Abgleich ohne Server direkt zwischen iPads vor Ort (nach Entscheidung zu `SYNC.md` Frage 5) | ⬜ |
+
+## M – Neue Funktionen (von Jonas ausgewählt 2026-11-07)
+| # | Schritt | Status |
+|---|---|---|
+| 67 | Lagemeldung auf Knopfdruck: aus den Daten (Lage, Verletzte je SK, Gefahren, Abschnitte, Nachforderungen), zum Vorlesen am Funk, landet im Tagebuch. Kein vorgeschriebenes ILS-Schema – eigener, schlanker Aufbau | ⬜ |
+| 68 | Nachforderungs-Rechner: Bedarf je Patient nach SK (SK1 mindestens RTW + NA oder RTH, SK2 mindestens RTW, SK3 mindestens KTW) gegen verfügbare Einheiten, Fehlbedarf anzeigen, per Tipp als Platzhalter nachfordern | ⬜ |
+| 69 | Erinnerungen: Lagemeldung an ILS im Takt, Patient wartet zu lange auf Transport, Platzhalter ohne Fahrzeug | ⬜ |
+| 70 | Transport-Board der Patientenablage: wartet → eingeteilt → abgefahren, Reihenfolge, Ziehen zwischen Spalten | ⬜ |
+| 71 | Klinikverteilung mit Kontingenten je SK und Warnung bei Überlastung | ⬜ |
+| 72 | Patientenanhängekarte scannen: Barcode per Kamera (VisionKit), Patient anlegen oder finden | ⬜ |
+| 73 | Führungsstruktur und Kräfteübersicht: Organigramm (Einsatzleiter, LNA, Abschnittsleiter) mit Funkrufnamen und Kanälen, Gesamtstärke aus Besatzungen | ⬜ |
+
+Zurückgestellt: Diktat fürs Tagebuch (Spracherkennung auf dem Gerät), Übergabe an die Ablösung, Checklisten.
+
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
 - **Schritt 2 (2026-10-17):** Jonas nutzt Xcode 26.6. Projekt `ELRD.xcodeproj` (objectVersion 77) mit synchronisiertem Ordner `ELRD/` – neue Dateien dort erscheinen automatisch, `project.pbxproj` muss nicht angefasst werden. Lokales Package `ELRDKit` (ein Produkt `ELRDKit`, 8 Module als Platzhalter, Test-Target `ELRDDomainTests` mit Swift Testing). Neue Module = neues Target in `ELRDKit/Package.swift` + Eintrag im Produkt. Bundle-ID vorläufig `ELRD.App`, Team in Xcode unter „Signing & Capabilities“ setzen. CI: `.github/workflows/build.yml` auf `macos-26`, läuft nur bei Code-Änderungen; Build-Logs als Artefakt. CI grün (Build + Tests auf iPad-Simulator, Xcode 26.6). Claude prüft Builds selbst per `gh run list/view -R Jonas112/ELRD` (Fehler stehen als Annotationen; Log-Download ist über den Proxy gesperrt). Jonas: lokal einmal öffnen und Team unter „Signing & Capabilities“ setzen.
@@ -163,6 +190,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Änderungswünsche Jonas (2026-11-07, Block nach 56):** (1) **Transportmittel** am Patienten schlank wie die Zielklinik: Zugeordnete mit „ändern“, sonst bis zu drei freie Transportmittel und „Alle Einheiten …“ → eigene Liste `UnitPickerSheet` mit Suche über Einsatz und Stammdaten (`UnitPickerSearch`); unbekannter Funkrufname → Typ wählen, „Anlegen und zuordnen“; Stammdaten-Fahrzeug antippen fügt es dem Einsatz hinzu und ordnet zu. Zuordnen eines Transportmittels schließt die Liste, NEF & Co. lassen sie offen. (2) **Einsatz verlassen** sitzt im Querformat unten in der Seitenleiste („Einsätze“), schmal weiter oben links in der Lageleiste. (3) **Vorschaubilder** in der Einsatzliste (laufend groß, beendet klein): markierter Eintrag, sonst erstes Foto, sonst letzter Kartenausschnitt (`MissionSummary.thumbnail`), sonst Kartensymbol. (4) **Körpergrafik** am Patienten immer sichtbar, Tipp öffnet die Verletzungsauswahl an der Stelle – auch ohne erfasste Verletzung. (5/6) **Farben:** Anmeldestatus grau/orange/grün und IVENA-Dringlichkeit 1 rot, 2 orange, 3 grün als farbige Segmente (`SegmentedChoice(tint:)`), Zielklinik mit Statusfarbe umrandet. (7) **Drag & Drop** der Einheiten: Zeile war ein `Menu` und hat die Berührung geschluckt; jetzt Tipp → Dialog „Verschieben nach …“, Halten → Kontextmenü, Halten und Ziehen → verschieben. (8) **Profilkreis** in der Einsatzliste 34 pt statt 44 pt (Navigationsleiste ist niedriger). (9) **Kartenliste** einklappbar („‹‹“ oder nach links wischen), Griff am linken Kartenrand klappt wieder aus; Zustand je Gerät gemerkt. Außerdem: Schreibweise der Zielklinik im Bericht fest gewählt (Test war wackelig). Tests: 3 Features, 1 Store. **Auf dem Gerät prüfen:** Ziehen der Einheiten, Wischen in der Kartenliste.
 
 ## Offene Fragen an Jonas
+0. **Nachforderungs-Rechner (68):** Bedeutet „SK1 mindestens 1 RTW, 1 NA oder RTH“: RTW + (NA oder RTH) – oder (RTW + NA) oder RTH allein? Zählt ein NA (NEF) für mehrere SK1-Patienten gleichzeitig?
 1. **Abo (E76):** Gratismonat in App Store Connect und 30 Tage lokaler Test – beides behalten? TestFlight frei oder mit Abo?
 2. **Datenschutzerklärung Fassung 2:** juristisch prüfen lassen; Hinweis auf OpenStreetMap-Nutzungsbedingungen (Kachel-Server sind für geringe Last gedacht – bei vielen Nutzern eigener Kachel-Anbieter nötig).
 3. **Backend:** Fragen 1–5 in `SYNC.md` (Betrieb, Anmeldung, Freigabe, Dateien, Abgleich ohne Netz).

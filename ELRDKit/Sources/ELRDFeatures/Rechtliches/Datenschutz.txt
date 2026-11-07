@@ -1,33 +1,49 @@
 Datenschutzerklärung
 
+Stand: November 2026
+
 Der Schutz Ihrer persönlichen Daten ist mir ein besonderes Anliegen. Diese Datenschutzerklärung informiert Sie darüber, wie die Einsatzleiter Rettungsdienst App (nachfolgend „App“) Ihre Daten verarbeitet.
 
 1. Allgemeine Informationen
-Die App wurde entwickelt, um Einsatzleiter im Rettungsdienst bei der Organisation und Dokumentation von Einsätzen zu unterstützen. Sämtliche Daten, die Sie in der App eingeben, werden ausschließlich lokal auf Ihrem Gerät gespeichert. Es erfolgt keine automatisierte Übermittlung von Daten an externe Server oder Dritte.
+Die App wurde entwickelt, um Einsatzleiter im Rettungsdienst bei der Organisation und Dokumentation von Einsätzen zu unterstützen. Sämtliche Daten, die Sie in der App eingeben, werden ausschließlich lokal auf Ihrem Gerät gespeichert. Einsatzdaten werden nicht automatisch an externe Server oder Dritte übermittelt. Ausnahmen bestehen nur für die unter Nummer 3 genannten Funktionen, die Sie selbst auslösen.
 
 2. Verarbeitung von personenbezogenen Daten
 Die App verarbeitet personenbezogene Daten ausschließlich zu dem Zweck, Ihnen die gewünschten Funktionen bereitzustellen. Hierzu zählen unter anderem:
 
-Einsatzdokumentation (z. B. Einsatzorte, beteiligte Personen, Maßnahmen)
-Notizen oder andere relevante Informationen im Rahmen des Einsatzes
+Einsatzdokumentation (z. B. Einsatzorte, beteiligte Personen, Maßnahmen, Sichtung)
+Notizen, Fotos und Sprachaufnahmen im Einsatztagebuch
+Benutzerkonten auf dem Gerät (Name, Kennung, Rolle; Passwörter nur als geschützter Prüfwert, nie im Klartext)
 
 Wichtige Hinweise:
-Alle eingegebenen Daten bleiben ausschließlich auf Ihrem Gerät.
+Alle eingegebenen Einsatzdaten bleiben auf Ihrem Gerät.
 Es erfolgt keine Synchronisation mit Cloud-Diensten oder externen Datenbanken.
-Die App hat keine Schnittstellen zu Dritten, durch die personenbezogene Daten übertragen werden könnten.
+Die App enthält keine Werbung, keine Analyse- oder Tracking-Werkzeuge und keine Schnittstellen zu Dritten, über die Einsatzdaten übertragen werden.
 
-3. Sicherheit Ihrer Daten
-Ihre Daten sind durch die Sicherheitsmechanismen Ihres Geräts (z. B. PIN, Passwort, Fingerabdrucksensor) geschützt. Wir empfehlen, diese Mechanismen zu aktivieren, um unbefugten Zugriff auf die App und Ihre Daten zu verhindern. Da die App keine Daten extern speichert, obliegt die Sicherung (Backup) und Löschung der Daten allein Ihnen als Nutzer.
+3. Funktionen mit Verbindung nach außen
+Einige Funktionen benötigen eine Internetverbindung oder Gerätedienste. Dabei werden keine Einsatz- oder Patientendaten übertragen.
 
-4. Rechte der Nutzer
-Da keine personenbezogenen Daten außerhalb Ihres Geräts verarbeitet oder gespeichert werden, entfällt die Notwendigkeit, Anfragen zur Datenlöschung, -übertragung oder -auskunft an mich zu richten. Alle Daten können direkt von Ihnen innerhalb der App oder über die Geräteeinstellungen gelöscht werden.
+Lagekarte: Für die Kartendarstellung lädt die App Kartenausschnitte (Kacheln) für den gerade angezeigten Bereich. Je nach gewählter Karte stammen sie von Apple (Apple Karten), von OpenStreetMap (tile.openstreetmap.org, OpenStreetMap Foundation, Großbritannien) oder von OpenTopoMap (tile.opentopomap.org, Deutschland). Dabei erhält der jeweilige Anbieter technisch bedingt Ihre IP-Adresse, Angaben zu Gerät und App sowie den angefragten Kartenausschnitt und kann daraus auf das betrachtete Gebiet schließen. Es gelten die Datenschutzbestimmungen des jeweiligen Anbieters. Ohne Internetverbindung bleibt die Karte leer; alle anderen Funktionen arbeiten weiter.
 
-5. Änderungen dieser Datenschutzerklärung
-Ich behalte mir vor, diese Datenschutzerklärung bei Bedarf anzupassen, um Änderungen an der App oder neuen rechtlichen Vorgaben gerecht zu werden. Änderungen werden Ihnen in der App mitgeteilt.
+Standort: Die App fragt erst nach der Freigabe Ihres Standorts, wenn Sie auf der Karte „Ich“ (eigener Standort) tippen. Nach der Freigabe zeigt die Lagekarte Ihren Standort an, solange sie geöffnet ist. Der Standort wird nur angezeigt, weder gespeichert noch übertragen. Die Freigabe können Sie jederzeit in den Einstellungen des Geräts widerrufen.
 
-6. Kontakt
+Kamera, Mikrofon und Fotos: Zugriff erfolgt nur, wenn Sie im Einsatztagebuch ein Foto aufnehmen, ein Bild auswählen oder eine Sprachaufnahme starten. Die Aufnahmen werden nur in der App auf Ihrem Gerät gespeichert.
+
+E-Mail, Teilen und Drucken: Berichte, Kartenbilder und Protokolle verlassen das Gerät nur, wenn Sie sie selbst per E-Mail versenden, teilen oder drucken. Die Übermittlung erfolgt dann über die von Ihnen gewählte App oder den Drucker; für deren Verarbeitung sind deren Anbieter verantwortlich.
+
+Abonnement: Kauf und Verwaltung des Abonnements laufen vollständig über den App Store von Apple. Die App erhält dabei nur die Information, ob und bis wann ein Abonnement besteht, aber keine Zahlungs- oder Kontodaten. Der Beginn des Testzeitraums wird lokal auf dem Gerät gespeichert.
+
+4. Sicherheit Ihrer Daten
+Ihre Daten sind durch die Sicherheitsmechanismen Ihres Geräts (z. B. Code, Face ID, Touch ID) und die Dateiverschlüsselung des Geräts geschützt. Wir empfehlen, diese Mechanismen zu aktivieren, um unbefugten Zugriff auf die App und Ihre Daten zu verhindern. Da die App keine Daten extern speichert, obliegt die Sicherung (Backup) und Löschung der Daten allein Ihnen als Nutzer.
+
+5. Rechte der Nutzer
+Da ich keine personenbezogenen Daten außerhalb Ihres Geräts verarbeite oder speichere, kann ich zu Ihren Einsatzdaten keine Auskunft geben und sie weder übertragen noch löschen. Alle Daten können Sie direkt in der App oder durch Löschen der App selbst entfernen. Für Daten, die bei den unter Nummer 3 genannten Anbietern anfallen, wenden Sie sich bitte an den jeweiligen Anbieter.
+
+6. Änderungen dieser Datenschutzerklärung
+Ich behalte mir vor, diese Datenschutzerklärung bei Bedarf anzupassen, um Änderungen an der App oder neuen rechtlichen Vorgaben gerecht zu werden. Änderungen werden Ihnen in der App mitgeteilt und müssen erneut bestätigt werden.
+
+7. Kontakt
 Falls Sie Fragen zur Datenschutzerklärung oder zur App haben, können Sie sich an mich wenden:
 
 Support.Reco@icloud.com
 
-Copyright © 2024 Jonas Wehner. All rights reserved.
+Copyright © 2024–2026 Jonas Wehner. All rights reserved.

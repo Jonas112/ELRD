@@ -1,0 +1,136 @@
+{
+  "appPolicies": {
+    "eula": "",
+    "policies": [
+      {
+        "locale": "de_DE",
+        "policyText": "",
+        "policyURL": ""
+      }
+    ]
+  },
+  "identifier": "E1D0A801",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_askToBuyEnabled": false,
+    "_billingGracePeriodEnabled": false,
+    "_billingIssuesEnabled": false,
+    "_disableDialogs": false,
+    "_failTransactionsEnabled": false,
+    "_locale": "de",
+    "_renewalBillingIssuesEnabled": false,
+    "_storefront": "DEU",
+    "_storeKitErrors": [
+      {
+        "current": {
+          "index": 1,
+          "type": "generic"
+        },
+        "enabled": false,
+        "name": "Load Products"
+      },
+      {
+        "current": {
+          "index": 1,
+          "type": "generic"
+        },
+        "enabled": false,
+        "name": "Purchase"
+      },
+      {
+        "current": {
+          "index": 5,
+          "type": "verification"
+        },
+        "enabled": false,
+        "name": "Verification"
+      },
+      {
+        "enabled": false,
+        "name": "App Store Sync"
+      },
+      {
+        "current": {
+          "index": 1,
+          "type": "generic"
+        },
+        "enabled": false,
+        "name": "Subscription Status"
+      },
+      {
+        "current": {
+          "index": 0,
+          "type": "generic"
+        },
+        "enabled": false,
+        "name": "App Transaction"
+      },
+      {
+        "current": {
+          "index": 1,
+          "type": "generic"
+        },
+        "enabled": false,
+        "name": "Manage Subscriptions Sheet"
+      },
+      {
+        "current": {
+          "index": 1,
+          "type": "generic"
+        },
+        "enabled": false,
+        "name": "Refund Request Sheet"
+      },
+      {
+        "current": {
+          "index": 1,
+          "type": "generic"
+        },
+        "enabled": false,
+        "name": "Offer Code Redeem Sheet"
+      }
+    ],
+    "_timeRate": 0
+  },
+  "subscriptionGroups": [
+    {
+      "id": "21404680",
+      "localizations": [],
+      "name": "Basis Funktionen",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "49.99",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "6470716127",
+          "introductoryOffer": {
+            "internalID": "3CE3B4DF",
+            "numberOfPeriods": 1,
+            "paymentMode": "free",
+            "subscriptionPeriod": "P1M"
+          },
+          "localizations": [
+            {
+              "description": "Digital Organisieren / Dokumentieren",
+              "displayName": "Rescue Commander Basisfunktion",
+              "locale": "de"
+            }
+          ],
+          "productID": "ELRD.RescueCommander.BasisFunctionsMonthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "ELRD.RescueCommander.BasisFunctionsMonthly",
+          "subscriptionGroupID": "21404680",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

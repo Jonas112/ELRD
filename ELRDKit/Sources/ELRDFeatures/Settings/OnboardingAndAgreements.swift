@@ -6,10 +6,11 @@ import ELRDStammdaten
 
 // MARK: - Vereinbarungen (Schritt 50)
 
-/// Nutzungsbedingungen und Datenschutzerklärung (Texte aus ELRDRG, Stand Februar 2026).
+/// Nutzungsbedingungen (aus ELRDRG, Stand Februar 2026) und Datenschutzerklärung
+/// (Fassung 2, Stand November 2026: Kartenkacheln, Standort, Medien, Abo ergänzt).
 enum Agreements {
     /// Bei inhaltlicher Änderung der Texte erhöhen – dann wird erneut nachgefragt.
-    static let currentVersion = 1
+    static let currentVersion = 2
 
     static var termsOfUse: String { text("Nutzungsbedingungen") }
     static var privacy: String { text("Datenschutz") }

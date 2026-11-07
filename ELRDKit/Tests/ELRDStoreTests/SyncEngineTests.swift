@@ -14,11 +14,12 @@ private struct SyncDevice {
     let engine: SyncEngine
     let session: SessionIdentity
     let clock: TestClock
+    let files = AttachmentFileStore.temporary()
 
     init(prefix: String, server: InMemorySyncServer, clock: TestClock) throws {
         identity = DeviceIdentity(deviceID: DeviceID(), numberPrefix: prefix)!
         deviceClock = try DeviceClock(deviceID: identity.deviceID, repository: repository)
-        engine = SyncEngine(repository: repository, transport: server, clock: deviceClock, deviceID: identity.deviceID, now: { clock.now })
+        engine = SyncEngine(repository: repository, transport: server, clock: deviceClock, deviceID: identity.deviceID, files: files, now: { clock.now })
         session = SessionIdentity(userID: UserID(), displayName: "Gerät \(prefix)", device: identity)
         self.clock = clock
     }
@@ -196,6 +197,58 @@ struct SyncEngineTests {
         let other = try #require(try backward.repository.entity(Patient.self, id: patient.id.rawValue))
         #expect(one.firstName == "Anna" && other.firstName == "Anna")
         #expect(one.triage == .sk1 && other.triage == .sk1)
+    }
+
+    @Test func photosAndVoiceNotesFollowTheirEntries() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let storeA = try a.createMission()
+        let photo = try a.files.save(Data("JPEG-Inhalt".utf8), kind: .photo, createdAt: clock.now, pixelWidth: 4, pixelHeight: 3)
+        let voice = try a.files.save(Data("M4A-Inhalt".utf8), kind: .audio, createdAt: clock.now, duration: 4)
+        try storeA.perform(AddJournalMedia(attachments: [photo], text: "Einsatzstelle", occurredAt: nil))
+        try storeA.perform(AddJournalMedia(attachments: [voice], text: "", occurredAt: nil))
+
+        let sent = try await a.engine.sync(storeA.missionID)
+        #expect(sent.filesUploaded == 2)
+        #expect(await server.fileCount(mission: storeA.missionID) == 2)
+
+        #expect(try b.engine.missingFiles(for: storeA.missionID).isEmpty, "vor dem Abgleich kennt B den Einsatz nicht")
+        let received = try await b.engine.sync(storeA.missionID)
+        #expect(received.filesDownloaded == 2)
+        #expect(received.filesMissing == 0)
+        #expect(b.files.isIntact(photo))
+        #expect(b.files.data(for: voice) == Data("M4A-Inhalt".utf8))
+        #expect(try b.engine.missingFiles(for: storeA.missionID).isEmpty)
+
+        // Nochmal: nichts mehr zu übertragen.
+        let again = try await b.engine.sync(storeA.missionID)
+        #expect(again.filesUploaded == 0 && again.filesDownloaded == 0)
+    }
+
+    @Test func fileNotYetUploadedIsReportedMissing() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let storeA = try a.createMission()
+        let photo = try a.files.save(Data("Foto".utf8), kind: .photo, createdAt: clock.now)
+        try storeA.perform(AddJournalMedia(attachments: [photo], text: "", occurredAt: nil))
+        // A hat nur die Ereignisse übertragen, die Datei ist verloren gegangen.
+        try FileManager.default.removeItem(at: a.files.url(for: photo))
+        try await a.engine.sync(storeA.missionID)
+
+        let received = try await b.engine.sync(storeA.missionID)
+        #expect(received.filesMissing == 1)
+        #expect(try b.engine.missingFiles(for: storeA.missionID) == [photo])
+    }
+
+    @Test func damagedFileIsRejected() throws {
+        let store = AttachmentFileStore.temporary()
+        let original = try store.save(Data("echt".utf8), kind: .photo, createdAt: Date())
+        let other = AttachmentFileStore.temporary()
+        #expect(throws: AttachmentStoreError.checksumMismatch) {
+            try other.store(Data("gefälscht".utf8), for: original)
+        }
+        try other.store(Data("echt".utf8), for: original)
+        #expect(other.isIntact(original))
     }
 
     @Test func localOnlyTransportReportsNotConnected() async throws {

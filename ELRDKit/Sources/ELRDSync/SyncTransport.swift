@@ -47,6 +47,19 @@ public protocol SyncTransport: Sendable {
     func purge(mission: MissionID) async throws
 }
 
+/// Dateien (Fotos, Sprachnotizen, Zeichnungen) zum Einsatz (Schritt 55).
+///
+/// Dateien werden über ihre Prüfsumme (SHA-256) angesprochen: gleicher Inhalt wird
+/// nur einmal übertragen, und der Empfänger prüft, ob er das Richtige bekommen hat.
+/// Ereignisse enthalten nur den Verweis (`FileAttachment`), nie die Datei selbst.
+public protocol SyncFileTransport: Sendable {
+    /// Welche der Prüfsummen dem Server noch fehlen.
+    func missingFiles(_ sha256: [String], mission: MissionID) async throws -> [String]
+    func uploadFile(_ data: Data, sha256: String, mission: MissionID) async throws
+    /// `nil`, wenn der Server die Datei (noch) nicht hat.
+    func downloadFile(sha256: String, mission: MissionID) async throws -> Data?
+}
+
 /// Fehler beim Synchronisieren.
 public enum SyncError: Error, Equatable, Sendable {
     /// Kein Server eingerichtet oder Konto nicht verknüpft.
@@ -84,7 +97,7 @@ public struct LocalOnlyTransport: SyncTransport {
 
 /// Referenz-Server im Arbeitsspeicher: verhält sich wie das künftige Backend.
 /// Für Tests (zwei Geräte) und als ausführbare Beschreibung des Vertrags.
-public actor InMemorySyncServer: SyncTransport {
+public actor InMemorySyncServer: SyncTransport, SyncFileTransport {
     private var logs: [MissionID: [ChangeEvent]] = [:]
     private var known: Set<ChangeEventID> = []
     /// Für Tests: nächster Aufruf scheitert mit diesem Fehler.
@@ -116,7 +129,30 @@ public actor InMemorySyncServer: SyncTransport {
         try checkFailure()
         for event in logs[mission] ?? [] { known.remove(event.id) }
         logs[mission] = nil
+        files[mission] = nil
     }
+
+    // Dateien je Einsatz, nach Prüfsumme.
+    private var files: [MissionID: [String: Data]] = [:]
+
+    public func missingFiles(_ sha256: [String], mission: MissionID) async throws -> [String] {
+        try checkFailure()
+        let stored = files[mission] ?? [:]
+        return sha256.filter { stored[$0] == nil }
+    }
+
+    public func uploadFile(_ data: Data, sha256: String, mission: MissionID) async throws {
+        try checkFailure()
+        files[mission, default: [:]][sha256] = data
+    }
+
+    public func downloadFile(sha256: String, mission: MissionID) async throws -> Data? {
+        try checkFailure()
+        return files[mission]?[sha256]
+    }
+
+    /// Anzahl gespeicherter Dateien eines Einsatzes.
+    public func fileCount(mission: MissionID) -> Int { files[mission]?.count ?? 0 }
 
     /// Anzahl gespeicherter Ereignisse eines Einsatzes.
     public func eventCount(mission: MissionID) -> Int { logs[mission]?.count ?? 0 }

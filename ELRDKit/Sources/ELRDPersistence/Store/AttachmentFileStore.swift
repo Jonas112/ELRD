@@ -70,3 +70,29 @@ public final class AttachmentFileStore: Sendable {
         SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }
+
+/// Fehler beim Übernehmen einer Datei.
+public enum AttachmentStoreError: Error, Equatable, Sendable {
+    /// Inhalt passt nicht zur Prüfsumme (beschädigt oder falsche Datei).
+    case checksumMismatch
+}
+
+extension AttachmentStoreError: LocalizedError {
+    public var errorDescription: String? {
+        "Eine empfangene Datei ist beschädigt und wurde nicht übernommen."
+    }
+}
+
+public extension AttachmentFileStore {
+    /// Legt eine von einem anderen Gerät empfangene Datei unter ihrem Verweis ab
+    /// (Schritt 55). Nur wenn die Prüfsumme stimmt.
+    func store(_ data: Data, for attachment: FileAttachment) throws {
+        guard Self.sha256(data) == attachment.sha256 else { throw AttachmentStoreError.checksumMismatch }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        var options: Data.WritingOptions = [.atomic]
+        #if os(iOS)
+        options.insert(.completeFileProtectionUntilFirstUserAuthentication)
+        #endif
+        try data.write(to: url(for: attachment), options: options)
+    }
+}

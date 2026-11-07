@@ -77,3 +77,22 @@ public struct FileAttachment: Identifiable, Hashable, Codable, Sendable {
         sha256.count == 64 && sha256.allSatisfy(\.isHexDigit)
     }
 }
+
+// MARK: - Dateien eines Einsatzes (Schritt 55)
+
+public extension MapShape {
+    /// Datei der Form (nur Freihandzeichnungen).
+    var attachment: FileAttachment? {
+        if case let .drawing(_, image) = self { image } else { nil }
+    }
+}
+
+public enum MissionAttachments {
+    /// Alle Dateien, auf die Tagebuch und Lagekarte verweisen (auch gelöschte
+    /// Einträge – sie lassen sich wiederherstellen). Jede Prüfsumme einmal.
+    public static func all(journal: [JournalEntry], mapObjects: [MapObject]) -> [FileAttachment] {
+        var seen = Set<String>()
+        let files = journal.flatMap(\.attachments) + mapObjects.compactMap(\.shape.attachment)
+        return files.filter { seen.insert($0.id.rawValue.uuidString).inserted }
+    }
+}

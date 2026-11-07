@@ -8,6 +8,11 @@ public struct SyncReport: Equatable, Sendable {
     public var pushed = 0
     public var pulled = 0
     public var imported = RemoteImportResult()
+    /// Dateien (Fotos, Sprachnotizen, Zeichnungen), Schritt 55.
+    public var filesUploaded = 0
+    public var filesDownloaded = 0
+    /// Dateien, die noch kein Gerät hochgeladen hat (oder beschädigt ankamen).
+    public var filesMissing = 0
 
     public init() {}
 }
@@ -27,6 +32,7 @@ public final class SyncEngine {
     private let transport: any SyncTransport
     private let deviceID: DeviceID
     private let importer: RemoteChangeImporter
+    private let files: AttachmentFileStore?
     private let now: () -> Date
 
     public init(
@@ -34,11 +40,13 @@ public final class SyncEngine {
         transport: any SyncTransport,
         clock: DeviceClock,
         deviceID: DeviceID,
+        files: AttachmentFileStore? = nil,
         now: @escaping () -> Date = Date.init
     ) {
         self.repository = repository
         self.transport = transport
         self.deviceID = deviceID
+        self.files = files
         self.now = now
         importer = RemoteChangeImporter(repository: repository, clock: clock, now: now)
     }
@@ -83,8 +91,64 @@ public final class SyncEngine {
             hasMore = page.hasMore && !page.events.isEmpty
         }
 
+        // 3. Dateien: fehlende hochladen, fehlende holen (nur wenn der Transport das kann).
+        if let files, let fileTransport = transport as? any SyncFileTransport {
+            try await syncFiles(mission, files: files, transport: fileTransport, report: &report)
+        }
+
         try update(mission) { $0.lastSyncAt = now() }
         return report
+    }
+
+    /// Dateien, auf die der Einsatz verweist, die hier noch fehlen oder beschädigt sind.
+    public func missingFiles(for mission: MissionID) throws -> [FileAttachment] {
+        guard let files else { return [] }
+        return try attachments(of: mission).filter { !files.isIntact($0) }
+    }
+
+    private func attachments(of mission: MissionID) throws -> [FileAttachment] {
+        MissionAttachments.all(
+            journal: try repository.entities(JournalEntry.self, in: mission, includeDeleted: true),
+            mapObjects: try repository.entities(MapObject.self, in: mission, includeDeleted: true)
+        )
+    }
+
+    private func syncFiles(
+        _ mission: MissionID,
+        files: AttachmentFileStore,
+        transport: any SyncFileTransport,
+        report: inout SyncReport
+    ) async throws {
+        let all = try attachments(of: mission)
+        var local: [String: FileAttachment] = [:]
+        var absent: [FileAttachment] = []
+        for file in all {
+            if files.isIntact(file) {
+                local[file.sha256] = local[file.sha256] ?? file
+            } else {
+                absent.append(file)
+            }
+        }
+
+        let wanted = try await transport.missingFiles(local.keys.sorted(), mission: mission)
+        for hash in wanted {
+            guard let file = local[hash], let data = files.data(for: file) else { continue }
+            try await transport.uploadFile(data, sha256: hash, mission: mission)
+            report.filesUploaded += 1
+        }
+
+        for file in absent {
+            guard let data = try await transport.downloadFile(sha256: file.sha256, mission: mission) else {
+                report.filesMissing += 1
+                continue
+            }
+            do {
+                try files.store(data, for: file)
+                report.filesDownloaded += 1
+            } catch AttachmentStoreError.checksumMismatch {
+                report.filesMissing += 1
+            }
+        }
     }
 
     /// Vergisst den Abgleich eines Einsatzes (z. B. nach endgültigem Löschen).

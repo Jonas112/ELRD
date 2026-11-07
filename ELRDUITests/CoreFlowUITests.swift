@@ -57,7 +57,8 @@ final class CoreFlowUITests: XCTestCase {
         reveal(open, in: app)
         open.tap()
         XCTAssertTrue(app.navigationBars["Transportmittel"].waitForExistence(timeout: 10))
-        let rtw = button(app, containing: "RK SWFT 71/1")
+        // Kachel in der Liste („…, frei“), nicht der Vorschlag am Patienten dahinter.
+        let rtw = app.buttons.matching(NSPredicate(format: "label CONTAINS 'RK SWFT 71/1' AND label CONTAINS 'frei'")).firstMatch
         XCTAssertTrue(rtw.waitForExistence(timeout: 10))
         rtw.tap()
         // Transportmittel gewählt → Liste schließt sich, am Patienten steht „ändern“.

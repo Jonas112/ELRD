@@ -16,14 +16,14 @@ struct UnitPickerSearch: Equatable {
         choices.filter { matches("\($0.unit.typeDisplayName) \($0.unit.displayName)") }
     }
 
-    /// Stammdaten-Fahrzeuge, die noch nicht im Einsatz sind. Ohne Suchtext nur
-    /// Transportmittel, damit die Liste kurz bleibt.
+    /// Stammdaten-Fahrzeuge, die noch nicht im Einsatz sind – nur bei Suchtext,
+    /// damit die Liste schlank bleibt (eine Region hat Dutzende Fahrzeuge).
     func masterUnits(_ master: [MasterUnit], excluding units: [MissionUnit]) -> [MasterUnit] {
+        guard !words.isEmpty else { return [] }
         let inMission = Set(units.active.compactMap { $0.callsign?.lowercased() })
-        let candidates = master.filter { !inMission.contains($0.callsign.lowercased()) }
-        let matching = words.isEmpty
-            ? candidates.filter { $0.type.transportsPatients }
-            : candidates.filter { matches("\($0.typeDisplayName) \($0.callsign)") }
+        let matching = master
+            .filter { !inMission.contains($0.callsign.lowercased()) }
+            .filter { matches("\($0.typeDisplayName) \($0.callsign)") }
         return matching.sorted {
             (UnitChoice.typeRank($0.type), $0.callsign) < (UnitChoice.typeRank($1.type), $1.callsign)
         }
@@ -85,7 +85,13 @@ struct UnitPickerSheet: View {
                         )
                     }
 
-                    if !master.isEmpty { masterSection(master) }
+                    if !master.isEmpty {
+                        masterSection(master)
+                    } else if search.text.isEmpty, !masterUnits.isEmpty {
+                        Label("Weitere \(masterUnits.count) Fahrzeuge aus den Stammdaten: oben Funkrufname eintippen.", systemImage: "magnifyingglass")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .padding(Spacing.xl)
             }
@@ -129,11 +135,11 @@ struct UnitPickerSheet: View {
 
     private func masterSection(_ units: [MasterUnit]) -> some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
-            Text(search.text.isEmpty ? "Aus den Stammdaten (Transportmittel)" : "Aus den Stammdaten")
+            Text("Aus den Stammdaten – antippen fügt hinzu und ordnet zu")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: Spacing.s)], spacing: Spacing.s) {
-                ForEach(units) { unit in
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: Spacing.s)], spacing: Spacing.s) {
+                ForEach(units.prefix(24)) { unit in
                     Button { addMaster(unit) } label: {
                         HStack(spacing: Spacing.m) {
                             Text(unit.typeDisplayName)
@@ -143,8 +149,8 @@ struct UnitPickerSheet: View {
                                 .frame(width: 52, height: 36)
                                 .background(Surface.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(unit.callsign).font(.headline).foregroundStyle(.primary).lineLimit(2)
-                                Text("noch nicht im Einsatz · hinzufügen").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                Text(unit.callsign).font(.headline).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
+                                Text("hinzufügen").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             }
                             Spacer(minLength: 0)
                             Image(systemName: "plus.circle").font(.title2).foregroundStyle(ActionFill.primary)

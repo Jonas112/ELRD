@@ -82,7 +82,7 @@ struct UnitAssignmentSection: View {
     private func group(_ title: String, _ items: [UnitChoice], tile: @escaping (UnitChoice) -> UnitChoiceTile) -> some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: Spacing.s)], spacing: Spacing.s) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: Spacing.s)], spacing: Spacing.s) {
                 ForEach(items) { choice in tile(choice) }
             }
         }
@@ -137,7 +137,7 @@ struct UnitChoiceTile: View {
     private var statusText: String {
         switch style {
         case .assigned: "zugeordnet · tippen zum Lösen"
-        case .free: choice.unit.isPlaceholder ? "frei · Fahrzeug noch unbekannt" : "frei"
+        case .free: choice.unit.isPlaceholder ? "frei · Platzhalter" : "frei"
         case .busy: "bei \(choice.otherPatients.joined(separator: ", "))"
         }
     }

@@ -478,7 +478,8 @@ struct PatientDetailView: View {
                     .foregroundStyle(.orange)
                 FlowLayout(spacing: Spacing.s) {
                     ForEach(groups.freeTransport.prefix(3)) { choice in
-                        ChoiceChip("\(choice.unit.typeDisplayName) \(choice.unit.displayName)", isSelected: false, minHeight: 52, background: Surface.elevated) {
+                        ChoiceChip(choice.unit.isPlaceholder ? choice.unit.displayName : "\(choice.unit.typeDisplayName) \(choice.unit.displayName)",
+                                   isSelected: false, minHeight: 52, background: Surface.elevated) {
                             perform(AssignUnit(patientID: patientID, unitID: choice.id))
                         }
                     }
@@ -489,7 +490,7 @@ struct PatientDetailView: View {
             } else {
                 Button { showsUnits = true } label: {
                     HStack {
-                        Text(groups.assigned.map { "\($0.unit.typeDisplayName) \($0.unit.displayName)" }.joined(separator: ", "))
+                        Text(groups.assigned.map { $0.unit.isPlaceholder ? $0.unit.displayName : "\($0.unit.typeDisplayName) \($0.unit.displayName)" }.joined(separator: ", "))
                             .font(.headline)
                             .foregroundStyle(.primary)
                             .multilineTextAlignment(.leading)

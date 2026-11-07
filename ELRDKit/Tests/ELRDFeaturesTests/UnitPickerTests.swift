@@ -20,8 +20,11 @@ struct UnitPickerTests {
 
         var search = UnitPickerSearch()
         #expect(search.filter(choices).count == choices.count)
-        #expect(search.masterUnits(master, excluding: store.state.units).map(\.callsign) == ["RK SWFT 72/1"],
-                "ohne Suche nur Transportmittel, die noch nicht im Einsatz sind")
+        #expect(search.masterUnits(master, excluding: store.state.units).isEmpty, "ohne Suche bleibt die Liste schlank")
+        search.text = "SWFT"
+        #expect(search.masterUnits(master, excluding: store.state.units).map(\.callsign) == ["RK SWFT 72/1", "RK SWFT 76/1"],
+                "nur, was noch nicht im Einsatz ist; Transportmittel zuerst")
+        search.text = ""
         #expect(search.newCallsign(units: store.state.units, master: master) == nil)
 
         search.text = "71"

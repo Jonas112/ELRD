@@ -15,6 +15,8 @@ struct MissionMapView: View {
 
     @AppStorage(MapBaseLayer.storageKey) private var layer: MapBaseLayer = .apple
     @StateObject private var location = LocationAccess()
+    /// Nach der Freigabe gleich den Einsatzort setzen (Schritt 61).
+    @State private var placesMissionAfterPermission = false
     @State private var focus: MapFocusRequest?
     @State private var showsLocationDenied = false
     /// Gewähltes Ziel fürs Fadenkreuz; ohne Einsatzort ist es automatisch der Einsatzort.
@@ -91,6 +93,11 @@ struct MissionMapView: View {
             Text("Den eigenen Standort zeigt die Karte erst, wenn ELRD ihn verwenden darf (Einstellungen → ELRD → Standort).")
         }
         .onChange(of: location.permission) { _, permission in
+            if placesMissionAfterPermission {
+                placesMissionAfterPermission = false
+                if permission == .allowed { placeMissionAtMyLocation() }
+                return
+            }
             if permission == .allowed, focus == nil { focus = MapFocusRequest(target: .user) }
         }
         .alert("Nicht gespeichert", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
@@ -175,6 +182,14 @@ struct MissionMapView: View {
         .accessibilityLabel("Liste mit Abschnitten und Markierungen ausklappen")
     }
 
+    /// Form direkt auf der Karte verschoben oder in der Größe geändert (Schritt 60).
+    private func changeShape(_ id: MapObjectID, _ change: (MapShape) -> MapShape) {
+        guard canEdit, let object = store.state.mapObjects.active.first(where: { $0.id == id }) else { return }
+        let shape = change(object.shape)
+        guard shape != object.shape else { return }
+        _ = perform(EditMapObject(objectID: id, shape: shape))
+    }
+
     private func setPanelCollapsed(_ collapsed: Bool) {
         if reduceMotion {
             sidePanelCollapsed = collapsed
@@ -200,6 +215,8 @@ struct MissionMapView: View {
                 onMoveSection: { id, coordinate in perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate)) },
                 objects: store.state.mapObjects.active,
                 onSelectObject: { editing = EditingMapObject(id: $0) },
+                onMoveObject: { id, coordinate in changeShape(id) { $0.moved(to: coordinate) } },
+                onResizeObject: { id, handle in changeShape(id) { $0.resized(handle: handle) } },
                 attachments: attachments
             )
             .dropDestination(for: String.self) { items, point in
@@ -226,6 +243,23 @@ struct MissionMapView: View {
             }
 
             if !isDrawing { mapControls(mission, showsSectionButton: showsSectionButton) }
+        }
+        .overlay(alignment: .bottomLeading) {
+            if !NetworkStatus.shared.isOnline, !isDrawing, activePlacing(mission) == nil {
+                Label(
+                    layer.tileTemplate == nil
+                        ? "Offline – nur bereits geladene Kartenteile"
+                        : "Offline – Karte aus dem Speicher",
+                    systemImage: "wifi.slash"
+                )
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, Spacing.m)
+                .padding(.vertical, Spacing.s)
+                .background(.regularMaterial, in: Capsule())
+                .padding(Spacing.m)
+                .padding(.bottom, Spacing.xl)
+                .allowsHitTesting(false)
+            }
         }
         .overlay(alignment: .bottom) {
             if isDrawing {
@@ -452,6 +486,20 @@ struct MissionMapView: View {
                         .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                         .buttonStyle(.plain)
                 }
+                if target == .mission {
+                    // Schritt 61: Einsatzort = eigener Standort (beim Eintreffen).
+                    Button(action: placeMissionAtMyLocation) {
+                        Label(location.isLocating ? "Orte …" : "Mein Standort", systemImage: "location.fill")
+                            .font(.headline)
+                            .lineLimit(1)
+                            .padding(.horizontal, Spacing.m)
+                            .frame(minHeight: TouchTarget.comfortable)
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(location.isLocating)
+                    .accessibilityLabel("Einsatzort auf meinen Standort setzen")
+                }
                 Button { place(target) } label: {
                     Label("\(name) hier", systemImage: target == .mission ? "flag.fill" : "square.stack.3d.up.fill")
                         .font(.headline)
@@ -550,6 +598,28 @@ struct MissionMapView: View {
             MapControlLabel(title: layer.shortTitle, systemImage: "square.3.layers.3d")
         }
         .accessibilityLabel("Kartengrundlage: \(layer.title)")
+    }
+
+    /// Einsatzort auf den eigenen Standort setzen; fragt bei Bedarf nach der Freigabe.
+    private func placeMissionAtMyLocation() {
+        switch location.permission {
+        case .denied:
+            showsLocationDenied = true
+        case .unknown:
+            placesMissionAfterPermission = true
+            location.request()
+        case .allowed:
+            Task {
+                guard let coordinate = await location.currentCoordinate() else {
+                    errorMessage = "Standort gerade nicht bestimmbar (z. B. in Gebäuden). Bitte Karte verschieben und „Einsatzort hier“ tippen."
+                    return
+                }
+                if perform(SetMissionCoordinate(coordinate)) {
+                    placing = nil
+                    focus = MapFocusRequest(target: .coordinate(coordinate))
+                }
+            }
+        }
     }
 
     private func locateMe() {

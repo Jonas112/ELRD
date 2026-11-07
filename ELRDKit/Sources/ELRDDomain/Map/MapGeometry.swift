@@ -55,6 +55,51 @@ public extension MapShape {
         }
     }
 
+    /// Kleinste Größe beim Ziehen am Griff (Schritt 60).
+    static let minimumSizeMeters = 5.0
+
+    /// Stelle des Griffs zum Ändern der Größe: Kreis am Ostrand, Rechteck und
+    /// Zeichnung an der Südost-Ecke.
+    var resizeHandle: GeoCoordinate? {
+        switch self {
+        case let .circle(center, radius):
+            let perLongitude = metersPerDegreeLongitude(at: center.latitude)
+            guard perLongitude > 1 else { return nil }
+            return GeoCoordinate(latitude: center.latitude, longitude: center.longitude + radius / perLongitude)
+        case let .rectangle(bounds), let .drawing(bounds, _):
+            return GeoCoordinate(latitude: bounds.south, longitude: bounds.east)
+        }
+    }
+
+    /// Neue Form, nachdem der Griff an `handle` gezogen wurde. Kreis: Mittelpunkt
+    /// bleibt, Radius = Abstand zum Griff. Rechteck/Zeichnung: Nordwest-Ecke bleibt.
+    func resized(handle: GeoCoordinate) -> MapShape {
+        switch self {
+        case let .circle(center, _):
+            let perLongitude = metersPerDegreeLongitude(at: center.latitude)
+            let dx = (handle.longitude - center.longitude) * perLongitude
+            let dy = (handle.latitude - center.latitude) * metersPerDegreeLatitude
+            let radius = max((dx * dx + dy * dy).squareRoot(), Self.minimumSizeMeters)
+            return .circle(center: center, radiusMeters: radius)
+        case let .rectangle(bounds):
+            return .rectangle(bounds: Self.resize(bounds, to: handle))
+        case let .drawing(bounds, image):
+            return .drawing(bounds: Self.resize(bounds, to: handle), image: image)
+        }
+    }
+
+    private static func resize(_ bounds: GeoBounds, to handle: GeoCoordinate) -> GeoBounds {
+        let perLongitude = metersPerDegreeLongitude(at: bounds.north)
+        let minLatitude = minimumSizeMeters / metersPerDegreeLatitude
+        let minLongitude = perLongitude > 1 ? minimumSizeMeters / perLongitude : minLatitude
+        return GeoBounds(
+            north: bounds.north,
+            south: min(handle.latitude, bounds.north - minLatitude),
+            east: max(handle.longitude, bounds.west + minLongitude),
+            west: bounds.west
+        ) ?? bounds
+    }
+
     /// Größe als Text, z. B. „Radius 100 m“ oder „200 × 100 m“.
     var sizeText: String {
         switch self {

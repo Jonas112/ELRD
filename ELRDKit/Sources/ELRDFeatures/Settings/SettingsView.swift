@@ -151,6 +151,8 @@ struct GeneralSettingsView: View {
                 Text("Empfänger für „Bericht an ILS“.")
             }
 
+            MapCacheSection()
+
             Section("Standardbericht") {
                 Picker("Vorlage", selection: Binding(
                     get: { settings.defaultReportTemplateID ?? ReportTemplateLibrary.fullID },
@@ -364,3 +366,36 @@ struct IVENASettingsView: View {
         do { try store?.update(change) } catch { errorMessage = ErrorText.message(for: error) }
     }
 }
+
+/// Speicher der Kartenkacheln (Schritt 59): Größe und Leeren.
+private struct MapCacheSection: View {
+    @State private var bytes: Int?
+
+    var body: some View {
+        Section {
+            HStack {
+                Text("Gespeicherte Kartenkacheln")
+                Spacer()
+                Text(bytes.map { ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .file) } ?? "…")
+                    .foregroundStyle(.secondary)
+            }
+            Button("Kartenspeicher leeren", role: .destructive) {
+                TileDiskCache.shared.clear()
+                bytes = 0
+            }
+            .disabled(bytes == 0)
+        } header: {
+            Text("Offline-Karte")
+        } footer: {
+            Text("OpenStreetMap und Topografisch bleiben dort verfügbar, wo die Karte schon einmal angesehen wurde – auch ohne Netz. Höchstens 300 MB, älteste Kacheln werden zuerst entfernt.")
+        }
+        .task {
+            let cache = TileDiskCache.shared
+            bytes = await Task.detached { () -> Int in
+                cache.prune()
+                return cache.sizeInBytes()
+            }.value
+        }
+    }
+}
+

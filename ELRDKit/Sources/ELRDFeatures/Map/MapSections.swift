@@ -88,6 +88,30 @@ final class MapObjectAnnotation: NSObject, MKAnnotation {
     }
 }
 
+/// Griff zum Ändern der Größe (Kreis: Ostrand, Rechteck: Südost-Ecke).
+final class MapResizeHandle: NSObject, MKAnnotation {
+    let objectID: MapObjectID
+    @objc dynamic var coordinate: CLLocationCoordinate2D
+
+    init(objectID: MapObjectID, coordinate: CLLocationCoordinate2D) {
+        self.objectID = objectID
+        self.coordinate = coordinate
+        super.init()
+    }
+
+    /// Weißer Punkt mit Rand, groß genug zum Greifen (30 pt).
+    @MainActor static let image: UIImage = UIGraphicsImageRenderer(size: CGSize(width: 30, height: 30)).image { context in
+        let rect = CGRect(x: 3, y: 3, width: 24, height: 24)
+        UIColor.white.setFill()
+        context.cgContext.fillEllipse(in: rect)
+        UIColor.systemBlue.setStroke()
+        context.cgContext.setLineWidth(3)
+        context.cgContext.strokeEllipse(in: rect)
+        UIColor.systemBlue.setFill()
+        context.cgContext.fillEllipse(in: rect.insetBy(dx: 8, dy: 8))
+    }
+}
+
 /// Farben für Markierungen (wie ELRDRG: Rot als Standard).
 enum MapObjectPalette {
     static let colors: [(name: String, color: RGBColor)] = [

@@ -20,6 +20,15 @@
 				<string>CA92.1</string>
 			</array>
 		</dict>
+		<dict>
+			<!-- Änderungsdatum der zwischengespeicherten Kartenkacheln im App-Container (Schritt 59). -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

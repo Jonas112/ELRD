@@ -36,6 +36,10 @@ struct MapCanvas: UIViewRepresentable {
     var objects: [MapObject] = []
     /// Beschriftung eines Kartenobjekts angetippt.
     var onSelectObject: (MapObjectID) -> Void = { _ in }
+    /// Objekt an seiner Beschriftung verschoben (Schritt 60).
+    var onMoveObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
+    /// Griff eines Objekts gezogen: neue Größe (Schritt 60).
+    var onResizeObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
     /// Dateiablage für Zeichnungen.
     var attachments: AttachmentFileStore?
 
@@ -90,6 +94,8 @@ struct MapCanvas: UIViewRepresentable {
         context.coordinator.apply(layer: layer, to: map)
         context.coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
         context.coordinator.onSelectObject = onSelectObject
+        context.coordinator.onMoveObject = onMoveObject
+        context.coordinator.onResizeObject = onResizeObject
         context.coordinator.attachments = attachments
         context.coordinator.updateSections(sections, on: map)
         context.coordinator.updateObjects(objects, on: map)
@@ -105,6 +111,8 @@ struct MapCanvas: UIViewRepresentable {
         coordinator.apply(layer: layer, to: map)
         coordinator.updateMissionMarker(missionCoordinate, title: missionTitle, on: map)
         coordinator.onSelectObject = onSelectObject
+        coordinator.onMoveObject = onMoveObject
+        coordinator.onResizeObject = onResizeObject
         coordinator.attachments = attachments
         coordinator.updateSections(sections, on: map)
         coordinator.updateObjects(objects, on: map)
@@ -133,21 +141,28 @@ struct MapCanvas: UIViewRepresentable {
         var canEdit = false
         private var sectionAnnotations: [SectionID: SectionAnnotation] = [:]
         var onSelectObject: (MapObjectID) -> Void = { _ in }
+        var onMoveObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
+        var onResizeObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
         var attachments: AttachmentFileStore?
-        /// Gezeichnete Objekte: Stand, Fläche und Beschriftung je Kennung.
-        private var drawn: [MapObjectID: (object: MapObject, overlay: any MKOverlay, label: MapObjectAnnotation)] = [:]
+        /// Gezeichnete Objekte: Stand, Fläche, Beschriftung und Größen-Griff je Kennung.
+        private var drawn: [MapObjectID: (object: MapObject, overlay: any MKOverlay, label: MapObjectAnnotation, handle: MapResizeHandle?)] = [:]
+        /// Bearbeiten erlaubt, als die Objekte gezeichnet wurden (Griffe nur dann).
+        private var drawnWithEditing = false
         /// Farbe je Fläche (für den Renderer).
         private var overlayColors: [ObjectIdentifier: RGBColor] = [:]
 
         /// Gleicht Kreise und Rechtecke ab; geänderte werden neu gezeichnet.
         func updateObjects(_ objects: [MapObject], on map: MKMapView) {
             let wanted = Dictionary(objects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            let editingChanged = drawnWithEditing != canEdit
+            drawnWithEditing = canEdit
             for (id, entry) in drawn {
                 let current = wanted[id]
                 let unchanged = current.map { $0.shape == entry.object.shape && $0.color == entry.object.color && $0.displayName == entry.object.displayName } ?? false
-                guard !unchanged else { continue }
+                guard !unchanged || editingChanged else { continue }
                 map.removeOverlay(entry.overlay)
                 map.removeAnnotation(entry.label)
+                if let handle = entry.handle { map.removeAnnotation(handle) }
                 overlayColors[ObjectIdentifier(entry.overlay)] = nil
                 drawn[id] = nil
             }
@@ -157,7 +172,13 @@ struct MapCanvas: UIViewRepresentable {
                 overlayColors[ObjectIdentifier(shapeOverlay)] = object.color
                 map.addOverlay(shapeOverlay, level: .aboveLabels)
                 map.addAnnotation(label)
-                drawn[object.id] = (object, shapeOverlay, label)
+                var handle: MapResizeHandle?
+                if canEdit, let position = object.shape.resizeHandle {
+                    let created = MapResizeHandle(objectID: object.id, coordinate: position.clLocation)
+                    map.addAnnotation(created)
+                    handle = created
+                }
+                drawn[object.id] = (object, shapeOverlay, label, handle)
             }
         }
 
@@ -216,9 +237,14 @@ struct MapCanvas: UIViewRepresentable {
             switch newState {
             case .ending:
                 view.setDragState(.none, animated: true)
-                if let annotation = view.annotation as? SectionAnnotation,
-                   let moved = GeoCoordinate(latitude: annotation.coordinate.latitude, longitude: annotation.coordinate.longitude) {
-                    onMoveSection(annotation.sectionID, moved)
+                guard let annotation = view.annotation,
+                      let moved = GeoCoordinate(latitude: annotation.coordinate.latitude, longitude: annotation.coordinate.longitude) else { break }
+                if let section = annotation as? SectionAnnotation {
+                    onMoveSection(section.sectionID, moved)
+                } else if let label = annotation as? MapObjectAnnotation {
+                    onMoveObject(label.objectID, moved)
+                } else if let handle = annotation as? MapResizeHandle {
+                    onResizeObject(handle.objectID, moved)
                 }
             case .canceling:
                 view.setDragState(.none, animated: true)
@@ -245,8 +271,11 @@ struct MapCanvas: UIViewRepresentable {
             case .hybrid: map.mapType = .hybrid
             case .openStreetMap, .openTopoMap: map.mapType = .standard
             }
-            if let template = layer.tileTemplate {
-                let overlay = MKTileOverlay(urlTemplate: template)
+            if layer.tileTemplate != nil {
+                // Mit Speicher: Kacheln bleiben offline verfügbar (Schritt 59).
+                let overlay = CachingTileOverlay(layer: layer)
+                let cache = TileDiskCache.shared
+                Task.detached(priority: .background) { cache.prune() }
                 overlay.canReplaceMapContent = true
                 overlay.maximumZ = layer.maximumZoom
                 map.addOverlay(overlay, level: .aboveLabels)
@@ -309,7 +338,20 @@ struct MapCanvas: UIViewRepresentable {
                 view.glyphImage = UIImage(systemName: "pencil")
                 view.titleVisibility = .visible
                 view.displayPriority = .defaultHigh
-                view.isDraggable = false
+                // Halten und Ziehen verschiebt die ganze Form (Schritt 60).
+                view.isDraggable = canEdit
+                return view
+            }
+            if let handle = annotation as? MapResizeHandle {
+                let identifier = "resize"
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                    ?? MKAnnotationView(annotation: handle, reuseIdentifier: identifier)
+                view.annotation = handle
+                view.image = MapResizeHandle.image
+                view.displayPriority = .required
+                view.isDraggable = canEdit
+                view.canShowCallout = false
+                view.accessibilityLabel = "Größe ändern: halten und ziehen"
                 return view
             }
             if let section = annotation as? SectionAnnotation {

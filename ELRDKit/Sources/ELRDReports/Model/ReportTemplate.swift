@@ -83,6 +83,8 @@ public struct ReportChapterOptions: Codable, Hashable, Sendable {
     // Tagebuch und Protokoll (Schritt 43)
     /// Bilder im Tagebuch (Größe in Punkt; 0 = keine Bilder).
     public var journalImageHeight: Double = 220
+    /// Protokoll nur dieser Bereiche (leer = alle).
+    public var logCategories: Set<LogCategory> = []
 
     public init() {}
 
@@ -97,6 +99,7 @@ public struct ReportChapterOptions: Codable, Hashable, Sendable {
         usesPatientSheets = try container.decodeIfPresent(Bool.self, forKey: .usesPatientSheets) ?? defaults.usesPatientSheets
         showsPatientNames = try container.decodeIfPresent(Bool.self, forKey: .showsPatientNames) ?? defaults.showsPatientNames
         journalImageHeight = try container.decodeIfPresent(Double.self, forKey: .journalImageHeight) ?? defaults.journalImageHeight
+        logCategories = try container.decodeIfPresent(Set<LogCategory>.self, forKey: .logCategories) ?? defaults.logCategories
     }
 }
 

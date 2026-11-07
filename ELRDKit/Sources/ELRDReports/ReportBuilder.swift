@@ -11,7 +11,9 @@ public enum ReportBuilder {
             switch chapter.kind {
             case .missionInfo: chapterBlocks = MissionInfoChapter.blocks(input, options: chapter.options, theme: template.theme)
             case .organisation: chapterBlocks = OrganisationChapter.blocks(input, options: chapter.options)
-            case .patients, .journal, .log: chapterBlocks = [] // Schritte 42 und 43
+            case .patients: chapterBlocks = PatientsChapter.blocks(input, options: chapter.options, theme: template.theme)
+            case .journal: chapterBlocks = JournalChapter.blocks(input, options: chapter.options)
+            case .log: chapterBlocks = LogChapter.blocks(input, options: chapter.options)
             }
             guard !chapterBlocks.isEmpty else { continue }
             if !blocks.isEmpty { blocks.append(.spacer(10)) }

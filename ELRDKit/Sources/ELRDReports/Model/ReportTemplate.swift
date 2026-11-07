@@ -79,6 +79,9 @@ public struct ReportChapterOptions: Codable, Hashable, Sendable {
     public var usesPatientSheets: Bool = false
     /// Namen im Bericht zeigen (Datenschutz: aus = nur Nummer, Alter, Geschlecht).
     public var showsPatientNames: Bool = true
+    /// Nur Patienten für diese Zielklinik (Name; `nil` = alle). Für den Bericht an
+    /// eine Klinik: sie erhält nur ihre Patienten (Schritt 56).
+    public var destinationFilter: String?
 
     // Tagebuch und Protokoll (Schritt 43)
     /// Bilder im Tagebuch (Größe in Punkt; 0 = keine Bilder).
@@ -98,6 +101,7 @@ public struct ReportChapterOptions: Codable, Hashable, Sendable {
         triageFilter = try container.decodeIfPresent(Set<Sichtungskategorie>.self, forKey: .triageFilter) ?? defaults.triageFilter
         usesPatientSheets = try container.decodeIfPresent(Bool.self, forKey: .usesPatientSheets) ?? defaults.usesPatientSheets
         showsPatientNames = try container.decodeIfPresent(Bool.self, forKey: .showsPatientNames) ?? defaults.showsPatientNames
+        destinationFilter = try container.decodeIfPresent(String.self, forKey: .destinationFilter)
         journalImageHeight = try container.decodeIfPresent(Double.self, forKey: .journalImageHeight) ?? defaults.journalImageHeight
         logCategories = try container.decodeIfPresent(Set<LogCategory>.self, forKey: .logCategories) ?? defaults.logCategories
     }
@@ -140,5 +144,44 @@ public struct ReportInput: Sendable {
         self.createdAt = createdAt
         self.createdBy = createdBy
         self.imageData = imageData
+    }
+}
+
+// MARK: - Zielkliniken (Schritt 56)
+
+/// Zielkliniken der Patienten eines Einsatzes, für die Auswahl „nur für Klinik …“.
+public struct ReportDestination: Hashable, Sendable, Identifiable {
+    public let name: String
+    public let patientCount: Int
+    public var id: String { name }
+
+    /// Gleiche Klinik trotz anderer Schreibweise (Groß/klein, Leerzeichen).
+    static func key(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    /// Gleiche Klinik (Schreibweise egal).
+    public static func sameHospital(_ lhs: String, _ rhs: String) -> Bool {
+        key(lhs) == key(rhs)
+    }
+
+    public static func matches(_ patient: Patient, filter: String) -> Bool {
+        guard let name = patient.destination?.name else { return false }
+        return key(name) == key(filter)
+    }
+
+    /// Kliniken mit mindestens einem (nicht gelöschten) Patienten, meiste zuerst.
+    public static func all(in patients: [Patient]) -> [ReportDestination] {
+        var names: [String: String] = [:]
+        var counts: [String: Int] = [:]
+        for patient in patients where !patient.isDeleted {
+            guard let name = patient.destination?.name, !key(name).isEmpty else { continue }
+            let normalized = key(name)
+            names[normalized] = names[normalized] ?? name.trimmingCharacters(in: .whitespacesAndNewlines)
+            counts[normalized, default: 0] += 1
+        }
+        return counts
+            .map { ReportDestination(name: names[$0.key] ?? $0.key, patientCount: $0.value) }
+            .sorted { ($0.patientCount, $1.name) > ($1.patientCount, $0.name) }
     }
 }

@@ -79,8 +79,8 @@ struct ReportEditorView: View {
             if let pdf {
                 MailComposer(
                     recipient: settings?.settings.ilsEmail.trimmingCharacters(in: .whitespaces) ?? "",
-                    subject: "\(template.name) Einsatz \(store.state.mission.displayNumber()) – \(store.state.mission.title)",
-                    body: "Im Anhang der \(template.name) zum Einsatz \(store.state.mission.displayNumber()).\n\n\(store.sessionDisplayName)",
+                    subject: "\(reportTitle) Einsatz \(store.state.mission.displayNumber()) – \(store.state.mission.title)",
+                    body: "Im Anhang der \(reportTitle) zum Einsatz \(store.state.mission.displayNumber()).\n\n\(store.sessionDisplayName)",
                     attachment: pdf,
                     fileName: fileName,
                     onFinish: { showsMail = false }
@@ -180,7 +180,11 @@ struct ReportEditorView: View {
             }
             .buttonStyle(.bordered)
             if expanded == chapter.kind {
-                ReportChapterOptionsView(kind: chapter.kind, options: $template.chapters[index].options)
+                ReportChapterOptionsView(
+                    kind: chapter.kind,
+                    options: $template.chapters[index].options,
+                    destinations: ReportDestination.all(in: store.state.patients)
+                )
                     .padding(.leading, Spacing.s)
             }
         }
@@ -258,8 +262,14 @@ struct ReportEditorView: View {
         .disabled(pdf == nil)
     }
 
+    /// Vorlagenname, beim Bericht für eine Klinik mit deren Namen.
+    private var reportTitle: String {
+        let destination = template.chapters.first { $0.kind == .patients && $0.isEnabled }?.options.destinationFilter
+        return destination.map { "\(template.name) \($0)" } ?? template.name
+    }
+
     private var fileName: String {
-        ReportFileName.make(template: template.name, mission: store.state.mission, date: Date())
+        ReportFileName.make(template: reportTitle, mission: store.state.mission, date: Date())
     }
 
     private func sendMail() {
@@ -339,6 +349,8 @@ struct ReportEditorView: View {
 struct ReportChapterOptionsView: View {
     let kind: ReportChapter.Kind
     @Binding var options: ReportChapterOptions
+    /// Zielkliniken der Patienten (Auswahl „nur für Klinik“).
+    var destinations: [ReportDestination] = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
@@ -352,6 +364,24 @@ struct ReportChapterOptionsView: View {
             case .patients:
                 Toggle("Einzelbogen je Patient", isOn: $options.usesPatientSheets)
                 Toggle("Namen zeigen", isOn: $options.showsPatientNames)
+                if !destinations.isEmpty || options.destinationFilter != nil {
+                    Text("Nur Patienten für Zielklinik").font(.subheadline).foregroundStyle(.secondary)
+                    FlowLayout(spacing: Spacing.s) {
+                        ChoiceChip("Alle", isSelected: options.destinationFilter == nil, minHeight: TouchTarget.minimum) {
+                            options.destinationFilter = nil
+                        }
+                        ForEach(destinations) { destination in
+                            let selected = options.destinationFilter.map { ReportDestination.sameHospital($0, destination.name) } ?? false
+                            ChoiceChip("\(destination.name) (\(destination.patientCount))", isSelected: selected, minHeight: TouchTarget.minimum) {
+                                options.destinationFilter = destination.name
+                            }
+                        }
+                        if let filter = options.destinationFilter,
+                           !destinations.contains(where: { ReportDestination.sameHospital($0.name, filter) }) {
+                            ChoiceChip("\(filter) (0)", isSelected: true, minHeight: TouchTarget.minimum) {}
+                        }
+                    }
+                }
                 Text("Nur Sichtungskategorien (keine = alle)").font(.subheadline).foregroundStyle(.secondary)
                 FlowLayout(spacing: Spacing.s) {
                     ForEach([Sichtungskategorie.sk1, .sk2, .sk3, .ungesichtet, .unverletzt, .verstorben], id: \.self) { triage in

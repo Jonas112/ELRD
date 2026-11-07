@@ -7,6 +7,9 @@ enum PatientsChapter {
     static func blocks(_ input: ReportInput, options: ReportChapterOptions, theme: ReportTheme) -> [ReportBlock] {
         let patients = selected(input.patients, options: options)
         var blocks: [ReportBlock] = [.heading(ReportChapter.Kind.patients.displayName, level: 1)]
+        if let destination = options.destinationFilter {
+            blocks.append(.paragraph("Nur Patienten für: \(destination)", style: .muted))
+        }
         if !options.triageFilter.isEmpty {
             let names = Sichtungskategorie.allCases.filter { options.triageFilter.contains($0) }.map(\.shortName)
             blocks.append(.paragraph("Auswahl: \(names.joined(separator: ", "))", style: .muted))
@@ -28,7 +31,10 @@ enum PatientsChapter {
     }
 
     static func selected(_ patients: [Patient], options: ReportChapterOptions) -> [Patient] {
-        let filtered = options.triageFilter.isEmpty ? patients : patients.filter { options.triageFilter.contains($0.triage) }
+        var filtered = options.triageFilter.isEmpty ? patients : patients.filter { options.triageFilter.contains($0.triage) }
+        if let destination = options.destinationFilter {
+            filtered = filtered.filter { ReportDestination.matches($0, filter: destination) }
+        }
         return Patient.sortedByTriage(filtered)
     }
 

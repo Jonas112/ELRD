@@ -299,9 +299,16 @@ struct SituationBar: View {
                         MessagesBellButton(unread: unreadMessages, action: onMessages)
                         if let account { AccountAvatarMenu(account: account) }
                     }
-                    HStack(spacing: Spacing.s) {
-                        counters(compact: true)
-                        addButton
+                    // iPhone: schmalere Zähler und „+“ ohne Text, damit alles in eine Zeile passt.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: Spacing.s) {
+                            counters(compact: true)
+                            addButton
+                        }
+                        HStack(spacing: Spacing.xs) {
+                            counters(compact: true, minWidth: 48)
+                            addPatientButton(iconOnly: true)
+                        }
                     }
                 }
                 .padding(.horizontal, Spacing.l)
@@ -362,20 +369,28 @@ struct SituationBar: View {
         return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    @ViewBuilder private func counters(compact: Bool) -> some View {
+    @ViewBuilder private func counters(compact: Bool, minWidth: CGFloat = 72) -> some View {
         ForEach(Self.counterOrder, id: \.self) { category in
-            TriageCounterButton(category: category, count: counts[category] ?? 0, fillsWidth: compact) {
+            TriageCounterButton(category: category, count: counts[category] ?? 0, fillsWidth: compact, minWidth: minWidth) {
                 onTriage(category)
             }
         }
     }
 
-    private var addButton: some View {
+    private var addButton: some View { addPatientButton(iconOnly: false) }
+
+    private func addPatientButton(iconOnly: Bool) -> some View {
         Button { showsQuickAdd = true } label: {
-            Label("Patient", systemImage: "plus")
+            Group {
+                if iconOnly {
+                    Image(systemName: "plus").frame(width: 28)
+                } else {
+                    Label("Patient", systemImage: "plus")
+                }
+            }
                 .font(.title3.weight(.heavy))
                 .foregroundStyle(.white)
-                .padding(.horizontal, Spacing.l)
+                .padding(.horizontal, iconOnly ? Spacing.m : Spacing.l)
                 .frame(minHeight: layout == .rail ? 64 : TouchTarget.comfortable)
                 .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
@@ -396,6 +411,8 @@ struct TriageCounterButton: View {
     let category: Sichtungskategorie
     let count: Int
     var fillsWidth = false
+    /// Mindestbreite (iPhone: schmaler).
+    var minWidth: CGFloat = 72
     let action: () -> Void
 
     var body: some View {
@@ -408,7 +425,7 @@ struct TriageCounterButton: View {
                     .monospacedDigit()
             }
             .foregroundStyle(Color.onTriage(category))
-            .frame(minWidth: 72, maxWidth: fillsWidth ? .infinity : 88, minHeight: fillsWidth ? TouchTarget.comfortable : 64)
+            .frame(minWidth: minWidth, maxWidth: fillsWidth ? .infinity : 88, minHeight: fillsWidth ? TouchTarget.comfortable : 64)
             .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)

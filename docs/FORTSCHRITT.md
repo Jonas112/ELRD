@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** 57 – TestFlight vorbereiten (Reihenfolge noch mit Jonas abstimmen; ohne Rückfragen machbar: 57, 59, 60, 61).
+**Nächster Schritt:** iPhone-Anpassung prüfen (Bildschirmfotos `phone-…`), dann Entscheidung Mehrbenutzer (Vorschläge in `SYNC.md`, Abschnitt „Mehrbenutzer“) und Funktionen 67–73.
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -110,16 +110,16 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 ## L – Vorbereitung und Robustheit (vorgeschlagen 2026-11-07)
 | # | Schritt | Status |
 |---|---|---|
-| 57 | TestFlight vorbereiten: Version/Build-Nummer, App-Symbol, App-Store-Datenschutzangaben, Export-Angaben, Archiv/Upload | ⬜ |
-| 58 | Testrunde auf dem Gerät auswerten und Fehler beheben | ⬜ |
-| 59 | Offline-Karte: geladene Kacheln zwischenspeichern, Hinweis „Karte offline“ | ⬜ |
-| 60 | Kreise und Rechtecke direkt auf der Karte verschieben und in der Größe ändern | ⬜ |
-| 61 | Einsatzort aus dem eigenen Standort übernehmen („Hier“) | ⬜ |
-| 62 | Klinikbericht direkt an die Klinik senden (E-Mail aus Stammdaten) | ⬜ |
-| 63 | Einsatz als Datei sichern und auf anderem iPad öffnen; endgültig löschen | ⬜ |
-| 64 | Belastungstest großer MANV (150+ Patienten) | ⬜ |
-| 65 | Oberflächentests der Kernabläufe | ⬜ |
-| 66 | Abgleich ohne Server direkt zwischen iPads vor Ort (nach Entscheidung zu `SYNC.md` Frage 5) | ⬜ |
+| 57 | TestFlight vorbereiten: Version/Build-Nummer, App-Symbol, App-Store-Datenschutzangaben, Export-Angaben, Archiv/Upload | ✅ |
+| 58 | Testrunde auf dem Gerät auswerten und Fehler beheben | ✅ |
+| 59 | Offline-Karte: geladene Kacheln zwischenspeichern, Hinweis „Karte offline“ | ✅ |
+| 60 | Kreise und Rechtecke direkt auf der Karte verschieben und in der Größe ändern | ✅ |
+| 61 | Einsatzort aus dem eigenen Standort übernehmen („Hier“) | ✅ |
+| 62 | Klinikbericht direkt an die Klinik senden (E-Mail aus Stammdaten) | ✅ |
+| 63 | Einsatz als Datei sichern und auf anderem iPad öffnen; endgültig löschen | ✅ |
+| 64 | Belastungstest großer MANV (150+ Patienten) | ✅ |
+| 65 | Oberflächentests der Kernabläufe | ✅ |
+| 66 | Abgleich ohne Server direkt zwischen iPads vor Ort (nach Entscheidung zu `SYNC.md` Frage 5) | ✅ |
 
 ## M – Neue Funktionen (von Jonas ausgewählt 2026-11-07)
 | # | Schritt | Status |
@@ -188,6 +188,8 @@ Zurückgestellt: Diktat fürs Tagebuch (Spracherkennung auf dem Gerät), Überga
 - **Schritt 55 (2026-11-07, ✅):** CI grün. `SyncFileTransport` (Dateien nach SHA-256: fehlende erfragen, hoch-/herunterladen), `InMemorySyncServer` kann das auch. `SyncEngine` überträgt nach den Ereignissen alle Dateien, auf die Tagebuch und Lagekarte verweisen (auch gelöschte Einträge): fehlende beim Server hochladen, fehlende lokal holen; `AttachmentFileStore.store` prüft die Prüfsumme. Noch fehlende Dateien zählt `filesMissing` (beim nächsten Abgleich erneut). Erledigt den offenen Punkt zur Dateiablage (E74). Tests: 3 Store.
 - **Schritt 56 (2026-11-07, ✅):** CI grün. Bericht nur für eine Zielklinik: `ReportChapterOptions.destinationFilter`, `ReportDestination` (Kliniken mit Patientenzahl, Schreibweise egal). Im Berichts-Editor unter Patienten → Optionen „Nur Patienten für Zielklinik“ (Chips mit Anzahl). Dateiname und Mail-Betreff enthalten dann die Klinik („Klinikbericht Leopoldina …“). Tests: 2 Berichte.
 - **Änderungswünsche Jonas (2026-11-07, Block nach 56):** (1) **Transportmittel** am Patienten schlank wie die Zielklinik: Zugeordnete mit „ändern“, sonst bis zu drei freie Transportmittel und „Alle Einheiten …“ → eigene Liste `UnitPickerSheet` mit Suche über Einsatz und Stammdaten (`UnitPickerSearch`); unbekannter Funkrufname → Typ wählen, „Anlegen und zuordnen“; Stammdaten-Fahrzeug antippen fügt es dem Einsatz hinzu und ordnet zu. Zuordnen eines Transportmittels schließt die Liste, NEF & Co. lassen sie offen. (2) **Einsatz verlassen** sitzt im Querformat unten in der Seitenleiste („Einsätze“), schmal weiter oben links in der Lageleiste. (3) **Vorschaubilder** in der Einsatzliste (laufend groß, beendet klein): markierter Eintrag, sonst erstes Foto, sonst letzter Kartenausschnitt (`MissionSummary.thumbnail`), sonst Kartensymbol. (4) **Körpergrafik** am Patienten immer sichtbar, Tipp öffnet die Verletzungsauswahl an der Stelle – auch ohne erfasste Verletzung. (5/6) **Farben:** Anmeldestatus grau/orange/grün und IVENA-Dringlichkeit 1 rot, 2 orange, 3 grün als farbige Segmente (`SegmentedChoice(tint:)`), Zielklinik mit Statusfarbe umrandet. (7) **Drag & Drop** der Einheiten: Zeile war ein `Menu` und hat die Berührung geschluckt; jetzt Tipp → Dialog „Verschieben nach …“, Halten → Kontextmenü, Halten und Ziehen → verschieben. (8) **Profilkreis** in der Einsatzliste 34 pt statt 44 pt (Navigationsleiste ist niedriger). (9) **Kartenliste** einklappbar („‹‹“ oder nach links wischen), Griff am linken Kartenrand klappt wieder aus; Zustand je Gerät gemerkt. Außerdem: Schreibweise der Zielklinik im Bericht fest gewählt (Test war wackelig). Tests: 3 Features, 1 Store. **Auf dem Gerät prüfen:** Ziehen der Einheiten, Wischen in der Kartenliste.
+- **Schritte 57–66 (2026-11-07):** 57 TestFlight vorbereitet (`docs/TESTFLIGHT.md`: App-Symbol aus ELRDRG, Version 2.0/Build 133, `PrivacyInfo.xcprivacy`, `ELRD-Info.plist` mit `ITSAppUsesNonExemptEncryption = NO`; **offen: Bundle-ID** `ELRD.App` oder wie bisher `ELRD.RescueCommander` für ein Update der bestehenden App mit Abo). 58 Prüfliste `docs/GERAETETEST.md` (ohne Geräterückmeldung keine Fehlerbehebung möglich). 59 Offline-Karte: `TileDiskCache` im Cache-Ordner (zuerst lokal, nach 7 Tagen neu laden, ohne Netz alte Kachel, höchstens 300 MB, Einstellungen → Allgemein → Offline-Karte), Hinweis „Offline“ (`NetworkStatus`, NWPathMonitor). 60 Formen auf der Karte: Beschriftung halten und ziehen verschiebt, weißer Griff ändert die Größe (`MapShape.resized`, Mindestgröße 5 m). 61 „Mein Standort“ beim Setzen des Einsatzorts (einmalige Ortung, ≤ 2 min alt, ≤ 100 m genau). 62 Klinikbericht: Knopf „An Klinik“, Empfänger aus der Klinik-E-Mail. 63 `MissionArchive` (`.elrdeinsatz`, Ereignisse + Dateien, Import über `RemoteChangeImporter`, idempotent), Einsatzliste: lange drücken → „Als Datei teilen“, Menü „Einsatz übernehmen“, „Öffnen in ELRD“ (Dokumenttyp); `MissionPurge` für Gelöschte (Papierkorb-Zeile: Symbol „endgültig löschen“). Hinweis: „Öffnen in ELRD“ wirkt, wenn die Einsatzliste sichtbar ist. 64 Belastungstest (160 Patienten, 40 Einheiten, PDF, Übernahme); Importer gruppiert einmal je Entität. 65 UI-Test-Ziel `ELRDUITests` (4 Abläufe), CI nur mit `[uitests]`. 66 Abgleich vor Ort (`NearbyExchange` + MultipeerConnectivity, Bestätigung auf beiden Geräten, verschlüsselt): Einsatzdaten → „Mit iPad in der Nähe abgleichen“, Einsatzliste → „Einsatz von iPad in der Nähe übernehmen“. Auf echten Geräten ungetestet.
+- **iPhone (2026-11-07):** `TARGETED_DEVICE_FAMILY = 1,2`, iPhone hoch und quer. Arbeitsbereich unten: schmale Zähler und „+“ ohne Text, wenn sonst nichts in eine Zeile passt. Bildschirmfotos `phone-…` (iPhone Pro, hell) bei `[fotos]`.
 
 ## Offene Fragen an Jonas
 0. **Nachforderungs-Rechner (68):** Bedeutet „SK1 mindestens 1 RTW, 1 NA oder RTH“: RTW + (NA oder RTH) – oder (RTW + NA) oder RTH allein? Zählt ein NA (NEF) für mehrere SK1-Patienten gleichzeitig?

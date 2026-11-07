@@ -65,3 +65,39 @@ Fehler werden auf `SyncError` abgebildet: `notConnected`, `unauthorized`, `missi
 3. Freigabe eines Einsatzes: automatisch für alle Geräte der Organisation oder je Einsatz per Code/QR?
 4. Fotos und Sprachnotizen: mit übertragen (Datenmenge, Datenschutz) oder nur Text?
 5. Alternativ oder zusätzlich: Abgleich ohne Server im lokalen Netz (iPads direkt untereinander, z. B. bei Großschadenslagen ohne Netz)?
+
+## Mehrbenutzer: Varianten (Vorschlag, 2026-11-07)
+
+Ausgangslage: Die App arbeitet lokal zuerst. Jede Änderung ist ein Ereignis, und das Zusammenführen ist fertig und getestet (Schritt 53). Für den Mehrbenutzerbetrieb fehlt nur noch der **Transport**. Jede der folgenden Varianten ist eine Umsetzung von `SyncTransport`. Der Rest der App bleibt gleich.
+
+| | A: Vor Ort (fertig, Schritt 66) | B: Apple CloudKit | C: Eigener Server (Deutschland) | D: Fertiges Backend (Supabase EU o. Ä.) |
+|---|---|---|---|---|
+| Server nötig | nein | nein (Apple) | ja, selbst betrieben | ja, gemietet |
+| Ohne Internet | ja (WLAN/Bluetooth, ~30–100 m) | nein | nein | nein |
+| Fortlaufend aktuell | nur im Nahbereich | ja (Push) | ja (WebSocket/Push) | ja |
+| Betrieb, Updates, Ausfälle | – | Apple | **wir** (auch nachts im Einsatz) | Anbieter |
+| Kosten | 0 | im Entwicklerkonto enthalten (bei üblicher Nutzung) | ca. 10–30 €/Monat + Zeit | ab ca. 25 $/Monat |
+| Datenschutz (Gesundheitsdaten, Art. 9 DSGVO) | Daten bleiben auf den Geräten | Apple als Auftragsverarbeiter; mit Ende-zu-Ende-Verschlüsselung sieht Apple nichts | volle Kontrolle, Hosting in Deutschland | AVV, EU-Region wählen |
+| Voraussetzungen | – | iCloud/Apple-ID auf jedem Gerät | Server, Domain, Anmeldung | Konto beim Anbieter |
+| Web-Ansicht (z. B. ILS), Android | nein | nein | ja, später möglich | ja |
+| Aufwand für uns | erledigt | mittel | hoch | mittel (ohne Fremd-SDK über REST) |
+
+**Empfehlung:**
+1. **Sofort: A ausbauen.** Beitritt per QR-Code: Das Einsatzleiter-iPad zeigt einen Code, das andere Gerät scannt ihn. Solange beide in der Nähe sind, gleichen sie alle 30 s automatisch ab. Das funktioniert an jeder Einsatzstelle, auch ohne Netz.
+2. **Dann: B (CloudKit) mit Ende-zu-Ende-Verschlüsselung je Einsatz.**
+   - Der Einsatzschlüssel wird nur per QR-Code vor Ort weitergegeben. Apple speichert nur verschlüsselte Ereignisse und Dateien.
+   - Kein eigener Server, kein Betrieb, keine Fremdbibliothek. Fortlaufend aktuell über Push.
+   - Passt, wenn alle Geräte Apple-Geräte mit Apple-ID sind.
+3. **Nur falls nötig: C.** Etwa wenn die ILS im Browser mitlesen soll, Android-Geräte dazukommen oder der Verband die Daten selbst hosten muss. Die Schnittstelle (`SyncTransport`, HTTP-Vorschlag oben) ist dafür schon festgelegt.
+
+**In allen Varianten gleich:**
+- Rollen je Einsatz: Einsatzleiter (alles), Mitarbeit (bearbeiten), Lesen.
+- Beitritt per QR-Code.
+- Ein Konflikt kann nie Daten löschen.
+- Löschen gewinnt nur gegen gleichzeitiges Bearbeiten (E79).
+
+**Fragen dazu:**
+1. Haben alle Dienst-Geräte eine Apple-ID/iCloud? Werden sie über ein MDM verwaltet?
+2. Soll die ILS oder Leitstelle mitlesen (Web), oder reicht der Bericht?
+3. Wie viele Geräte arbeiten typischerweise gleichzeitig an einem Einsatz?
+4. Wer ist datenschutzrechtlich verantwortlich (Kreisverband)? Gibt es Vorgaben zum Hosting?

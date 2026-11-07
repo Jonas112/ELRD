@@ -22,6 +22,9 @@ struct MissionMapView: View {
     @State private var center: GeoCoordinate?
     @State private var errorMessage: String?
     @State private var showsSectionList = false
+    /// Liste links eingeklappt – mehr Platz für die Karte (Jonas). Nur Komfort je Gerät.
+    @AppStorage("map.sidePanelCollapsed") private var sidePanelCollapsed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var proxy = MapCanvasProxy()
     @State private var editing: EditingMapObject?
     @Environment(\.attachmentStore) private var attachments
@@ -44,21 +47,15 @@ struct MissionMapView: View {
         GeometryReader { proxyGeometry in
             let isWide = proxyGeometry.size.width >= 900
             HStack(spacing: 0) {
-                if isWide {
-                    MapSectionList(
-                        pins: MapSectionPin.pins(for: store.state),
-                        objects: store.state.mapObjects.active,
-                        canEdit: canEdit,
-                        allowsDragging: true,
-                        onSelect: select,
-                        onRemove: removeFromMap,
-                        onSelectObject: selectObject
-                    )
-                    .frame(width: 300)
-                    .background(Surface.canvas)
+                if isWide && !sidePanelCollapsed {
+                    sidePanel
+                        .transition(.move(edge: .leading))
                     Divider()
                 }
                 mapArea(showsSectionButton: !isWide)
+                    .overlay(alignment: .leading) {
+                        if isWide && sidePanelCollapsed { expandHandle }
+                    }
             }
         }
         .sheet(isPresented: $showsSectionList) {
@@ -111,6 +108,75 @@ struct MissionMapView: View {
                let first = store.state.mapObjects.active.first {
                 editing = EditingMapObject(id: first.id)
             }
+        }
+    }
+
+    // MARK: Liste links (breit)
+
+    /// Abschnitte und Markierungen; nach links wischen oder „‹‹“ klappt ein.
+    private var sidePanel: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Auf der Karte").font(.headline)
+                Spacer()
+                Button { setPanelCollapsed(true) } label: {
+                    Image(systemName: "chevron.left.2")
+                        .font(.headline)
+                        .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
+                        .background(Surface.elevated, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Liste einklappen")
+            }
+            .padding(.horizontal, Spacing.m)
+            .padding(.vertical, Spacing.s)
+            MapSectionList(
+                pins: MapSectionPin.pins(for: store.state),
+                objects: store.state.mapObjects.active,
+                canEdit: canEdit,
+                allowsDragging: true,
+                onSelect: select,
+                onRemove: removeFromMap,
+                onSelectObject: selectObject
+            )
+        }
+        .frame(width: 300)
+        .background(Surface.canvas)
+        // Kräftig nach links wischen klappt ein; senkrechtes Scrollen bleibt frei.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24).onEnded { value in
+                let dx = value.translation.width
+                if dx < -80, abs(dx) > abs(value.translation.height) * 2 { setPanelCollapsed(true) }
+            }
+        )
+    }
+
+    /// Schmaler Griff am linken Kartenrand: Tipp oder nach rechts wischen klappt aus.
+    private var expandHandle: some View {
+        Button { setPanelCollapsed(false) } label: {
+            VStack(spacing: Spacing.xs) {
+                Image(systemName: "chevron.right.2").font(.headline)
+                Image(systemName: "list.bullet").font(.headline)
+            }
+            .foregroundStyle(.primary)
+            .frame(width: TouchTarget.minimum, height: 112)
+            .background(.regularMaterial, in: UnevenRoundedRectangle(bottomTrailingRadius: 16, topTrailingRadius: 16, style: .continuous))
+            .shadow(color: .black.opacity(0.15), radius: 4, x: 1, y: 1)
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 16).onEnded { value in
+                if value.translation.width > 40 { setPanelCollapsed(false) }
+            }
+        )
+        .accessibilityLabel("Liste mit Abschnitten und Markierungen ausklappen")
+    }
+
+    private func setPanelCollapsed(_ collapsed: Bool) {
+        if reduceMotion {
+            sidePanelCollapsed = collapsed
+        } else {
+            withAnimation(.snappy) { sidePanelCollapsed = collapsed }
         }
     }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import ELRDDomain
 import ELRDStore
 
@@ -66,7 +67,8 @@ struct MissionListView: View {
                     }
                     .accessibilityLabel("Einstellungen")
                 }
-                ToolbarItem(placement: .topBarTrailing) { AccountAvatarMenu(account: account, size: TouchTarget.minimum) }
+                // Die Navigationsleiste ist niedriger als 44 pt – ein größerer Kreis würde oben und unten abgeschnitten.
+                ToolbarItem(placement: .topBarTrailing) { AccountAvatarMenu(account: account, size: 34) }
             }
         }
         .sheet(isPresented: $showsSettings) {
@@ -359,15 +361,18 @@ struct RunningMissionCard: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(summary.title)
-                    .font(.title.weight(.bold))
-                    .lineLimit(2)
-                if !summary.location.isEmpty {
-                    Text(summary.location)
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
+            HStack(alignment: .top, spacing: Spacing.l) {
+                MissionThumbnailView(file: summary.thumbnail, size: 88)
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(summary.title)
+                        .font(.title.weight(.bold))
                         .lineLimit(2)
+                    if !summary.location.isEmpty {
+                        Text(summary.location)
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
             }
             ViewThatFits(in: .horizontal) {
@@ -413,6 +418,7 @@ struct FinishedMissionRow: View {
     var body: some View {
         Button(action: open) {
             HStack(spacing: Spacing.l) {
+                MissionThumbnailView(file: summary.thumbnail, size: 56)
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(summary.title)
                         .font(.title3.weight(.semibold))
@@ -436,7 +442,8 @@ struct FinishedMissionRow: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, Spacing.xl)
+            .padding(.horizontal, Spacing.l)
+            .padding(.vertical, Spacing.s)
             .frame(minHeight: 76)
             .contentShape(Rectangle())
         }
@@ -465,3 +472,49 @@ struct TrailingIconLabelStyle: LabelStyle {
         }
     }
 }
+
+/// Vorschaubild eines Einsatzes in der Liste (Foto oder Kartenausschnitt aus dem
+/// Tagebuch). Ohne Bild ein ruhiges Symbol, damit die Zeilen gleich aussehen.
+struct MissionThumbnailView: View {
+    let file: FileAttachment?
+    let size: CGFloat
+
+    @Environment(\.attachmentStore) private var attachments
+    @Environment(\.displayScale) private var displayScale
+    @State private var image: UIImage?
+
+    var body: some View {
+        ZStack {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: "map")
+                    .font(.system(size: size * 0.36, weight: .regular))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .frame(width: size, height: size)
+        .background(Surface.elevated)
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.2, style: .continuous))
+        .accessibilityHidden(true)
+        .task(id: file?.id) {
+            guard let file else {
+                image = nil
+                return
+            }
+            guard let loaded = attachments.data(for: file).flatMap(UIImage.init(data:)),
+                  loaded.size.width > 0, loaded.size.height > 0 else {
+                image = nil
+                return
+            }
+            // Seitenverhältnis behalten, kurze Seite = Kachelgröße (wird danach beschnitten).
+            let pixels = size * displayScale
+            let scale = max(pixels / loaded.size.width, pixels / loaded.size.height)
+            let target = CGSize(width: loaded.size.width * scale, height: loaded.size.height * scale)
+            image = scale < 1 ? (loaded.preparingThumbnail(of: target) ?? loaded) : loaded
+        }
+    }
+}
+

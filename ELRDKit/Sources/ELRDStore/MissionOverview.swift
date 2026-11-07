@@ -19,8 +19,10 @@ public struct MissionSummary: Identifiable, Equatable, Sendable {
     /// Anzahl der (nicht gelöschten) Patienten.
     public let patientCount: Int
     public let triageCounts: [Sichtungskategorie: Int]
+    /// Vorschaubild: markierter Eintrag, sonst erstes Foto, sonst letzter Kartenausschnitt.
+    public let thumbnail: FileAttachment?
 
-    public init(mission: Mission, patients: [Patient], calendar: Calendar = .current) {
+    public init(mission: Mission, patients: [Patient], journal: [JournalEntry] = [], calendar: Calendar = .current) {
         id = mission.id
         displayNumber = mission.displayNumber(calendar: calendar)
         year = calendar.component(.year, from: mission.startedAt)
@@ -34,6 +36,8 @@ public struct MissionSummary: Identifiable, Equatable, Sendable {
         let active = patients.active
         patientCount = active.count
         triageCounts = Patient.countsByTriage(active)
+        thumbnail = JournalEntry.thumbnail(in: journal)
+            ?? JournalEntry.chronological(journal).last { $0.origin == .mapSnapshot }?.firstImage
     }
 
     /// Dauer bis zum Ende bzw. bis `now`, solange der Einsatz läuft.
@@ -92,14 +96,24 @@ public struct MissionListFilter: Equatable, Sendable {
 public enum MissionOverview {
     public static func load(from repository: any EntityRepository, calendar: Calendar = .current) throws -> [MissionSummary] {
         try repository.missions().map { mission in
-            MissionSummary(mission: mission, patients: try repository.entities(Patient.self, in: mission.id), calendar: calendar)
+            MissionSummary(
+                mission: mission,
+                patients: try repository.entities(Patient.self, in: mission.id),
+                journal: try repository.entities(JournalEntry.self, in: mission.id),
+                calendar: calendar
+            )
         }
     }
 
     /// Gelöschte Einsätze (Papierkorb der Einsatzliste), zuletzt begonnene zuerst.
     public static func loadDeleted(from repository: any EntityRepository, calendar: Calendar = .current) throws -> [MissionSummary] {
         try repository.missions(includeDeleted: true).filter(\.isDeleted).map { mission in
-            MissionSummary(mission: mission, patients: try repository.entities(Patient.self, in: mission.id), calendar: calendar)
+            MissionSummary(
+                mission: mission,
+                patients: try repository.entities(Patient.self, in: mission.id),
+                journal: try repository.entities(JournalEntry.self, in: mission.id),
+                calendar: calendar
+            )
         }
     }
 }

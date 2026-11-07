@@ -10,11 +10,14 @@ public struct PatientCatalogs: Sendable {
     public var injuries: [MasterInjury]
     public var rmi: RMICatalog?
     public var hospitals: [MasterHospital]
+    /// Fahrzeuge aus den Stammdaten (Transportmittel-Auswahl am Patienten).
+    public var units: [MasterUnit]
 
-    public init(injuries: [MasterInjury] = [], rmi: RMICatalog? = nil, hospitals: [MasterHospital] = []) {
+    public init(injuries: [MasterInjury] = [], rmi: RMICatalog? = nil, hospitals: [MasterHospital] = [], units: [MasterUnit] = []) {
         self.injuries = injuries
         self.rmi = rmi
         self.hospitals = hospitals
+        self.units = units
     }
 
     public static let empty = PatientCatalogs()
@@ -25,7 +28,7 @@ public struct PatientCatalogs: Sendable {
         let master = (try? repository.document(MasterDataSet.self, key: .masterData)) ?? MasterDataSet()
         let catalogID = master.ivenaCatalogID ?? BundledMasterData.ivenaCatalogs.first?.id
         let rmi = catalogID.flatMap { try? BundledMasterData.ivenaCatalog(id: $0) }
-        return PatientCatalogs(injuries: master.injuries, rmi: rmi, hospitals: master.sortedHospitals)
+        return PatientCatalogs(injuries: master.injuries, rmi: rmi, hospitals: master.sortedHospitals, units: master.units)
     }
 }
 

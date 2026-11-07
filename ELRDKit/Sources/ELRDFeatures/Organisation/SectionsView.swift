@@ -270,6 +270,9 @@ struct SectionCard: View {
     let onReplace: (MissionUnit) -> Void
     let onDrop: (DragPayload, DropTarget) -> Bool
 
+    /// Einheit, deren Aktionen nach einem Tipp angeboten werden.
+    @State private var actionEntry: UnitEntry?
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             head
@@ -356,22 +359,54 @@ struct SectionCard: View {
             .organisationDrop(isEnabled: canEdit, cornerRadius: 14) { onDrop($0, .unit(entry.unit.id)) }
     }
 
-    /// Tipp öffnet „Verschieben nach …“ (Platzhalter: zuerst „Fahrzeug eintragen“).
+    /// Tipp öffnet „Verschieben nach …“ (Platzhalter: gleich „Fahrzeug eintragen“).
+    /// Halten und Ziehen verschiebt per Drag & Drop; Halten ohne Ziehen zeigt das Menü.
+    /// Ein `Menu` als Zeile hätte die Berührung selbst behalten – dann ließ sich
+    /// nichts ziehen (Jonas).
     @ViewBuilder
     private func unitRowContent(_ entry: UnitEntry) -> some View {
         let row = UnitRowLabel(entry: entry, showsMoveHint: canEdit)
         if canEdit {
-            if entry.unit.isPlaceholder {
-                // Tipp: gleich „Fahrzeug eintragen“; langes Drücken: Verschieben usw.
-                Menu { unitMenu(entry) } label: { row } primaryAction: { onReplace(entry.unit) }
-                    .buttonStyle(.plain)
-            } else {
-                Menu { unitMenu(entry) } label: { row }
-                    .buttonStyle(.plain)
+            Button {
+                if entry.unit.isPlaceholder { onReplace(entry.unit) } else { actionEntry = entry }
+            } label: {
+                row.contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .contextMenu { unitMenu(entry) }
+            .confirmationDialog(
+                actionEntry.map { "\($0.unit.typeDisplayName) \($0.unit.displayName)" } ?? "",
+                isPresented: Binding(
+                    get: { actionEntry?.unit.id == entry.unit.id },
+                    set: { if !$0 { actionEntry = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                unitDialogButtons(entry)
+            } message: {
+                Text("Tipp auf ein Ziel verschiebt. Tipp: Zeile halten und auf einen Abschnitt ziehen.")
             }
         } else {
             row
         }
+    }
+
+    /// Aktionen im Dialog (ohne Gruppen – Dialoge kennen keine Abschnitte).
+    @ViewBuilder
+    private func unitDialogButtons(_ entry: UnitEntry) -> some View {
+        ForEach(sections.filter { $0.id != entry.unit.sectionID }) { target in
+            Button("Nach „\(target.name)“ verschieben") { onMove(entry.unit.id, target.id) }
+        }
+        if column.section != nil {
+            Button("Nach „Ohne Abschnitt“ verschieben") { onMove(entry.unit.id, nil) }
+        }
+        ForEach(entry.patients) { badge in
+            Button("Patient \(badge.number) öffnen") { onOpenPatient(badge.id) }
+        }
+        if entry.patients.isEmpty {
+            Button("Aus dem Einsatz entfernen", role: .destructive) { onRemoveUnit(entry.unit) }
+        }
+        Button("Abbrechen", role: .cancel) {}
     }
 
     @ViewBuilder

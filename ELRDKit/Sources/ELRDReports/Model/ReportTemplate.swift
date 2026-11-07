@@ -177,7 +177,9 @@ public struct ReportDestination: Hashable, Sendable, Identifiable {
         for patient in patients where !patient.isDeleted {
             guard let name = patient.destination?.name, !key(name).isEmpty else { continue }
             let normalized = key(name)
-            names[normalized] = names[normalized] ?? name.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Feste Wahl der Schreibweise, unabhängig von der Reihenfolge der Patienten.
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            names[normalized] = names[normalized].map { min($0, trimmed) } ?? trimmed
             counts[normalized, default: 0] += 1
         }
         return counts

@@ -23,6 +23,7 @@ struct PatientDetailView: View {
     /// Körperteil, mit dem die Verletzungsauswahl öffnet (Tipp in die kleine Grafik).
     @State private var injuryStartSpot: BodySpot?
     @State private var showsHospitals = false
+    @State private var showsUnits = false
     @State private var confirmsRelease = false
     /// Kreislauf und „intubiert“ untereinander, wenn die Spalte schmal ist.
     @State private var stacksCirculation = false
@@ -344,7 +345,8 @@ struct PatientDetailView: View {
             }
             SegmentedChoice(
                 options: [(TreatmentPriority.sofortigeIntervention, "1 sofort"), (.stationaereAufnahmeWahrscheinlich, "2 stationär"), (.vermutlichAmbulant, "3 ambulant")],
-                selection: patientBinding(patient, \.treatmentPriority)
+                selection: patientBinding(patient, \.treatmentPriority),
+                tint: { Color.treatmentPriority($0) }
             )
             if patient.treatmentPriority == .sofortigeIntervention {
                 Text("ABCD-Status · Info für die Klinik").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
@@ -381,8 +383,9 @@ struct PatientDetailView: View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             Text("Verletzungen").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
             HStack(alignment: .top, spacing: Spacing.m) {
-                // Kleine Körpergrafik mit Markierungen; Tipp öffnet die Auswahl an dieser Stelle.
-                if !patient.injuries.isEmpty && !stacksCirculation {
+                // Kleine Körpergrafik mit Markierungen; Tipp öffnet die Auswahl an dieser
+                // Stelle – auch ohne erfasste Verletzung (Jonas).
+                if !stacksCirculation {
                     BodyDiagramView(
                         selection: nil,
                         counts: BodyPart.counts(for: patient.injuries),
@@ -391,7 +394,12 @@ struct PatientDetailView: View {
                     )
                     .frame(width: 96, height: 168)
                 }
-                VStack(spacing: Spacing.s) {
+                VStack(alignment: .leading, spacing: Spacing.s) {
+                    if patient.injuries.isEmpty {
+                        Text(canEdit && !stacksCirculation ? "Noch keine Verletzung. Körperteil antippen oder unten erfassen." : "Noch keine Verletzung.")
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     ForEach(patient.injuries) { injury in
                         InjuryRow(injury: injury, onRemove: canEdit ? { removeInjury(injury.id) } : nil)
                     }
@@ -457,13 +465,48 @@ struct PatientDetailView: View {
         }
     }
 
-    /// Einheiten gegliedert (zugeordnet, freie Transportmittel, weitere, belegte).
+    /// Transportmittel schlank wie die Zielklinik: Zugeordnete mit „ändern“, sonst
+    /// die ersten freien Transportmittel und „Alle Einheiten …“ (eigene Liste).
     private func unitSection(_ patient: Patient) -> some View {
-        UnitAssignmentSection(
-            choices: UnitChoice.ordered(units: store.state.units, patients: store.state.patients, for: patientID),
-            onAssign: { perform(AssignUnit(patientID: patientID, unitID: $0)) },
-            onUnassign: { perform(UnassignUnit(patientID: patientID, unitID: $0)) }
-        )
+        let groups = UnitAssignmentGroups(UnitChoice.ordered(units: store.state.units, patients: store.state.patients, for: patientID))
+        return VStack(alignment: .leading, spacing: Spacing.s) {
+            Text("Transportmittel").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            if groups.assigned.isEmpty {
+                Label("Noch keine Einheit zugeordnet", systemImage: "exclamationmark.circle")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+                FlowLayout(spacing: Spacing.s) {
+                    ForEach(groups.freeTransport.prefix(3)) { choice in
+                        ChoiceChip("\(choice.unit.typeDisplayName) \(choice.unit.displayName)", isSelected: false, minHeight: 52, background: Surface.elevated) {
+                            perform(AssignUnit(patientID: patientID, unitID: choice.id))
+                        }
+                    }
+                    Button(groups.freeTransport.isEmpty ? "Einheit wählen oder anlegen …" : "Alle Einheiten …") { showsUnits = true }
+                        .font(.headline)
+                        .frame(minHeight: 52)
+                }
+            } else {
+                Button { showsUnits = true } label: {
+                    HStack {
+                        Text(groups.assigned.map { "\($0.unit.typeDisplayName) \($0.unit.displayName)" }.joined(separator: ", "))
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
+                        Spacer()
+                        Text("ändern").font(.subheadline.weight(.semibold))
+                    }
+                    .padding(.horizontal, Spacing.m)
+                    .frame(minHeight: TouchTarget.comfortable)
+                    .background(ActionFill.selected, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Öffnet die Liste der Einheiten")
+            }
+        }
+        .sheet(isPresented: $showsUnits) {
+            UnitPickerSheet(store: store, patientID: patientID, masterUnits: catalogs.units)
+                .largeSheet()
+        }
     }
 
     /// Zielklinik: gewählte mit „ändern“, sonst die ersten Vorschläge und „Alle …“.
@@ -474,6 +517,8 @@ struct PatientDetailView: View {
             if let destination = patient.destination {
                 Button { showsHospitals = true } label: {
                     HStack {
+                        Circle().fill(Color.registration(patient.registrationState)).frame(width: 12, height: 12)
+                            .accessibilityHidden(true)
                         Text(destination.name).font(.headline).foregroundStyle(.primary)
                         Spacer()
                         Text("ändern").font(.subheadline.weight(.semibold))
@@ -481,6 +526,8 @@ struct PatientDetailView: View {
                     .padding(.horizontal, Spacing.m)
                     .frame(minHeight: TouchTarget.comfortable)
                     .background(ActionFill.selected, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.registration(patient.registrationState), lineWidth: 2))
                 }
                 .buttonStyle(.plain)
                 SegmentedChoice(
@@ -488,7 +535,8 @@ struct PatientDetailView: View {
                     selection: Binding(
                         get: { patient.registrationState },
                         set: { perform(SetRegistration(patientID: patientID, state: $0)) }
-                    )
+                    ),
+                    tint: { Color.registration($0) }
                 )
             } else {
                 FlowLayout(spacing: Spacing.s) {
@@ -678,18 +726,15 @@ struct PlannedHint: View {
 struct SegmentedChoice<Value: Hashable>: View {
     let options: [(Value, String)]
     @Binding var selection: Value
+    /// Fachliche Farbe je Wert (z. B. Anmeldestatus, IVENA-Dringlichkeit): gewählt
+    /// voll gefüllt, sonst Schrift und Punkt in der Farbe.
+    var tint: ((Value) -> Color)? = nil
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
             ForEach(options, id: \.0) { value, title in
                 Button { selection = value } label: {
-                    Text(title)
-                        .font(.subheadline.weight(selection == value ? .heavy : .semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                        .foregroundStyle(selection == value ? .primary : .secondary)
-                        .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum + 4)
-                        .background(selection == value ? Surface.card : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    segment(value, title)
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(selection == value ? .isSelected : [])
@@ -697,6 +742,33 @@ struct SegmentedChoice<Value: Hashable>: View {
         }
         .padding(Spacing.xs)
         .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func segment(_ value: Value, _ title: String) -> some View {
+        let isSelected = selection == value
+        if let color = tint?(value) {
+            HStack(spacing: 6) {
+                if !isSelected {
+                    Circle().fill(color).frame(width: 10, height: 10)
+                }
+                Text(title)
+                    .font(.subheadline.weight(isSelected ? .heavy : .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(isSelected ? Color.white : color)
+            .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum + 4)
+            .background(isSelected ? color : color.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        } else {
+            Text(title)
+                .font(.subheadline.weight(isSelected ? .heavy : .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundStyle(isSelected ? .primary : .secondary)
+                .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum + 4)
+                .background(isSelected ? Surface.card : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
     }
 }
 

@@ -33,7 +33,7 @@ struct UnitChoice: Identifiable, Equatable {
     /// Transportmittel zuerst.
     static let typeOrder: [UnitType] = [.rtw, .ktw, .ktwKatS, .rth, .nef]
 
-    private static func typeRank(_ type: UnitType) -> Int {
+    static func typeRank(_ type: UnitType) -> Int {
         typeOrder.firstIndex(of: type) ?? typeOrder.count
     }
 

@@ -81,3 +81,16 @@ struct TrashCommandTests {
         #expect(TrashItem.Kind.allCases.allSatisfy { !$0.displayName.isEmpty && !$0.systemImage.isEmpty })
     }
 }
+
+@Suite("Vorschaubild in der Einsatzliste")
+@MainActor
+struct MissionThumbnailTests {
+    @Test func firstPhotoBecomesThumbnail() throws {
+        let fixture = try StoreFixture()
+        let store = try fixture.newMission()
+        #expect(try MissionOverview.load(from: fixture.repository).first?.thumbnail == nil)
+        let photo = FileAttachment(kind: .photo, byteCount: 3, sha256: "abc", createdAt: fixture.clock.now)
+        try store.perform(AddJournalMedia(attachments: [photo], text: "Einsatzstelle"))
+        #expect(try MissionOverview.load(from: fixture.repository).first?.thumbnail == photo)
+    }
+}

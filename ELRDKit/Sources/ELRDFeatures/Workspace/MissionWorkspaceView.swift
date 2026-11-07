@@ -69,7 +69,8 @@ public struct MissionWorkspaceView: View {
                             badges: badges,
                             account: account,
                             onMessages: { showsMessages = true },
-                            onReport: { showsReport = true }
+                            onReport: { showsReport = true },
+                            onClose: onClose
                         )
                         VStack(spacing: 0) {
                             situationBar(layout: layout, badges: badges)
@@ -279,8 +280,8 @@ struct SituationBar: View {
         Group {
             switch layout {
             case .rail:
+                // Breit: „Einsatz verlassen“ sitzt unten in der Seitenleiste (Jonas).
                 HStack(spacing: Spacing.l) {
-                    backButton
                     missionTitle
                     Spacer(minLength: Spacing.m)
                     HStack(spacing: Spacing.s) { counters(compact: false) }
@@ -485,11 +486,12 @@ struct WorkspaceRail: View {
     let account: AccountMenuModel?
     let onMessages: () -> Void
     let onReport: () -> Void
+    var onClose: (() -> Void)?
 
     var body: some View {
         VStack(spacing: Spacing.s) {
             ForEach(WorkspaceSection.allCases) { section in
-                SectionButton(section: section, isSelected: selection == section, badge: badges.badge(for: section), height: 76) {
+                SectionButton(section: section, isSelected: selection == section, badge: badges.badge(for: section), height: 72) {
                     selection = section
                 }
                 .frame(width: 80)
@@ -498,6 +500,22 @@ struct WorkspaceRail: View {
             ReportButton(action: onReport)
             MessagesBellButton(unread: badges.unreadMessages, action: onMessages)
             if let account { AccountAvatarMenu(account: account) }
+            if let onClose {
+                Divider().frame(width: 64).padding(.vertical, Spacing.xs)
+                Button(action: onClose) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 22, weight: .semibold))
+                            .scaleEffect(x: -1, y: 1)
+                        Text("Einsätze").font(.caption.weight(.semibold))
+                    }
+                    .frame(width: 80, height: 56)
+                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.primary.opacity(0.85))
+                .accessibilityLabel("Einsatz verlassen, zurück zur Einsatzliste")
+            }
         }
         .padding(.vertical, Spacing.l)
         .frame(width: 96)

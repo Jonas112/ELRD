@@ -57,6 +57,16 @@ public extension Color {
 
     /// Ampelfarbe für den Klinik-Anmeldestatus.
     static func registration(_ state: HospitalRegistrationState) -> Color { Color(state.color) }
+
+    /// IVENA-Behandlungsdringlichkeit wie in IVENA: 1 rot, 2 gelb/orange, 3 grün.
+    static func treatmentPriority(_ priority: TreatmentPriority) -> Color {
+        switch priority {
+        case .sofortigeIntervention: Color(RGBColor(hex: 0xD32F2F))
+        case .stationaereAufnahmeWahrscheinlich: Color(RGBColor(hex: 0xF57C00))
+        case .vermutlichAmbulant: Color(RGBColor(hex: 0x2E7D32))
+        case .keineDringlichkeit: Color(RGBColor(hex: 0x8E8E93))
+        }
+    }
 }
 
 /// Hintergründe als System-Farben, damit hell/dunkel und erhöhter Kontrast stimmen.

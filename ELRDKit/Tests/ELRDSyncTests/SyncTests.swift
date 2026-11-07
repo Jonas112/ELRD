@@ -224,3 +224,93 @@ struct ChangeMergerTests {
         }
     }
 }
+
+@Suite("Entitätsverlauf und Server-Vertrag (Schritt 53)")
+struct EntityHistoryTests {
+    private func lifecycle(_ operation: ChangeOperation, at seconds: Double, device: DeviceID = S.deviceA, author: UserID? = S.userA) -> ChangeEvent {
+        ChangeEvent(missionID: S.missionID, entityType: .patient, entityID: entityID, operation: operation,
+                    changes: [], timestamp: S.ts(seconds, device: device), authorID: author)
+    }
+
+    private let entityID = UUID()
+
+    @Test func latestLifecycleEventDecidesDeletion() {
+        let insert = lifecycle(.insert, at: 0)
+        let delete = lifecycle(.delete, at: 10, device: S.deviceB)
+        let lateEdit = ChangeEvent(missionID: S.missionID, entityType: .patient, entityID: entityID, operation: .update,
+                                   changes: [.set(field: "lastName", value: .string("Neu"))], timestamp: S.ts(20), authorID: S.userA)
+        #expect(EntityHistory([insert, delete, lateEdit]).isDeleted, "Bearbeiten hebt Löschen nicht auf")
+        #expect(EntityHistory([lateEdit, delete, insert]).isDeleted, "Reihenfolge egal")
+        let restore = lifecycle(.restore, at: 15)
+        #expect(!EntityHistory([delete, restore, insert, lateEdit]).isDeleted)
+        let deleteAgain = lifecycle(.delete, at: 30, device: S.deviceB)
+        #expect(EntityHistory([insert, delete, restore, deleteAgain]).isDeleted)
+    }
+
+    @Test func metadataComesFromEvents() throws {
+        let insert = lifecycle(.insert, at: 0)
+        let delete = lifecycle(.delete, at: 10, device: S.deviceB, author: S.userB)
+        let history = EntityHistory([delete, insert, insert])
+        #expect(history.events.count == 2, "doppelte Ereignisse zählen einmal")
+        let metadata = try #require(history.metadata())
+        #expect(metadata.createdBy == S.userA)
+        #expect(metadata.createdAt == S.start)
+        #expect(metadata.updatedBy == S.userB)
+        #expect(metadata.deletedAt == S.start.addingTimeInterval(10))
+        #expect(metadata.version == 2)
+        #expect(EntityHistory([delete]).metadata() == nil, "ohne Anlegen kein Stand")
+    }
+
+    @Test func mergedEntityMatchesRecordedPatient() throws {
+        var clock = HybridLogicalClock(deviceID: S.deviceA)
+        var patient = S.patient()
+        patient.firstName = "Max"
+        let insertResult = try ChangeRecorder.event(old: nil, new: patient, clock: &clock, author: S.userA, now: S.start)
+        let insert = try #require(insertResult)
+        var edited = patient
+        edited.triage = .sk1
+        edited.metadata.recordChange(by: S.userA, at: S.start.addingTimeInterval(5))
+        let editResult = try ChangeRecorder.event(old: patient, new: edited, clock: &clock, author: S.userA, now: S.start.addingTimeInterval(5))
+        let edit = try #require(editResult)
+        let merged = try #require(try EntityHistory([edit, insert]).entity(Patient.self))
+        #expect(merged.firstName == "Max")
+        #expect(merged.triage == .sk1)
+        #expect(merged.metadata.version == 2)
+        #expect(!merged.isDeleted)
+    }
+
+    @Test func serverIsIdempotentAndPaged() async throws {
+        let server = InMemorySyncServer()
+        let events = (0..<5).map { lifecycle(.insert, at: Double($0)) }
+        try await server.push(events, mission: S.missionID)
+        try await server.push(events, mission: S.missionID)
+        #expect(await server.eventCount(mission: S.missionID) == 5)
+
+        let first = try await server.pull(mission: S.missionID, after: nil, limit: 3)
+        #expect(first.events.count == 3)
+        #expect(first.hasMore)
+        let second = try await server.pull(mission: S.missionID, after: first.cursor, limit: 3)
+        #expect(second.events.count == 2)
+        #expect(!second.hasMore)
+        let empty = try await server.pull(mission: S.missionID, after: second.cursor, limit: 3)
+        #expect(empty.events.isEmpty)
+
+        try await server.purge(mission: S.missionID)
+        #expect(await server.eventCount(mission: S.missionID) == 0)
+    }
+
+    @Test func outboxOnlyContainsOwnUnsentEvents() {
+        let own = [lifecycle(.insert, at: 0), lifecycle(.update, at: 5), lifecycle(.update, at: 9)]
+        let foreign = lifecycle(.update, at: 7, device: S.deviceB)
+        var checkpoint = SyncCheckpoint()
+        #expect(checkpoint.outbox(own + [foreign], device: S.deviceA).count == 3)
+        checkpoint.pushedThrough = own[1].timestamp
+        #expect(checkpoint.outbox(own + [foreign], device: S.deviceA) == [own[2]])
+
+        var all = SyncCheckpoints()
+        all[S.missionID] = checkpoint
+        #expect(all[S.missionID] == checkpoint)
+        all.remove(S.missionID)
+        #expect(all[S.missionID] == SyncCheckpoint())
+    }
+}

@@ -17,6 +17,8 @@ public struct DocumentKey: Hashable, Sendable, RawRepresentable {
     public static let reportTemplates = DocumentKey(rawValue: "reportTemplates")
     /// Ungesendete Texte (Tagebuch, Nachrichten) je Einsatz (`TextDraftSet`).
     public static let textDrafts = DocumentKey(rawValue: "textDrafts")
+    /// Sync-Stand je Einsatz (`SyncCheckpoints`).
+    public static let syncCheckpoints = DocumentKey(rawValue: "syncCheckpoints")
 }
 
 /// Speichert einzelne, als Ganzes behandelte Dokumente (Stammdaten, später Einstellungen).

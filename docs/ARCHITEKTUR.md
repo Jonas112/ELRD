@@ -53,7 +53,7 @@ Ziel: Mehrere Nutzer bearbeiten denselben Einsatz auf mehreren Geräten.
 4. **Änderungsjournal:** Append-only `ChangeEvent` mit `id`, `missionID`, `entityType`, `entityID`, Operation (insert/update/delete), geänderten Feldern mit neuem Wert, `authorID`, `deviceID`, Hybrid-Logical-Clock-Zeitstempel.
 5. **Konfliktstrategie (umgesetzt in `ELRDSync`, Schritt 7):** Je Feld gewinnt die Änderung mit dem größten HLC-Zeitstempel. Listen mit Kennungen (Verletzungen, Anhänge, zugeordnete Einheiten) werden elementweise geführt (`upsertElement`/`removeElement`) und nie als Ganzes überschrieben. `MergeState` ist reihenfolgeunabhängig und idempotent.
 6. **Patienten- und Tagebuchnummern:** `SerialNumber` mit Gerätepräfix („A-12“, „B-3“). Jedes Gerät vergibt nur Nummern mit eigenem Präfix (`DeviceIdentity`), daher keine Kollisionen offline.
-7. **Transport:** Protokoll `SyncTransport` mit zwei späteren Implementierungen denkbar: ELRD-Backend (bevorzugt, DSGVO, Mandantentrennung) oder lokales Netzwerk. Zunächst nur `NoopTransport`.
+7. **Transport (Schritt 53):** Protokoll `SyncTransport` (push idempotent, pull nach Cursor in Ankunftsreihenfolge, purge je Einsatz). Umgesetzt: `LocalOnlyTransport` (Standard, kein Server) und `InMemorySyncServer` (Referenz für Tests). `SyncEngine` lädt eigene Ereignisse hoch, holt fremde ab und führt sie über `RemoteChangeImporter`/`EntityHistory` zusammen; Löschen gewinnt gegen gleichzeitiges Bearbeiten. Details und offene Fragen zum Backend: `docs/SYNC.md`.
 
 ## Benutzer & Anmeldung
 

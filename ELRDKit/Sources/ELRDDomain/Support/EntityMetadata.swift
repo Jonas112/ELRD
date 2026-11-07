@@ -61,6 +61,13 @@ public struct EntityMetadata: Hashable, Codable, Sendable {
         deletedAt = nil
         recordChange(by: author, at: date)
     }
+
+    /// Gleiche Metadaten mit anderer Version (Übernahme fremder Änderungen, Schritt 53).
+    public func withVersion(_ version: Int) -> EntityMetadata {
+        var copy = self
+        copy.version = max(version, 1)
+        return copy
+    }
 }
 
 /// Gemeinsame Schnittstelle aller gespeicherten Entitäten.

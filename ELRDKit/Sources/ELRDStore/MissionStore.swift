@@ -117,6 +117,8 @@ public final class MissionStore {
 
     /// Nummernpräfix dieses Geräts (z. B. „A“) – für die Anzeige „nächste A-11“.
     public var numberPrefix: String { session.device.numberPrefix }
+    /// Name der angemeldeten Person (z. B. „Erstellt von …“ im Bericht).
+    public var sessionDisplayName: String { session.displayName }
 
     /// Ob eine Funktion gerade verfügbar ist (für die Oberfläche).
     public func isEnabled(_ feature: Feature) -> Bool {

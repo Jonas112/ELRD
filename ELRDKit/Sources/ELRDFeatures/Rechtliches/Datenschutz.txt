@@ -1,0 +1,33 @@
+Datenschutzerklärung
+
+Der Schutz Ihrer persönlichen Daten ist mir ein besonderes Anliegen. Diese Datenschutzerklärung informiert Sie darüber, wie die Einsatzleiter Rettungsdienst App (nachfolgend „App“) Ihre Daten verarbeitet.
+
+1. Allgemeine Informationen
+Die App wurde entwickelt, um Einsatzleiter im Rettungsdienst bei der Organisation und Dokumentation von Einsätzen zu unterstützen. Sämtliche Daten, die Sie in der App eingeben, werden ausschließlich lokal auf Ihrem Gerät gespeichert. Es erfolgt keine automatisierte Übermittlung von Daten an externe Server oder Dritte.
+
+2. Verarbeitung von personenbezogenen Daten
+Die App verarbeitet personenbezogene Daten ausschließlich zu dem Zweck, Ihnen die gewünschten Funktionen bereitzustellen. Hierzu zählen unter anderem:
+
+Einsatzdokumentation (z. B. Einsatzorte, beteiligte Personen, Maßnahmen)
+Notizen oder andere relevante Informationen im Rahmen des Einsatzes
+
+Wichtige Hinweise:
+Alle eingegebenen Daten bleiben ausschließlich auf Ihrem Gerät.
+Es erfolgt keine Synchronisation mit Cloud-Diensten oder externen Datenbanken.
+Die App hat keine Schnittstellen zu Dritten, durch die personenbezogene Daten übertragen werden könnten.
+
+3. Sicherheit Ihrer Daten
+Ihre Daten sind durch die Sicherheitsmechanismen Ihres Geräts (z. B. PIN, Passwort, Fingerabdrucksensor) geschützt. Wir empfehlen, diese Mechanismen zu aktivieren, um unbefugten Zugriff auf die App und Ihre Daten zu verhindern. Da die App keine Daten extern speichert, obliegt die Sicherung (Backup) und Löschung der Daten allein Ihnen als Nutzer.
+
+4. Rechte der Nutzer
+Da keine personenbezogenen Daten außerhalb Ihres Geräts verarbeitet oder gespeichert werden, entfällt die Notwendigkeit, Anfragen zur Datenlöschung, -übertragung oder -auskunft an mich zu richten. Alle Daten können direkt von Ihnen innerhalb der App oder über die Geräteeinstellungen gelöscht werden.
+
+5. Änderungen dieser Datenschutzerklärung
+Ich behalte mir vor, diese Datenschutzerklärung bei Bedarf anzupassen, um Änderungen an der App oder neuen rechtlichen Vorgaben gerecht zu werden. Änderungen werden Ihnen in der App mitgeteilt.
+
+6. Kontakt
+Falls Sie Fragen zur Datenschutzerklärung oder zur App haben, können Sie sich an mich wenden:
+
+Support.Reco@icloud.com
+
+Copyright © 2024 Jonas Wehner. All rights reserved.

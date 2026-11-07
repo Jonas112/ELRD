@@ -15,6 +15,7 @@ struct PatientDetailView: View {
     var catalogs: PatientCatalogs = .empty
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @State private var form: PatientEditForm?
     @State private var saveState: SaveState = .saved
     @State private var confirmsDelete = false
@@ -272,7 +273,8 @@ struct PatientDetailView: View {
         if let binding = Binding($form), let patient {
             DetailCard(title: "Zustand") {
                 circulationSection(patient)
-                ivenaSection(patient)
+                // IVENA lässt sich in den Einstellungen ausblenden (Schritt 49).
+                if appSettings?.settings.showsIVENA ?? true { ivenaSection(patient) }
                 injuriesSection(patient)
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("Notiz").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)

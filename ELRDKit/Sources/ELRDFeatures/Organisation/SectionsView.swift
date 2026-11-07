@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import ELRDDomain
 import ELRDStore
 
@@ -406,9 +407,18 @@ struct SectionCard: View {
 struct UnitRowLabel: View {
     let entry: UnitEntry
     let showsMoveHint: Bool
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
 
     var body: some View {
         HStack(spacing: Spacing.m) {
+            // Eigenes Fahrzeugbild aus den Einstellungen (wie ELRDRG), sonst nur das Kennzeichen.
+            if let data = appSettings?.settings.image(for: entry.unit.type), let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 52, height: 36)
+                    .accessibilityHidden(true)
+            }
             Text(entry.unit.typeDisplayName)
                 .font(.subheadline.weight(.heavy))
                 .lineLimit(1)

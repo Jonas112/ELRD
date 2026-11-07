@@ -13,13 +13,13 @@ import ELRDStore
 /// Beispieldaten im Arbeitsspeicher (nichts wird gespeichert, Keychain bleibt unberührt).
 public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
-        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages
+        case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages, report, settings, masterData, onboarding
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
 
         /// Bildschirme, die direkt im laufenden Beispieleinsatz starten.
-        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission].contains(self) }
+        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .settings, .masterData, .onboarding].contains(self) }
 
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {
@@ -58,9 +58,14 @@ public final class AppEnvironment {
     public let userService: UserService
     public let device: DeviceIdentity
     public let deviceClock: DeviceClock
-    public let entitlements: StaticEntitlements
+    public let entitlements: any EntitlementProvider
+    /// Abo über StoreKit (Schritt 51); `nil` bei Beispieldaten.
+    public let subscriptions: StoreKitEntitlements?
     /// Dateien zu Anhängen (Zeichnungen, Kartenausschnitte, Fotos).
     public let attachments: AttachmentFileStore
+    /// Geräteeinstellungen (Schritt 47) und Berichtsvorlagen (Schritt 45).
+    public let settings: AppSettingsStore
+    public let reportLibrary: ReportLibraryStore
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
     /// Gewünschter Beispielbildschirm (nur Demo).
@@ -70,17 +75,20 @@ public final class AppEnvironment {
         repository: any EntityRepository & DocumentRepository,
         userService: UserService,
         device: DeviceIdentity,
-        entitlements: StaticEntitlements,
+        entitlements: any EntitlementProvider,
         attachments: AttachmentFileStore,
         isDemo: Bool,
         demoScreen: AppLaunchOptions.DemoScreen? = nil
     ) throws {
         self.repository = repository
         self.attachments = attachments
+        self.settings = AppSettingsStore(repository: repository)
+        self.reportLibrary = ReportLibraryStore(repository: repository)
         self.userService = userService
         self.device = device
         self.deviceClock = try DeviceClock(deviceID: device.deviceID, repository: repository)
         self.entitlements = entitlements
+        self.subscriptions = entitlements as? StoreKitEntitlements
         self.isDemo = isDemo
         self.demoScreen = demoScreen
     }
@@ -92,6 +100,18 @@ public final class AppEnvironment {
     }
 
     /// Echte App: SwiftData auf dem Gerät, Keychain.
+    /// Abo über StoreKit; in Debug-Builds (Xcode) ist alles frei (E76).
+    static func liveEntitlements() -> StoreKitEntitlements {
+        #if DEBUG
+        let forceDevelopment = true
+        #else
+        let forceDevelopment = false
+        #endif
+        let entitlements = StoreKitEntitlements(trial: StoreKitEntitlements.storedTrial(), forceDevelopment: forceDevelopment)
+        Task { await entitlements.refresh() }
+        return entitlements
+    }
+
     public static func live() throws -> AppEnvironment {
         let repository = SwiftDataRepository(container: try PersistenceStore.makeContainer())
         let device = try loadOrCreateDevice(in: repository)
@@ -102,7 +122,7 @@ public final class AppEnvironment {
             repository: repository,
             userService: users,
             device: device,
-            entitlements: StaticEntitlements.development(),
+            entitlements: Self.liveEntitlements(),
             attachments: try AttachmentFileStore.standard(),
             isDemo: false
         )

@@ -1,0 +1,64 @@
+Benutzerlizenzvereinbarung (EULA)
+für die Einsatzleiter-App ELRD
+Stand: Februar 2026
+
+1. Zweck der App
+Diese App dient ausschließlich als digitale Unterstützung bei der organisatorischen Planung und Dokumentation von Rettungsdiensteinsätzen.
+Die App ersetzt keine fachliche, medizinische, taktische oder einsatzrechtliche Entscheidung.
+
+Sämtliche einsatzrelevanten Entscheidungen erfolgen ausschließlich eigenverantwortlich durch den jeweiligen Einsatzleiter oder die zuständigen Organisationen.
+
+2. Bereitstellung ohne Gewähr
+Die App wird kostenpflichtig (je nach Modell)
+„wie gesehen“ („as is“) und ohne jegliche Gewährleistung bereitgestellt.
+Insbesondere übernimmt der Anbieter keine Gewähr für:
+- Richtigkeit oder Vollständigkeit angezeigter Informationen
+- Verfügbarkeit in zeitkritischen Situationen
+- Ausfallsicherheit
+- Datenintegrität
+- Einsatzfähigkeit unter realen Bedingungen
+- Eignung für einen bestimmten Einsatzzweck
+
+3. Eigenverantwortung des Nutzers
+Der Nutzer bestätigt ausdrücklich, dass ..
+.. er fachlich qualifiziert ist
+.. alle einsatzkritischen Entscheidungen unabhängig von der App getroffen werden
+.. die App lediglich ein Hilfsmittel darstellt
+.. die Nutzung der App in Einsatzlagen ausschließlich auf eigenes Risiko erfolgt.
+
+4. Keine Haftung für Einsatzfolgen
+Der Anbieter haftet nicht für:
+- Fehlentscheidungen
+- Einsatzverzögerungen
+- Fehlkommunikation
+- Personen- oder Sachschäden
+- Vermögensschäden
+- Folgeschäden jeglicher Art die mittelbar oder unmittelbar im Zusammenhang mit der Nutzung der App stehen.
+
+5. Haftungsbeschränkung
+Der Anbieter haftet – gleich aus welchem Rechtsgrund – nur:
+nach zwingenden gesetzlichen Vorschriften.
+Die Gesamthaftung ist – soweit gesetzlich zulässig – auf den vom Nutzer gezahlten Betrag der letzten 6 Monate begrenzt.
+
+6. Keine Garantie für Verfügbarkeit
+Es besteht kein Anspruch auf:
+- permanente Verfügbarkeit
+- Serverstabilität
+- Funktionalität
+- Kompatibilität mit bestimmten Geräten
+- Technische Störungen können jederzeit auftreten
+
+7. Daten & Dokumentation
+Der Anbieter übernimmt keine Haftung für:
+- Datenverlust
+- fehlerhafte Dokumentation
+- unvollständige Einsatzprotokolle
+- Synchronisationsfehler
+Die Sicherung einsatzrelevanter Daten liegt allein in der Verantwortung des Nutzers bzw. der Organisation.
+
+8. Kein Ersatz für behördliche Systeme
+Die App ist kein behördlich zertifiziertes Einsatzleitsystem und ersetzt keine offiziellen BOS- oder Leitstellen-Systeme.
+
+9. Rechtswahl
+Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.
+

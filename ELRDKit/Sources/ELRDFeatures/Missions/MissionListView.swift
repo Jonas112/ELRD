@@ -9,7 +9,11 @@ import ELRDStore
 struct MissionListView: View {
     @Bindable var model: MissionListModel
     let account: AccountMenuModel
+    let masterData: MasterDataEditor?
+    let isAdmin: Bool
+    let initialSettingsPage: SettingsView.Page?
     let onOpen: (MissionStore) -> Void
+    @State private var showsSettings: Bool
 
     @State private var showsNewMission: Bool
     @State private var pendingDelete: MissionSummary?
@@ -19,13 +23,20 @@ struct MissionListView: View {
     init(
         model: MissionListModel,
         account: AccountMenuModel,
+        masterData: MasterDataEditor? = nil,
+        isAdmin: Bool = false,
         showsNewMissionInitially: Bool = false,
+        initialSettingsPage: SettingsView.Page? = nil,
         onOpen: @escaping (MissionStore) -> Void
     ) {
         self.model = model
         self.account = account
+        self.masterData = masterData
+        self.isAdmin = isAdmin
+        self.initialSettingsPage = initialSettingsPage
         self.onOpen = onOpen
         _showsNewMission = State(initialValue: showsNewMissionInitially)
+        _showsSettings = State(initialValue: initialSettingsPage != nil)
     }
 
     var body: some View {
@@ -45,8 +56,20 @@ struct MissionListView: View {
             .navigationTitle("Einsätze")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showsSettings = true } label: {
+                        Image(systemName: "gearshape")
+                            .font(.title3.weight(.semibold))
+                            .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
+                    }
+                    .accessibilityLabel("Einstellungen")
+                }
                 ToolbarItem(placement: .topBarTrailing) { AccountAvatarMenu(account: account, size: TouchTarget.minimum) }
             }
+        }
+        .sheet(isPresented: $showsSettings) {
+            SettingsView(masterData: masterData, isAdmin: isAdmin, initialPage: initialSettingsPage) { showsSettings = false }
+                .largeSheet()
         }
         .onAppear { model.filter.showsAllYears = showsAllYears }
         .onChange(of: showsAllYears) { _, value in model.filter.showsAllYears = value }

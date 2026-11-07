@@ -18,6 +18,7 @@ public struct MissionWorkspaceView: View {
 
     @State private var selection: WorkspaceSection
     @State private var showsMessages = AppLaunchOptions.current.demoScreen == .messages
+    @State private var showsReport = AppLaunchOptions.current.demoScreen == .report
     @State private var showsDetails: Bool
     @State private var showsQuickAdd = false
     @State private var lastAdded: Patient?
@@ -64,7 +65,8 @@ public struct MissionWorkspaceView: View {
                             selection: $selection,
                             badges: badges,
                             account: account,
-                            onMessages: { showsMessages = true }
+                            onMessages: { showsMessages = true },
+                            onReport: { showsReport = true }
                         )
                         VStack(spacing: 0) {
                             situationBar(layout: layout, badges: badges)
@@ -103,6 +105,9 @@ public struct MissionWorkspaceView: View {
             if !Task.isCancelled { lastAdded = nil }
         }
         .sheet(isPresented: $showsMessages) { MessagesView(store: store).largeSheet() }
+        .fullScreenCover(isPresented: $showsReport) {
+            ReportEditorView(store: store, people: people) { showsReport = false }
+        }
         .sheet(isPresented: $showsDetails) { MissionDetailsView(store: store, people: people).largeSheet() }
         .alert("Aktion nicht möglich", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
@@ -125,6 +130,7 @@ public struct MissionWorkspaceView: View {
             onClose: path.isEmpty ? onClose : nil,
             onDetails: { showsDetails = true },
             onMessages: { showsMessages = true },
+            onReport: { showsReport = true },
             onTriage: { category in
                 // Tipp auf einen Zähler: Patienten dieser Kategorie zeigen.
                 patientQuery = PatientListQuery(triage: category, sort: patientQuery.sort, layout: patientQuery.layout)
@@ -246,6 +252,7 @@ struct SituationBar: View {
     let onClose: (() -> Void)?
     let onDetails: () -> Void
     let onMessages: () -> Void
+    let onReport: () -> Void
     let onTriage: (Sichtungskategorie) -> Void
     let onQuickAdd: (Sichtungskategorie) -> Void
 
@@ -270,6 +277,7 @@ struct SituationBar: View {
                         backButton
                         missionTitle
                         Spacer(minLength: Spacing.s)
+                        ReportButton(action: onReport)
                         MessagesBellButton(unread: unreadMessages, action: onMessages)
                         if let account { AccountAvatarMenu(account: account) }
                     }
@@ -459,6 +467,7 @@ struct WorkspaceRail: View {
     let badges: WorkspaceBadges
     let account: AccountMenuModel?
     let onMessages: () -> Void
+    let onReport: () -> Void
 
     var body: some View {
         VStack(spacing: Spacing.s) {
@@ -469,6 +478,7 @@ struct WorkspaceRail: View {
                 .frame(width: 80)
             }
             Spacer(minLength: Spacing.l)
+            ReportButton(action: onReport)
             MessagesBellButton(unread: badges.unreadMessages, action: onMessages)
             if let account { AccountAvatarMenu(account: account) }
         }
@@ -543,6 +553,22 @@ struct SectionButton: View {
 }
 
 /// Glocke für Nachrichten mit Zähler.
+/// Bericht erstellen (Schritt 44).
+struct ReportButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "doc.richtext")
+                .font(.system(size: 22, weight: .semibold))
+                .frame(width: TouchTarget.comfortable, height: TouchTarget.comfortable)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.primary.opacity(0.8))
+        .accessibilityLabel("Bericht erstellen")
+    }
+}
+
 struct MessagesBellButton: View {
     let unread: Int
     let action: () -> Void

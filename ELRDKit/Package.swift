@@ -73,6 +73,7 @@ let package = Package(
                 "ELRDReports",
                 "ELRDStammdaten",
             ],
+            resources: [.copy("Rechtliches")],
             swiftSettings: commonSettings
         ),
 

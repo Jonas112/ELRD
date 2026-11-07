@@ -18,6 +18,9 @@ public struct RootView: View {
             if let environment {
                 AppFlowView(environment: environment)
                     .environment(\.attachmentStore, environment.attachments)
+                    .environment(environment.settings)
+                    .environment(environment.reportLibrary)
+                    .environment(environment.subscriptions)
             } else if let startupError {
                 ContentUnavailableView(
                     "ELRD konnte nicht starten",
@@ -65,6 +68,7 @@ struct SignedInView: View {
     @State private var catalogs = PatientCatalogs.empty
     @State private var masterData: MasterDataEditor?
     @State private var journalTemplates: JournalTemplateEditor?
+    @State private var showsOnboarding = false
 
     var body: some View {
         Group {
@@ -88,13 +92,20 @@ struct SignedInView: View {
                 MissionListView(
                     model: list,
                     account: account,
-                    showsNewMissionInitially: environment.demoScreen == .newMission
+                    masterData: masterData,
+                    isAdmin: user.role == .admin,
+                    showsNewMissionInitially: environment.demoScreen == .newMission,
+                    initialSettingsPage: environment.demoScreen == .settings ? .general : environment.demoScreen == .masterData ? .masterData : nil
                 ) { store in
                     openStore = store
                 }
             } else {
                 ProgressView()
             }
+        }
+        // Einführung und Vereinbarungen (Schritt 50): beim ersten Mal und bei neuer Fassung.
+        .fullScreenCover(isPresented: $showsOnboarding) {
+            OnboardingView(masterData: masterData) { showsOnboarding = false }
         }
         // Nach „Region laden“ stehen neue Kliniken gleich in der Klinikauswahl.
         .onChange(of: masterData?.revision) {
@@ -107,6 +118,11 @@ struct SignedInView: View {
             journalTemplates = JournalTemplateEditor(repository: environment.repository)
             let model = MissionListModel(environment: environment, user: user)
             list = model
+            // Beispieldaten: Einführung nur auf dem eigenen Bildschirmfoto.
+            let settings = environment.settings.settings
+            showsOnboarding = environment.isDemo
+                ? environment.demoScreen == .onboarding
+                : !(settings.hasCompletedOnboarding && Agreements.isAccepted(settings))
             // Bildschirmfoto „Arbeitsbereich“: laufenden Beispieleinsatz direkt öffnen.
             if environment.demoScreen?.opensRunningMission == true, let running = model.result.running.first {
                 openStore = try? model.open(running.id)

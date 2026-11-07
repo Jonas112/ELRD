@@ -34,7 +34,7 @@ struct HospitalPickerView: View {
                     }
 
                     if choices.isEmpty {
-                        Text("Noch keine Kliniken in den Stammdaten. Unter Einstellungen → Stammdaten lässt sich eine Region importieren (Schritt 48); bis dahin die Klinik oben als Text eintragen.")
+                        Text("Noch keine Kliniken in den Stammdaten. In der Einsatzliste unter Einstellungen → Stammdaten → „Region laden“ übernehmen; bis dahin die Klinik oben als Text eintragen.")
                             .foregroundStyle(.secondary)
                     }
 

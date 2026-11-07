@@ -196,6 +196,8 @@ jobs:
                 xcrun simctl terminate "$device" ELRD.App || true
                 xcrun simctl launch "$device" ELRD.App --demo-screen $screen -AppleLanguages "(de)" -AppleLocale de_DE
                 sleep 5
+                # Karte: MapKit braucht beim ersten Start länger (sonst weißes Bild).
+                case $screen in map*) sleep 8 ;; esac
                 xcrun simctl io "$device" screenshot "shots/$prefix$screen-$mode.png"
               done
             done

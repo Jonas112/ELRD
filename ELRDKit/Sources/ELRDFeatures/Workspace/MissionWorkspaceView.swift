@@ -291,13 +291,11 @@ struct SituationBar: View {
                 .frame(minHeight: 96)
             case .bottomBar:
                 VStack(spacing: Spacing.m) {
-                    HStack(spacing: Spacing.m) {
-                        backButton
-                        missionTitle
-                        Spacer(minLength: Spacing.s)
-                        ReportButton(action: onReport)
-                        MessagesBellButton(unread: unreadMessages, action: onMessages)
-                        if let account { AccountAvatarMenu(account: account) }
+                    // iPhone: passt der Titel nicht, werden die Knöpfe auf 44 pt verkleinert,
+                    // damit der Titel lesbar bleibt.
+                    ViewThatFits(in: .horizontal) {
+                        topRow(buttonSize: TouchTarget.comfortable, spacing: Spacing.m)
+                        topRow(buttonSize: TouchTarget.minimum, spacing: Spacing.xs)
                     }
                     // iPhone: schmalere Zähler und „+“ ohne Text, damit alles in eine Zeile passt.
                     ViewThatFits(in: .horizontal) {
@@ -318,12 +316,23 @@ struct SituationBar: View {
         .background(Surface.card)
     }
 
-    @ViewBuilder private var backButton: some View {
+    private func topRow(buttonSize: CGFloat, spacing: CGFloat) -> some View {
+        HStack(spacing: spacing) {
+            backButton(size: buttonSize)
+            missionTitle
+            Spacer(minLength: Spacing.xs)
+            ReportButton(size: buttonSize, action: onReport)
+            MessagesBellButton(unread: unreadMessages, size: buttonSize, action: onMessages)
+            if let account { AccountAvatarMenu(account: account, size: buttonSize) }
+        }
+    }
+
+    @ViewBuilder private func backButton(size: CGFloat) -> some View {
         if let onClose {
             Button(action: onClose) {
                 Image(systemName: "chevron.left")
                     .font(.title2.weight(.semibold))
-                    .frame(width: TouchTarget.comfortable, height: TouchTarget.comfortable)
+                    .frame(width: size, height: size)
                     .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .buttonStyle(.plain)
@@ -607,13 +616,14 @@ struct SectionButton: View {
 /// Glocke für Nachrichten mit Zähler.
 /// Bericht erstellen (Schritt 44).
 struct ReportButton: View {
+    var size: CGFloat = TouchTarget.comfortable
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "doc.richtext")
                 .font(.system(size: 22, weight: .semibold))
-                .frame(width: TouchTarget.comfortable, height: TouchTarget.comfortable)
+                .frame(width: size, height: size)
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.primary.opacity(0.8))
@@ -623,13 +633,14 @@ struct ReportButton: View {
 
 struct MessagesBellButton: View {
     let unread: Int
+    var size: CGFloat = TouchTarget.comfortable
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: unread > 0 ? "bell.badge" : "bell")
                 .font(.system(size: 22, weight: .semibold))
-                .frame(width: TouchTarget.comfortable, height: TouchTarget.comfortable)
+                .frame(width: size, height: size)
                 .overlay(alignment: .topTrailing) {
                     if unread > 0 {
                         Text("\(unread)")

@@ -304,27 +304,62 @@ struct OpenItemRow: View {
     let action: () -> Void
 
     var body: some View {
+        // iPhone: Knopf unter den Text statt daneben, sonst bricht er silbenweise um.
+        ViewThatFits(in: .horizontal) {
+            wide
+            narrow
+        }
+    }
+
+    private var wide: some View {
         HStack(spacing: Spacing.l) {
             marker
                 .frame(width: 64, height: 44)
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(item.title)
-                    .font(.headline)
-                    .lineLimit(2)
-                Text(item.detail)
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: Spacing.m)
-            Button(item.actionTitle, action: action)
-                .font(.headline)
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .frame(minHeight: TouchTarget.comfortable)
+            texts(titleLines: 2)
+                // Idealbreite fest, damit die Wahl nicht von der Textlänge abhängt.
+                .frame(minWidth: 160, idealWidth: 220, maxWidth: .infinity, alignment: .leading)
+            actionButton
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.vertical, Spacing.s)
+    }
+
+    private var narrow: some View {
+        HStack(alignment: .top, spacing: Spacing.m) {
+            marker
+                .frame(width: 52, height: 40)
+            VStack(alignment: .leading, spacing: Spacing.s) {
+                texts(titleLines: 3)
+                actionButton
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Spacing.l)
+        .padding(.vertical, Spacing.m)
+    }
+
+    private func texts(titleLines: Int) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+            Text(item.title)
+                .font(.headline)
+                .lineLimit(titleLines)
+            Text(item.detail)
+                .font(.subheadline.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+    }
+
+    private var actionButton: some View {
+        Button(action: action) {
+            Text(item.actionTitle)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .font(.headline)
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .frame(minHeight: TouchTarget.comfortable)
     }
 
     @ViewBuilder private var marker: some View {

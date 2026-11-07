@@ -259,14 +259,20 @@ struct MissionListView: View {
                     sectionTitle
                     Spacer(minLength: Spacing.l)
                     searchField.frame(width: 320)
-                    yearPicker
+                    yearPicker(width: 180)
                 }
                 VStack(alignment: .leading, spacing: Spacing.m) {
                     sectionTitle
                     HStack(spacing: Spacing.m) {
                         searchField
-                        yearPicker
+                        yearPicker(width: 180)
                     }
+                }
+                // iPhone: Suche über die ganze Breite, Zeitraum darunter.
+                VStack(alignment: .leading, spacing: Spacing.m) {
+                    sectionTitle
+                    searchField
+                    yearPicker(width: nil)
                 }
             }
 
@@ -353,13 +359,14 @@ struct MissionListView: View {
         .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
-    private var yearPicker: some View {
+    private func yearPicker(width: CGFloat?) -> some View {
         Picker("Zeitraum", selection: $showsAllYears) {
             Text(String(Calendar.current.component(.year, from: model.now()))).tag(false)
             Text("Alle").tag(true)
         }
         .pickerStyle(.segmented)
-        .frame(width: 180)
+        .frame(width: width)
+        .frame(maxWidth: width == nil ? .infinity : nil)
         .controlSize(.large)
     }
 
@@ -417,25 +424,13 @@ struct NewMissionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: Spacing.xl) {
-                Image(systemName: "plus")
-                    .font(.system(size: 44, weight: .bold))
-                    .frame(width: 92, height: 92)
-                    .background(.white.opacity(0.18), in: Circle())
-                VStack(alignment: .leading, spacing: Spacing.s) {
-                    Text("Neuer Einsatz")
-                        .font(.system(size: 34, weight: .heavy))
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-                    Text(isEnabled ? "Stichwort, Einsatzart, Ort – alles Weitere später" : "Ohne Abo nur Ansehen und Export")
-                        .font(.body)
-                        .opacity(0.9)
-                }
-                Spacer(minLength: 0)
+            // iPhone: kleinerer Kreis und Rand, damit „Neuer Einsatz“ ganz lesbar bleibt.
+            ViewThatFits(in: .horizontal) {
+                content(circle: 92, titleSize: 34, spacing: Spacing.xl, padding: Spacing.xxl, minHeight: 200)
+                content(circle: 64, titleSize: 30, spacing: Spacing.l, padding: Spacing.xl, minHeight: 150)
             }
             .foregroundStyle(.white)
-            .padding(.horizontal, Spacing.xxl)
-            .frame(maxWidth: .infinity, minHeight: 200)
+            .frame(maxWidth: .infinity)
             .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -443,6 +438,29 @@ struct NewMissionButton: View {
         .opacity(isEnabled ? 1 : 0.5)
         .keyboardShortcut("n", modifiers: .command)
         .accessibilityHint("Legt einen neuen Einsatz an")
+    }
+
+    private func content(circle: CGFloat, titleSize: CGFloat, spacing: CGFloat, padding: CGFloat, minHeight: CGFloat) -> some View {
+        HStack(spacing: spacing) {
+            Image(systemName: "plus")
+                .font(.system(size: circle * 0.48, weight: .bold))
+                .frame(width: circle, height: circle)
+                .background(.white.opacity(0.18), in: Circle())
+            VStack(alignment: .leading, spacing: Spacing.s) {
+                Text("Neuer Einsatz")
+                    .font(.system(size: titleSize, weight: .heavy))
+                    .lineLimit(1)
+                    .fixedSize()
+                Text(isEnabled ? "Stichwort, Einsatzart, Ort – alles Weitere später" : "Ohne Abo nur Ansehen und Export")
+                    .font(.body)
+                    .opacity(0.9)
+                    // Feste Idealbreite: Die Wahl der Variante hängt nur am Titel.
+                    .frame(idealWidth: 120, alignment: .leading)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, padding)
+        .frame(minHeight: minHeight)
     }
 }
 
@@ -454,18 +472,15 @@ struct RunningMissionCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.l) {
-            HStack {
-                Label {
-                    Text("LAUFENDER EINSATZ").font(.subheadline.weight(.bold)).tracking(0.8)
-                } icon: {
-                    Circle().fill(.tint).frame(width: 10, height: 10)
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    runningLabel
+                    Spacer()
+                    elapsed
                 }
-                .foregroundStyle(.tint)
-                Spacer()
-                TimelineView(.periodic(from: .now, by: 60)) { _ in
-                    Text("\(summary.displayNumber) · seit \(ElapsedTimeFormat.string(from: summary.startedAt, to: now()))")
-                        .font(.body.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    runningLabel
+                    elapsed
                 }
             }
             HStack(alignment: .top, spacing: Spacing.l) {
@@ -500,6 +515,27 @@ struct RunningMissionCard: View {
         .accessibilityElement(children: .contain)
     }
 
+    private var runningLabel: some View {
+        Label {
+            Text("LAUFENDER EINSATZ").font(.subheadline.weight(.bold)).tracking(0.8)
+                .lineLimit(1)
+                .fixedSize()
+        } icon: {
+            Circle().fill(.tint).frame(width: 10, height: 10)
+        }
+        .foregroundStyle(.tint)
+    }
+
+    private var elapsed: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            Text("\(summary.displayNumber) · seit \(ElapsedTimeFormat.string(from: summary.startedAt, to: now()))")
+                .font(.body.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize()
+        }
+    }
+
     private var resumeButton: some View {
         Button(action: resume) {
             Label("Fortsetzen", systemImage: "arrow.right")
@@ -524,6 +560,50 @@ struct FinishedMissionRow: View {
 
     var body: some View {
         Button(action: open) {
+            // iPhone: Datum und Dauer unter den Titel statt in eine eigene Spalte.
+            ViewThatFits(in: .horizontal) {
+                wide
+                narrow
+            }
+            .padding(.horizontal, Spacing.l)
+            .padding(.vertical, Spacing.s)
+            .frame(minHeight: 76)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var dateText: String { summary.startedAt.formatted(date: .numeric, time: .shortened) }
+
+    private var durationText: String {
+        "\(ElapsedTimeFormat.string(from: summary.startedAt, to: summary.endedAt ?? now())) · \(patientText)"
+    }
+
+    private var narrow: some View {
+        HStack(spacing: Spacing.m) {
+            MissionThumbnailView(file: summary.thumbnail, size: 48)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(summary.title)
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text("\(dateText) · \(durationText)")
+                    .font(.footnote.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: Spacing.xs)
+            Image(systemName: "chevron.right")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private var wide: some View {
             HStack(spacing: Spacing.l) {
                 MissionThumbnailView(file: summary.thumbnail, size: 56)
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -536,25 +616,20 @@ struct FinishedMissionRow: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                Spacer(minLength: Spacing.l)
+                .frame(minWidth: 160, idealWidth: 220, maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .trailing, spacing: Spacing.xxs) {
-                    Text(summary.startedAt.formatted(date: .numeric, time: .shortened))
+                    Text(dateText)
                         .font(.body.monospacedDigit())
                         .foregroundStyle(.secondary)
-                    Text("\(ElapsedTimeFormat.string(from: summary.startedAt, to: summary.endedAt ?? now())) · \(patientText)")
+                    Text(durationText)
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
+                .fixedSize()
                 Image(systemName: "chevron.right")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
-            .padding(.horizontal, Spacing.l)
-            .padding(.vertical, Spacing.s)
-            .frame(minHeight: 76)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private var subtitle: String {

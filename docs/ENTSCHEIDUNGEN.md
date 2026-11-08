@@ -96,3 +96,8 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E90 | 2026-11-08 | Wettläufe: je Einsatz höchstens ein Lauf + ein gemeinsamer Folgelauf; Stände nur vorwärts; erst übernehmen, dann Stand sichern; Verlassen/Kontowechsel erst nach Ende aller Läufe; atomare Pakete; fester Datensatzname = idempotent | Push, Zeitgeber, eigene Änderungen und Nutzeraktionen lösen gleichzeitig aus (Jonas: „Race Conditions sauber lösen“) |
 | E91 | 2026-11-08 | „Teilen beenden“ löscht die Cloud-Kopie; Schlüsselverlust beim Teilenden baut die Zone neu auf (alle müssen neu beitreten); lokale Kopien bleiben immer | Datensparsamkeit; verschlüsselte Daten sind nach Schlüsselverlust nicht mehr lesbar |
 | E92 | 2026-11-08 | Nachforderung: SK 1 braucht grundsätzlich einen Notarzt (je SK‑1-Patient ein NEF, oder RTH); in großer Not reicht ein RTW – der Rechner zeigt diesen Notfall-Bedarf zusätzlich, fordert aber den Normalbedarf nach | Vorgabe Jonas |
+| E93 | 2026-11-08 | Checkliste: Abhaken = Tagebucheintrag (Kategorie `checklist`), Zurücknehmen = Einträge löschen | Abgleichsicher: zwei Geräte haken nie gegeneinander; Uhrzeit dokumentiert |
+| E94 | 2026-11-08 | Diktat nur mit Spracherkennung auf dem Gerät (`requiresOnDeviceRecognition`); ohne Offline-Modell kein Knopf | Einsatz- und Patientendaten gehen nicht an Apple-Server |
+| E95 | 2026-11-08 | Neue Entitätsfelder immer optional (`nil` = nicht erfasst) | Ältere gespeicherte Stände und Ereignisse anderer Geräte bleiben lesbar |
+| E96 | 2026-11-08 | Klinikkontingente je Einsatz am Einsatz (ganze Liste, letzte Änderung gilt); Klinik ohne Grenzen bleibt sichtbar, bis sie entfernt wird | Kontingente ändern sich selten gleichzeitig; einfacher als eigene Entität |
+

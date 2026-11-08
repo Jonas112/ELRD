@@ -78,46 +78,64 @@ struct PatientsView: View {
                     }
                 }
             }
-            HStack(spacing: Spacing.s) {
+            // iPhone: Suche über die ganze Breite, Knöpfe darunter.
+            if isWide {
                 HStack(spacing: Spacing.s) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                    TextField("Name, Nummer, ILS-Nr., Merkmal", text: $query.searchText)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    if !query.searchText.isEmpty {
-                        Button { query.searchText = "" } label: {
-                            Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
-                        }
-                        .accessibilityLabel("Suche leeren")
-                    }
+                    searchField.frame(maxWidth: 360)
+                    Spacer()
+                    viewControls
                 }
-                .padding(.horizontal, Spacing.m)
-                .frame(minHeight: TouchTarget.minimum + 4)
-                .frame(maxWidth: isWide ? 360 : .infinity)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                if isWide { Spacer() }
-                Button { showsScanner = true } label: {
-                    Image(systemName: "barcode.viewfinder")
-                        .font(.title3.weight(.semibold))
-                        .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum + 4)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            } else {
+                VStack(alignment: .leading, spacing: Spacing.s) {
+                    searchField
+                    HStack(spacing: Spacing.s) { viewControls }
                 }
-                .accessibilityLabel("Anhängekarte scannen")
-                layoutToggle
-                Menu {
-                    Picker("Sortierung", selection: $query.sort) {
-                        ForEach(PatientSort.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                } label: {
-                    Label(query.sort.title, systemImage: "arrow.up.arrow.down")
-                        .font(.headline)
-                        .padding(.horizontal, Spacing.l)
-                        .frame(minHeight: TouchTarget.minimum + 4)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-                }
-                .accessibilityLabel("Sortierung: \(query.sort.title)")
             }
         }
+    }
+
+    private var searchField: some View {
+            HStack(spacing: Spacing.s) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Name, Nummer, ILS-Nr., Merkmal", text: $query.searchText)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                if !query.searchText.isEmpty {
+                    Button { query.searchText = "" } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel("Suche leeren")
+                }
+            }
+            .padding(.horizontal, Spacing.m)
+            .frame(minHeight: TouchTarget.minimum + 4)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var viewControls: some View {
+        Button { showsScanner = true } label: {
+            Image(systemName: "barcode.viewfinder")
+                .font(.title3.weight(.semibold))
+                .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum + 4)
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        }
+        .accessibilityLabel("Anhängekarte scannen")
+        layoutToggle
+        Menu {
+            Picker("Sortierung", selection: $query.sort) {
+                ForEach(PatientSort.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+        } label: {
+            Label(query.sort.title, systemImage: "arrow.up.arrow.down")
+                .font(.headline)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, Spacing.l)
+                .frame(minHeight: TouchTarget.minimum + 4)
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        }
+        .accessibilityLabel("Sortierung: \(query.sort.title)")
     }
 
     /// Umschalter Liste/Kacheln; die Wahl merkt sich das Gerät.

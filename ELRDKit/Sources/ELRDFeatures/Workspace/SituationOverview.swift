@@ -78,13 +78,16 @@ struct SituationOverview: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .sheet(item: $sheet) { tool in
-            switch tool {
-            case .report: SituationReportSheet(store: store)
-            case .checklist: ChecklistSheet(store: store, template: settings.effectiveChecklist)
-            case .handover: HandoverSheet(store: store, people: people, template: settings.effectiveChecklist)
-            case .hospitals: HospitalQuotaSheet(store: store, hospitals: masterData?.hospitals ?? [])
-            case .leadership: LeadershipSheet(store: store)
+            Group {
+                switch tool {
+                case .report: SituationReportSheet(store: store)
+                case .checklist: ChecklistSheet(store: store, template: settings.effectiveChecklist)
+                case .handover: HandoverSheet(store: store, people: people, template: settings.effectiveChecklist)
+                case .hospitals: HospitalQuotaSheet(store: store, hospitals: masterData?.hospitals ?? [])
+                case .leadership: LeadershipSheet(store: store)
+                }
             }
+            .largeSheet()
         }
     }
 

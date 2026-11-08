@@ -147,6 +147,15 @@ public struct MissionWorkspaceView: View {
             if phase == .active { evaluateOpenItems() }
         }
         .onDisappear { notifier?.forget(store.state.mission.id) }
+        // Schritt 84: angetippte Mitteilung dieses Einsatzes → zum Punkt.
+        .onChange(of: NotificationInbox.shared.pending, initial: true) {
+            guard let route = NotificationInbox.shared.take(for: store.missionID) else { return }
+            notifier?.dismissBanner()
+            if let target = route.target {
+                path = []
+                handle(target)
+            }
+        }
         .task(id: lastAdded?.id) {
             guard lastAdded != nil else { return }
             try? await Task.sleep(for: .seconds(6))
@@ -154,7 +163,7 @@ public struct MissionWorkspaceView: View {
         }
         .sheet(isPresented: $showsMessages) { MessagesView(store: store).largeSheet() }
         .fullScreenCover(isPresented: $showsReport) {
-            ReportEditorView(store: store, people: people) { showsReport = false }
+            ReportEditorView(store: store, people: people, hospitals: catalogs.hospitals) { showsReport = false }
         }
         .sheet(isPresented: $showsDetails) { MissionDetailsView(store: store, people: people).largeSheet() }
         .alert("Aktion nicht möglich", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {

@@ -72,5 +72,10 @@ struct HospitalMailTests {
         try store.perform(SetDestination(patientID: patients[1].id, hospital: HospitalSnapshot(name: "St. Josef")))
         #expect(ReportDestination.email(for: "leopoldina", in: store.state.patients) == "notaufnahme@leopoldina.de")
         #expect(ReportDestination.email(for: "St. Josef", in: store.state.patients) == nil, "keine Adresse hinterlegt")
+        // Schritt 85: Ersatz aus den Stammdaten.
+        var josef = MasterHospital(name: "St. Josef")
+        josef.email = " zna@josef.de "
+        #expect(ReportDestination.email(for: "st. josef", in: [MasterHospital(name: "Leopoldina"), josef]) == "zna@josef.de")
+        #expect(ReportDestination.email(for: "Unbekannt", in: [josef]) == nil)
     }
 }

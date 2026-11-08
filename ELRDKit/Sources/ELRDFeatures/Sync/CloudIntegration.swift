@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import CloudKit
+import UserNotifications
 import ELRDDomain
 import ELRDStore
 import ELRDCloud
@@ -58,6 +59,9 @@ public final class ELRDAppDelegate: NSObject, UIApplicationDelegate {
         // Beispieldaten (Bildschirmfotos, Oberflächentests): kein iCloud.
         if AppLaunchOptions.current.demoScreen == nil {
             application.registerForRemoteNotifications()
+            // Angetippte Mitteilungen führen zum Einsatz (Schritt 84) – früh setzen,
+            // damit auch ein Start über die Mitteilung ankommt.
+            UNUserNotificationCenter.current().delegate = ELRDNotificationDelegate.shared
         }
         return true
     }

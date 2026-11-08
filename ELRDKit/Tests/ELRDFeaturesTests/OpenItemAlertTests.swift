@@ -74,4 +74,37 @@ struct OpenItemAlertTests {
         #expect(anyRole.fits(.orgl), "ohne Funktion: überall wählbar")
         #expect(anyRole.fits(nil))
     }
+
+    // MARK: 84 Mitteilung antippen
+
+    @Test func notificationPayloadRoundTrips() throws {
+        let mission = MissionID()
+        let patient = PatientID()
+        let targets: [OpenItem.Target] = [.patient(patient), .section(.organisation), .messages, .situationReport, .hospitals]
+        for target in targets {
+            let info = NotificationPayload.userInfo(mission: mission, target: target)
+            let route = try #require(NotificationPayload.route(from: info))
+            #expect(route == NotificationRoute(missionID: mission, target: target))
+        }
+        #expect(NotificationPayload.route(from: NotificationPayload.userInfo(mission: mission, target: nil))?.target == nil)
+        #expect(NotificationPayload.route(from: ["x": "y"]) == nil)
+        #expect(NotificationPayload.decode("patient:kaputt") == nil)
+    }
+
+    @Test func plannedRemindersLeadToTheirItem() throws {
+        let store = try PreviewData.makeStore(now: now)
+        let planned = OpenItemAlerts.upcoming(for: store.state, now: now, reminders: ReminderSettings())
+        #expect(planned.contains { $0.target == .situationReport })
+        #expect(planned.contains { $0.target == .patient(store.state.activePatients[0].id) })
+        #expect(planned.contains { $0.target == .section(.organisation) })
+    }
+
+    @Test func inboxHandsRouteOnlyToItsMission() {
+        let inbox = NotificationInbox.shared
+        let mission = MissionID()
+        inbox.receive(NotificationRoute(missionID: mission, target: .messages))
+        #expect(inbox.take(for: MissionID()) == nil, "anderer Einsatz übernimmt nicht")
+        #expect(inbox.take(for: mission)?.target == .messages)
+        #expect(inbox.pending == nil)
+    }
 }

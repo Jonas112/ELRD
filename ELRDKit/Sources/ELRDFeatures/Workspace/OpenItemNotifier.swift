@@ -13,6 +13,8 @@ struct ScheduledReminder: Equatable {
     let date: Date
     let title: String
     let body: String
+    /// Wohin das Antippen führt (Schritt 84).
+    var target: OpenItem.Target? = nil
 }
 
 enum OpenItemAlerts {
@@ -39,7 +41,7 @@ enum OpenItemAlerts {
             let due = last.addingTimeInterval(Double(reminders.situationReportMinutes) * 60)
             if due > now {
                 result.append(ScheduledReminder(id: "\(missionKey).situationReport", date: due, title: title,
-                                                body: "Lagemeldung an die ILS fällig."))
+                                                body: "Lagemeldung an die ILS fällig.", target: .situationReport))
             }
         }
         if reminders.transportWaitMinutes > 0 {
@@ -50,7 +52,8 @@ enum OpenItemAlerts {
                 guard due > now else { continue }
                 result.append(ScheduledReminder(
                     id: "\(missionKey).wait.\(patient.id.rawValue.uuidString)", date: due, title: title,
-                    body: "Patient \(patient.number) (\(patient.triage.shortName)) wartet seit \(reminders.transportWaitMinutes) min ohne Transportmittel."
+                    body: "Patient \(patient.number) (\(patient.triage.shortName)) wartet seit \(reminders.transportWaitMinutes) min ohne Transportmittel.",
+                    target: .patient(patient.id)
                 ))
             }
         }
@@ -60,7 +63,8 @@ enum OpenItemAlerts {
                 guard due > now else { continue }
                 result.append(ScheduledReminder(
                     id: "\(missionKey).placeholder.\(unit.id.rawValue.uuidString)", date: due, title: title,
-                    body: "\(unit.type.shortName) seit \(reminders.placeholderMinutes) min angefordert, noch ohne Fahrzeug – bei der ILS nachfragen."
+                    body: "\(unit.type.shortName) seit \(reminders.placeholderMinutes) min angefordert, noch ohne Fahrzeug – bei der ILS nachfragen.",
+                    target: .section(.organisation)
                 ))
             }
         }
@@ -166,6 +170,7 @@ final class OpenItemNotifier {
             content.body = OpenItemAlerts.body(for: item, state: state)
             content.sound = .default
             content.threadIdentifier = state.mission.id.rawValue.uuidString
+            content.userInfo = NotificationPayload.userInfo(mission: state.mission.id, target: item.target)
             let request = UNNotificationRequest(identifier: "\(state.mission.id.rawValue.uuidString).new.\(item.id)", content: content, trigger: nil)
             center.add(request)
         }
@@ -185,6 +190,7 @@ final class OpenItemNotifier {
             content.body = reminder.body
             content.sound = .default
             content.threadIdentifier = mission.rawValue.uuidString
+            content.userInfo = NotificationPayload.userInfo(mission: mission, target: reminder.target)
             let interval = max(1, reminder.date.timeIntervalSince(now))
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
             center.add(UNNotificationRequest(identifier: reminder.id, content: content, trigger: trigger))

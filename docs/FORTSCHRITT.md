@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** Schritt 84 (Liste P). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
+**Nächster Schritt:** Schritt 86 (Liste P). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -146,16 +146,16 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 ## O – Rückmeldungen Jonas (2026-11-08, 2)
 | # | Schritt | Status |
 |---|---|---|
-| 80 | Zeichnen auf der Karte: Umschalter „Zeichnen“ / „Karte bewegen / zoomen“, Zeichnung bleibt am Ort | 🧪 |
-| 81 | Checklisten-Zuordnung unter der Einsatzart (linksbündig); Führungspersonal in den Einstellungen, in „Führung und Kräfte“ auswählbar | 🧪 |
-| 82 | Tagebuch: erst die Liste, „+ Eintrag“ öffnet einen eigenen Dialog | 🧪 |
-| 83 | Neue offene Punkte als Hinweis oben; Mitteilungen bei gesperrtem Gerät (vorgeplante Erinnerungen, ohne Namen) | 🧪 |
+| 80 | Zeichnen auf der Karte: Umschalter „Zeichnen“ / „Karte bewegen / zoomen“, Zeichnung bleibt am Ort | ✅ |
+| 81 | Checklisten-Zuordnung unter der Einsatzart (linksbündig); Führungspersonal in den Einstellungen, in „Führung und Kräfte“ auswählbar | ✅ |
+| 82 | Tagebuch: erst die Liste, „+ Eintrag“ öffnet einen eigenen Dialog | ✅ |
+| 83 | Neue offene Punkte als Hinweis oben; Mitteilungen bei gesperrtem Gerät (vorgeplante Erinnerungen, ohne Namen) | ✅ |
 
 ## P – Nächste Funktionen (von Jonas ausgewählt 2026-11-08)
 | # | Schritt | Status |
 |---|---|---|
-| 84 | Mitteilung antippen → direkt zum Einsatz und Punkt (Patient, Lagemeldung, Organisation …) | ⬜ |
-| 85 | Klinikbericht: Empfänger = E-Mail der Zielklinik aus den Stammdaten (offene Frage 4) | ⬜ |
+| 84 | Mitteilung antippen → direkt zum Einsatz und Punkt (Patient, Lagemeldung, Organisation …) | 🧪 |
+| 85 | Klinikbericht: Empfänger = E-Mail der Zielklinik; gab es schon (Schritt 62) – ergänzt: Ersatzadresse aus den Stammdaten, wenn die Zuweisung keine trägt | 🧪 |
 | 86 | Einsatz-Zeitstrahl aller Ereignisse und Kennzahlen (bis erste Sichtung, erster Transport, letzter Patient ab; SK-Verlauf), auch im Bericht | ⬜ |
 | 87 | Geführte Sichtung mSTaRT oder PRIOR (in den Einstellungen wählbar): Vorschlag mit Begründung, Übernahme per Tipp, Antworten im Protokoll (E104) | ⬜ |
 | 88 | Übungsmodus: Einsatz als Übung markiert (eigene Farbe, nicht in Statistiken), 3–4 Beispiellagen zum Einspielen (Jonas prüft) | ⬜ |
@@ -222,12 +222,13 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritte 67–76 (2026-11-08):** Fachlogik in `ELRDStore/Analysis` (rein, getestet in `AnalysisTests`): `ResourceDemand` + `RequestPlaceholders` (68, E87/E92 inkl. Notfall-Bedarf ohne NEF), `SituationReport` + `AddSituationReport` (67), `TransportBoard` (70), `HospitalDistribution` + `SetHospitalQuota`/`RemoveHospitalQuota` (71), `SetPatientTag` + `patient(withTag:)` (72), `ForceOverview`, `SetLeadershipPosition`, `SetSectionLeader` (73), `HandoverReport` + `HandOverMission` (75), `CheckChecklistItem`/`UncheckChecklistItem` (76). Neue Felder alle optional (alte Stände bleiben lesbar): `Mission.situationNote/hazards/hospitalQuotas/leadership`, `MissionSection.leaderName/leaderCallsign/radioChannel`, `Patient.tagNumber`, `JournalEntry.category/checklistItemID`. Erinnerungen (69) als offene Punkte (`OpenItem.items(…, reminders:)`), Einstellungen `AppSettings.reminders`/`checklist` unter „Erinnerungen und Checkliste“. Oberfläche: Werkzeugleiste auf der Lage (`SituationTools.swift`, `LeadershipSheet.swift`), Transport-Board als dritte Patientenansicht, `TagScannerSheet` (VisionKit; im Simulator nur Eingabe), `Dictation`/`DictationButton` (nur On-Device-Erkennung, sonst ausgeblendet). Demo-Bildschirme `situationReport checklist leadership hospitals transportBoard handover`.
 - **Schritte 77–79 (2026-11-08):** `MissionType` ist jetzt ein erweiterbarer Typ (Kürzel als Text, E97); eigene Arten tragen ihren Namen als Kürzel. Einstellungen: `AppSettings.missionTypes`, `checklists`, `defaultChecklistID`; Regel `checklist(for:)` = Liste der Art, sonst „ohne Einsatzart“, sonst erste (die alte Einzelliste `checklist` ist Ausgangspunkt). Seite „Erinnerungen, Einsatzarten, Checklisten“ mit `ChecklistEditorView`. Klinikauswahl: `HospitalChoice.hasCapacityReport` sortiert zuerst. Patient: `selectionButton` statt Schnellauswahl (Knopftext „Einheit wählen oder anlegen …“ – der Oberflächentest sucht danach), `disclosure` für seltene Angaben, IVENA eingeklappt (bei Priorität 1 bleibt ABCD sichtbar). Karte: Fahne ziehbar (`onMoveMission`), Einsatzort-Menü per Tipp. Banner aus den Einstellungen oben in der Einsatzliste (Beispieldaten mit Logo).
 - **Schritte 80–83 (2026-11-08):** 80: Beim Zeichnen schaltet die Leiste zwischen „✏︎ Zeichnen“ und „✋ Karte bewegen / zoomen“ um. Die Zeichenfläche merkt sich beim Start die geografischen Ecken und folgt der Karte per Transformation (verschieben, zoomen); Drehen ist beim Zeichnen gesperrt (E100). Beim Fertigstellen wird die Zeichnung über die gemerkten Ecken verortet, nicht über den aktuellen Ausschnitt. Farbe/Stärke/Radierer wählen schaltet zurück auf Zeichnen. 81: Einstellungen › Einsatzhilfen: Checkliste je Einsatzart als Menü unter dem Namen; neue Seite „Führungspersonal“ (Name, Funkrufname, Kanal, passende Funktionen; ohne Funktion überall wählbar), im Editor der Funktion bzw. Abschnittsleitung als Liste „Aus dem Führungspersonal“ über den Freitextfeldern (E102). 82: `JournalView` zeigt Kopf mit „+ Eintrag“ (⌘N/⌘J) und die Liste; Eingabe, Zeit, Fotos, Kamera, Sprachnotiz, Bausteine, Diktat und Entwurf liegen in `JournalComposerSheet`. Demo-Bildschirm `journalNew`. 83: `OpenItemNotifier` (Umgebung): beim Öffnen des Einsatzes wird der Stand gemerkt (nichts „neu“), eigene Änderungen werden still übernommen; neue Punkte durch Abgleich (`reloadOpenStores`) oder Zeitablauf (Minutentakt) erscheinen oben als oranger Hinweis mit Sprungknopf (8 s). Im Hintergrund: Mitteilung sofort (bei Abgleich per Push) und vorgeplante Erinnerungen (Lagemeldung, Wartezeit, Platzhalter; höchstens 40) – Texte nur mit Patientennummer und SK (E101). Schalter „Mitteilungen bei gesperrtem Gerät“ in den Erinnerungen. Beim Verlassen des Einsatzes werden seine geplanten Mitteilungen entfernt. Tests: `OpenItemAlertTests` (5).
+- **Schritte 84–85 (2026-11-08):** 80–83 grün (CI 42455348872, 4 UI-Tests, Fotos geprüft). 84: Mitteilungen tragen Einsatz und Ziel in `userInfo` (`NotificationPayload`, nur Kennungen). `ELRDNotificationDelegate` (im App-Delegate früh gesetzt, auch bei Start über die Mitteilung) legt die Route in `NotificationInbox`; `SignedInView` öffnet den Einsatz (wechselt ggf.), der Arbeitsbereich übernimmt das Ziel (`take(for:)`) und springt wie beim Hinweis oben. Im Vordergrund keine Systemmitteilungen (eigene Hinweise). 85: Die Klinik-Mail gab es seit Schritt 62; neu ist der Ersatz aus den Stammdaten (`ReportDestination.email(for:in: [MasterHospital])`), wenn die Zuweisung keine Adresse trägt. Tests: 3 Features, 1 Berichte.
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).
 1. **Abo (E76):** Gratismonat in App Store Connect und 30 Tage lokaler Test – beides behalten? TestFlight frei oder mit Abo?
 2. **Datenschutzerklärung Fassung 2:** juristisch prüfen lassen; Hinweis auf OpenStreetMap-Nutzungsbedingungen (Kachel-Server sind für geringe Last gedacht – bei vielen Nutzern eigener Kachel-Anbieter nötig).
 3. **Backend:** Fragen 1–5 in `SYNC.md` (Betrieb, Anmeldung, Freigabe, Dateien, Abgleich ohne Netz).
-4. **Bericht an Klinik:** Soll „An ILS“ beim Klinikbericht stattdessen die E-Mail-Adresse der Klinik aus den Stammdaten vorschlagen?
+4. ~~Bericht an Klinik~~ erledigt (Schritte 62, 85).
 5. **Auf dem Gerät prüfen:** Kamera, Mikrofon, Kartenkacheln, Drucken, Kauf mit `ELRD.storekit`, Tastaturkürzel mit Magic Keyboard, VoiceOver bei der Schnellanlage.
 

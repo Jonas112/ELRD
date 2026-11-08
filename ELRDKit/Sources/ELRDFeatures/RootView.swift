@@ -145,6 +145,9 @@ struct SignedInView: View {
                 list?.reportError(ErrorText.message(for: error))
             }
         }
+        // Schritt 84: angetippte Mitteilung → Einsatz öffnen (Ziel übernimmt der Arbeitsbereich).
+        .onChange(of: NotificationInbox.shared.pending) { openNotifiedMission() }
+        .onChange(of: list == nil) { openNotifiedMission() }
         // Nach „Region laden“ stehen neue Kliniken gleich in der Klinikauswahl.
         .onChange(of: masterData?.revision) {
             catalogs = PatientCatalogs.load(from: environment.repository)
@@ -166,6 +169,19 @@ struct SignedInView: View {
             if environment.demoScreen?.opensRunningMission == true, let running = model.result.running.first {
                 openStore = try? model.open(running.id)
             }
+        }
+    }
+
+    private func openNotifiedMission() {
+        guard let route = NotificationInbox.shared.pending, let list,
+              openStore?.missionID != route.missionID else { return }
+        do {
+            let store = try list.open(route.missionID)
+            if let current = openStore { environment.unregister(current) }
+            openStore = store
+        } catch {
+            // Einsatz gibt es hier nicht (mehr) – Mitteilung verwerfen.
+            NotificationInbox.shared.discard()
         }
     }
 

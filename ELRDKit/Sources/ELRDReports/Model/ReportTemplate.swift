@@ -179,6 +179,15 @@ public struct ReportDestination: Hashable, Sendable, Identifiable {
             .first { $0.contains("@") }
     }
 
+    /// Ersatz, wenn die Zuweisung keine Adresse trägt (z. B. Klinik von Hand
+    /// eingetragen oder Stammdaten später ergänzt): Adresse aus den Stammdaten (Schritt 85).
+    public static func email(for filter: String, in hospitals: [MasterHospital]) -> String? {
+        hospitals
+            .filter { key($0.name) == key(filter) }
+            .map { $0.email.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { $0.contains("@") }
+    }
+
     /// Kliniken mit mindestens einem (nicht gelöschten) Patienten, meiste zuerst.
     public static func all(in patients: [Patient]) -> [ReportDestination] {
         var names: [String: String] = [:]

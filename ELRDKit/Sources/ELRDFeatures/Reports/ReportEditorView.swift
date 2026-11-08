@@ -12,6 +12,8 @@ struct ReportEditorView: View {
 
     let store: MissionStore
     let people: [PersonChoice]
+    /// Kliniken aus den Stammdaten – Ersatz für die Mailadresse (Schritt 85).
+    var hospitals: [MasterHospital] = []
     let onClose: () -> Void
 
     @Environment(\.attachmentStore) private var attachments
@@ -270,7 +272,9 @@ struct ReportEditorView: View {
     /// Klinikbericht an die Klinik (E-Mail aus den Stammdaten, Schritt 62), sonst an die ILS.
     private var mailRecipient: String {
         if let hospitalFilter {
-            return ReportDestination.email(for: hospitalFilter, in: store.state.patients) ?? ""
+            return ReportDestination.email(for: hospitalFilter, in: store.state.patients)
+                ?? ReportDestination.email(for: hospitalFilter, in: hospitals)
+                ?? ""
         }
         return settings?.settings.ilsEmail.trimmingCharacters(in: .whitespaces) ?? ""
     }

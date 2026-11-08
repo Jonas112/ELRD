@@ -28,6 +28,11 @@ public struct MissionMetrics: Equatable, Sendable {
         public let date: Date
         public let counts: [Sichtungskategorie: Int]
 
+        public init(date: Date, counts: [Sichtungskategorie: Int]) {
+            self.date = date
+            self.counts = counts
+        }
+
         public func count(_ triage: Sichtungskategorie) -> Int { counts[triage] ?? 0 }
     }
 

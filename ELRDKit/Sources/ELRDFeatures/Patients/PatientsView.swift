@@ -14,6 +14,8 @@ struct PatientsView: View {
     var onOpen: (PatientID) -> Void = { _ in }
 
     @State private var showsScanner = false
+    /// Verbleibsliste (Schritt 93).
+    @State private var showsWhereabouts = AppLaunchOptions.current.demoScreen == .whereabouts
 
     var body: some View {
         GeometryReader { proxy in
@@ -42,6 +44,9 @@ struct PatientsView: View {
         }
         .sheet(isPresented: $showsScanner) {
             TagScannerSheet(store: store, onOpen: onOpen)
+        }
+        .sheet(isPresented: $showsWhereabouts) {
+            WhereaboutsSheet(store: store, onOpen: onOpen).largeSheet()
         }
     }
 
@@ -128,6 +133,13 @@ struct PatientsView: View {
                 .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .accessibilityLabel("Anhängekarte scannen")
+        Button { showsWhereabouts = true } label: {
+            Image(systemName: "person.text.rectangle")
+                .font(.title3.weight(.semibold))
+                .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum + 4)
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        }
+        .accessibilityLabel("Verbleibsliste")
         layoutToggle
         Menu {
             Picker("Sortierung", selection: $query.sort) {

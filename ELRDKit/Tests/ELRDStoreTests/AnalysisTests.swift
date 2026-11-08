@@ -362,4 +362,36 @@ struct AnalysisTests {
         #expect(current.isAwaitingArrival)
         #expect(UnitStatus(rawValue: 9) == nil)
     }
+
+    // MARK: 93 Verbleibsliste
+
+    @Test func whereaboutsShowDestinationAndSearch() throws {
+        let store = try fixture.newMission()
+        let transported = try store.perform(AddPatient(triage: .sk2, tagNumber: "PAK0042"))
+        try store.perform(EditPatient(patientID: transported.id) {
+            $0.firstName = "Jürgen"
+            $0.lastName = "Müller"
+            $0.estimatedAge = 54
+        })
+        let rtw = try unit(store, "RK 1", .rtw)
+        try store.perform(AssignUnit(patientID: transported.id, unitID: rtw.id))
+        try store.perform(SetDestination(patientID: transported.id, hospital: HospitalSnapshot(name: "Klinikum Nord")))
+        try store.perform(StartTransport(patientID: transported.id))
+        let released = try store.perform(AddPatient(triage: .sk3))
+        try store.perform(ReleasePatient(patientID: released.id))
+        _ = try store.perform(AddPatient(triage: .ungesichtet))
+
+        let list = PatientWhereabouts.list(patients: store.state.patients, units: store.state.units, sections: store.state.sections, now: fixture.clock.now)
+        #expect(list.map(\.place) == [.transported, .released, .onScene])
+        let first = try #require(list.first)
+        #expect(first.whereabouts == "Klinikum Nord")
+        #expect(first.detail.hasPrefix("mit RK 1 ab "))
+        #expect(first.birth == "ca. 54 J.")
+        #expect(first.matches("mueller") == false, "ue ist kein ü")
+        #expect(first.matches("müll jürg"))
+        #expect(first.matches("MULLER"), "Akzente egal")
+        #expect(first.matches("pak0042"))
+        #expect(list[1].whereabouts == "Vor Ort entlassen")
+    }
 }
+

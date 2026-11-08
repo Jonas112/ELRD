@@ -78,4 +78,14 @@ struct HospitalMailTests {
         #expect(ReportDestination.email(for: "st. josef", in: [MasterHospital(name: "Leopoldina"), josef]) == "zna@josef.de")
         #expect(ReportDestination.email(for: "Unbekannt", in: [josef]) == nil)
     }
+
+    // Schritt 93: Verbleibsliste als PDF
+    @Test func whereaboutsPDFIsCreated() throws {
+        let store = try PreviewData.makeStore()
+        let entries = PatientWhereabouts.list(patients: store.state.patients, units: store.state.units, sections: store.state.sections, now: Date())
+        let data = WhereaboutsReport.pdf(mission: store.state.mission, entries: entries, createdAt: Date(), createdBy: "Test")
+        #expect(data.starts(with: Data("%PDF".utf8)))
+        let blocks = WhereaboutsReport.blocks(entries: entries, createdAt: Date())
+        #expect(blocks.count == 3, "Überschrift, Hinweis, Tabelle")
+    }
 }

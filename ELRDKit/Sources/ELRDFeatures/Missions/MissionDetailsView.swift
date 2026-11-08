@@ -17,6 +17,9 @@ struct MissionDetailsView: View {
     @State private var showsNearby = false
     @Environment(\.attachmentStore) private var attachments
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
+    @State private var cloudInvite: CloudInvite?
+    @State private var confirmsCloudDisconnect = false
+    @State private var cloudError: String?
 
     init(store: MissionStore, people: [PersonChoice]) {
         self.store = store
@@ -39,7 +42,9 @@ struct MissionDetailsView: View {
                 .disabled(mission.isClosed)
 
                 // Mehrere Geräte: früh im Einsatz gebraucht, daher weit oben.
-                if let cloud { CloudShareSection(store: store, cloud: cloud) }
+                if let cloud {
+                    CloudShareSection(store: store, cloud: cloud, invite: $cloudInvite, confirmsDisconnect: $confirmsCloudDisconnect, errorMessage: $cloudError)
+                }
 
                 if !problems.isEmpty {
                     Section {
@@ -75,6 +80,7 @@ struct MissionDetailsView: View {
             .sheet(isPresented: $showsNearby) {
                 NearbySyncView(session: makeNearbySession())
             }
+            .cloudSharePresentation(store: store, cloud: cloud, invite: $cloudInvite, confirmsDisconnect: $confirmsCloudDisconnect, errorMessage: $cloudError)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") { dismiss() }

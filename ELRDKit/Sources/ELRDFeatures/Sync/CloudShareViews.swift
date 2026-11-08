@@ -10,14 +10,18 @@ import ELRDCloud
 ///
 /// Nicht geteilt: ein Knopf. Geteilt: Stand des Abgleichs, Einladung (QR-Code),
 /// „Jetzt abgleichen“ und Trennen. Die lokale Kopie bleibt immer erhalten.
+///
+/// Einladung und Rückfrage zeigt die umgebende Ansicht (`cloudSharePresentation`):
+/// An einem Listenabschnitt aufgehängt, schließen sie sich, sobald der Abschnitt
+/// neu gezeichnet wird – und das passiert bei jedem Abgleich.
 struct CloudShareSection: View {
     let store: MissionStore
     let cloud: CloudSyncCoordinator
+    @Binding var invite: CloudInvite?
+    @Binding var confirmsDisconnect: Bool
+    @Binding var errorMessage: String?
 
     @State private var isWorking = false
-    @State private var invite: CloudInvite?
-    @State private var errorMessage: String?
-    @State private var confirmsDisconnect = false
 
     var body: some View {
         let mission = store.missionID
@@ -65,20 +69,6 @@ struct CloudShareSection: View {
             Text("Mehrere Geräte (iCloud)")
         } footer: {
             Text(footer(link))
-        }
-        .sheet(item: $invite) { invite in
-            CloudInviteSheet(invite: invite)
-        }
-        .confirmationDialog(
-            link?.isOwner == true ? "Teilen beenden?" : "Einsatz verlassen?",
-            isPresented: $confirmsDisconnect,
-            titleVisibility: .visible
-        ) {
-            Button(link?.isOwner == true ? "Teilen beenden" : "Verlassen", role: .destructive, action: disconnect)
-        } message: {
-            Text(link?.isOwner == true
-                 ? "Alle anderen Geräte verlieren den Zugriff, die Kopie in deinem iCloud wird gelöscht. Auf allen Geräten bleiben die bisherigen Daten erhalten."
-                 : "Dieses Gerät gleicht nicht mehr ab. Die Daten auf diesem Gerät bleiben erhalten.")
         }
     }
 
@@ -170,13 +160,41 @@ struct CloudShareSection: View {
         }
     }
 
-    private func disconnect() {
-        Task {
-            do {
-                try await cloud.disconnect(store.missionID)
-            } catch {
-                errorMessage = ErrorText.message(for: error)
+}
+
+extension View {
+    /// Einladung (QR-Code) und Rückfrage zum Trennen – an einer stabilen Ansicht
+    /// außerhalb der Liste aufhängen (siehe `CloudShareSection`).
+    func cloudSharePresentation(
+        store: MissionStore,
+        cloud: CloudSyncCoordinator?,
+        invite: Binding<CloudInvite?>,
+        confirmsDisconnect: Binding<Bool>,
+        errorMessage: Binding<String?>
+    ) -> some View {
+        let isOwner = cloud?.link(for: store.missionID)?.isOwner == true
+        return sheet(item: invite) { invite in
+            CloudInviteSheet(invite: invite)
+        }
+        .confirmationDialog(
+            isOwner ? "Teilen beenden?" : "Einsatz verlassen?",
+            isPresented: confirmsDisconnect,
+            titleVisibility: .visible
+        ) {
+            Button(isOwner ? "Teilen beenden" : "Verlassen", role: .destructive) {
+                guard let cloud else { return }
+                Task {
+                    do {
+                        try await cloud.disconnect(store.missionID)
+                    } catch {
+                        errorMessage.wrappedValue = ErrorText.message(for: error)
+                    }
+                }
             }
+        } message: {
+            Text(isOwner
+                 ? "Alle anderen Geräte verlieren den Zugriff, die Kopie in deinem iCloud wird gelöscht. Auf allen Geräten bleiben die bisherigen Daten erhalten."
+                 : "Dieses Gerät gleicht nicht mehr ab. Die Daten auf diesem Gerät bleiben erhalten.")
         }
     }
 }

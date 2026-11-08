@@ -24,6 +24,8 @@ struct PatientDetailView: View {
     @State private var injuryStartSpot: BodySpot?
     @State private var showsHospitals = false
     @State private var showsUnits = false
+    @State private var editsTag = false
+    @State private var tagText = ""
     @State private var confirmsRelease = false
     /// Kreislauf und „intubiert“ untereinander, wenn die Spalte schmal ist.
     @State private var stacksCirculation = false
@@ -135,6 +137,11 @@ struct PatientDetailView: View {
                 .disabled(index.map { $0 >= order.count - 1 } ?? true)
                 .accessibilityLabel("Nächster Patient")
             Menu {
+                Button("Anhängekarte zuordnen …", systemImage: "barcode") {
+                    tagText = store.state.patients.first { $0.id == patientID }?.tagNumber ?? ""
+                    editsTag = true
+                }
+                .disabled(!canEdit)
                 Button("Patient löschen …", systemImage: "trash", role: .destructive) { confirmsDelete = true }
                     .disabled(!canEdit)
             } label: {
@@ -180,6 +187,7 @@ struct PatientDetailView: View {
 
     private func subtitle(_ patient: Patient) -> String {
         var parts: [String] = []
+        if let tag = patient.tagNumber { parts.append("Karte \(tag)") }
         if let ils = patient.dispatchPatientNumber, !ils.isEmpty { parts.append("ILS \(ils)") }
         if let features = patient.identifyingFeatures, !features.isEmpty { parts.append(features) }
         parts.append("seit \(patient.metadata.createdAt.formatted(date: .omitted, time: .shortened))")
@@ -452,6 +460,7 @@ struct PatientDetailView: View {
             HospitalPickerView(
                 choices: hospitalChoices(patient),
                 current: patient.destination,
+                capacity: { hospital in HospitalCapacity(hospital: hospital, triage: patient.triage, state: store.state) },
                 onSelect: { hospital in perform(SetDestination(patientID: patientID, hospital: hospital)) }
             )
             .largeSheet()
@@ -508,6 +517,16 @@ struct PatientDetailView: View {
         .sheet(isPresented: $showsUnits) {
             UnitPickerSheet(store: store, patientID: patientID, masterUnits: catalogs.units)
                 .largeSheet()
+        }
+        // Schritt 72: Nummer der Patientenanhängekarte (leer = entfernen).
+        .alert("Anhängekarte", isPresented: $editsTag) {
+            TextField("Kartennummer", text: $tagText)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+            Button("Sichern") { perform(SetPatientTag(patientID: patientID, tagNumber: tagText)) }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text("Nummer oder Barcode-Inhalt der Karte. Leer lassen, um sie zu entfernen.")
         }
     }
 

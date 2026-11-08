@@ -248,7 +248,23 @@ public struct SetHospitalQuota: MissionCommand {
         let parts = [Sichtungskategorie.sk1, .sk2, .sk3].compactMap { triage in
             target.limit(for: triage).map { "\(triage.shortName) \($0)" }
         }
-        draft.log(.mission, "Kontingent \(target.hospitalName): \(parts.isEmpty ? "entfernt" : parts.joined(separator: ", "))", subject: .mission(draft.missionID))
+        draft.log(.mission, "Kontingent \(target.hospitalName): \(parts.isEmpty ? "ohne Grenze" : parts.joined(separator: ", "))", subject: .mission(draft.missionID))
+    }
+}
+
+/// Entfernt eine Klinik aus der Kontingentliste.
+public struct RemoveHospitalQuota: MissionCommand {
+    public let quotaID: String
+
+    public init(quotaID: String) {
+        self.quotaID = quotaID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let quota = draft.mission.hospitalQuotas?.first(where: { $0.id == quotaID }) else { return }
+        let id = quotaID
+        _ = try draft.updateMission { $0.removeQuota(id: id) }
+        draft.log(.mission, "Kontingent \(quota.hospitalName) entfernt", subject: .mission(draft.missionID))
     }
 }
 

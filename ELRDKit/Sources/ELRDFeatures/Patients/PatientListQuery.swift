@@ -47,9 +47,24 @@ public enum PatientSort: String, CaseIterable, Sendable {
 /// Darstellung der Patientenliste: Zeilen oder große Kacheln.
 public enum PatientListLayout: String, CaseIterable, Sendable {
     case list, tiles
+    /// Transport-Board (Schritt 70).
+    case board
 
-    var title: String { self == .list ? "Liste" : "Kacheln" }
-    var symbol: String { self == .list ? "list.bullet" : "square.grid.2x2" }
+    var title: String {
+        switch self {
+        case .list: "Liste"
+        case .tiles: "Kacheln"
+        case .board: "Transport-Board"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .list: "list.bullet"
+        case .tiles: "square.grid.2x2"
+        case .board: "rectangle.split.3x1"
+        }
+    }
 
     /// Zuletzt gewählte Darstellung (nur Komfort je Gerät).
     public static let storageKey = "patientListLayout"

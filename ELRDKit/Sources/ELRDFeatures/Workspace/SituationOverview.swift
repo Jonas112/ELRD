@@ -7,39 +7,68 @@ import ELRDStore
 /// Jede Karte führt per Tipp in ihren Bereich.
 struct SituationOverview: View {
     let store: MissionStore
+    var people: [PersonChoice] = []
+    var masterData: MasterDataEditor?
     let onTarget: (OpenItem.Target) -> Void
 
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
+    @State private var sheet: Tool? = SituationOverview.demoTool
+
+    /// Bildschirmfotos: Werkzeug gleich geöffnet.
+    private static var demoTool: Tool? {
+        switch AppLaunchOptions.current.demoScreen {
+        case .situationReport?: .report
+        case .checklist?: .checklist
+        case .leadership?: .leadership
+        case .hospitals?: .hospitals
+        case .handover?: .handover
+        default: nil
+        }
+    }
     @State private var journalText = ""
     @State private var journalError: String?
     @FocusState private var journalFocused: Bool
 
+    /// Werkzeuge der Lage (Schritte 67, 71, 73, 75, 76).
+    enum Tool: String, Identifiable {
+        case report, checklist, handover, hospitals, leadership
+        var id: String { rawValue }
+    }
+
+    private var settings: AppSettings { appSettings?.settings ?? AppSettings() }
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
-            let items = OpenItem.items(for: store.state, now: context.date)
+            let items = OpenItem.items(for: store.state, now: context.date, reminders: settings.reminders)
             let dashboard = SituationDashboard(state: store.state)
             ScrollView {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: Spacing.xl) {
-                        VStack(spacing: Spacing.xl) {
-                            openItemsCard(items)
-                            hospitalCard(dashboard)
+                VStack(spacing: Spacing.l) {
+                    toolBar
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: Spacing.xl) {
+                            VStack(spacing: Spacing.xl) {
+                                openItemsCard(items)
+                                DemandCard(store: store)
+                                hospitalCard(dashboard)
+                            }
+                            .frame(minWidth: 520)
+                            VStack(spacing: Spacing.xl) {
+                                triageCard(dashboard)
+                                statusCard
+                                unitCard(dashboard)
+                                journalCard
+                            }
+                            .frame(minWidth: 340, maxWidth: 460)
                         }
-                        .frame(minWidth: 520)
-                        VStack(spacing: Spacing.xl) {
+                        VStack(spacing: Spacing.l) {
+                            openItemsCard(items)
                             triageCard(dashboard)
+                            DemandCard(store: store)
                             statusCard
                             unitCard(dashboard)
+                            hospitalCard(dashboard)
                             journalCard
                         }
-                        .frame(minWidth: 340, maxWidth: 460)
-                    }
-                    VStack(spacing: Spacing.l) {
-                        openItemsCard(items)
-                        triageCard(dashboard)
-                        statusCard
-                        unitCard(dashboard)
-                        hospitalCard(dashboard)
-                        journalCard
                     }
                 }
                 .padding(Spacing.xl)
@@ -47,6 +76,72 @@ struct SituationOverview: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
+        }
+        .sheet(item: $sheet) { tool in
+            switch tool {
+            case .report: SituationReportSheet(store: store)
+            case .checklist: ChecklistSheet(store: store, template: settings.effectiveChecklist)
+            case .handover: HandoverSheet(store: store, people: people, template: settings.effectiveChecklist)
+            case .hospitals: HospitalQuotaSheet(store: store, hospitals: masterData?.hospitals ?? [])
+            case .leadership: LeadershipSheet(store: store)
+            }
+        }
+    }
+
+    /// Lagemeldung, Checkliste, Führung, Kliniken, Übergabe – je ein großer Knopf.
+    private var toolBar: some View {
+        let template = settings.effectiveChecklist
+        let checked = store.state.checkedItems
+        let done = template.items.filter { checked[$0.id] != nil }.count
+        let last = store.state.lastSituationReportAt
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.m) {
+                toolButton("Lagemeldung", detail: last.map { "zuletzt \($0.formatted(date: .omitted, time: .shortened))" } ?? "noch keine", symbol: "antenna.radiowaves.left.and.right", tool: .report, prominent: true)
+                toolButton("Checkliste", detail: "\(done) von \(template.items.count)", symbol: "checklist", tool: .checklist)
+                toolButton("Führung", detail: leadershipDetail, symbol: "person.3.sequence", tool: .leadership)
+                toolButton("Kliniken", detail: hospitalDetail, symbol: "cross.case", tool: .hospitals)
+                toolButton("Übergabe", detail: "an die Ablösung", symbol: "arrow.left.arrow.right", tool: .handover)
+            }
+        }
+    }
+
+    private var leadershipDetail: String {
+        let count = store.state.mission.leadership?.count ?? 0
+        let strength = ForceOverview(state: store.state).strengthText
+        return strength ?? (count == 0 ? "nicht erfasst" : "\(count) Funktionen")
+    }
+
+    private var hospitalDetail: String {
+        let loads = HospitalDistribution.loads(store.state)
+        if loads.contains(where: { !$0.overloadedTriages.isEmpty }) { return "über Kontingent!" }
+        return loads.isEmpty ? "Kontingente" : "\(loads.count) Kliniken"
+    }
+
+    private func toolButton(_ title: String, detail: String, symbol: String, tool: Tool, prominent: Bool = false) -> some View {
+        Button { sheet = tool } label: {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: symbol)
+                    .font(.title2.weight(.semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline)
+                    Text(detail).font(.subheadline).opacity(0.8).lineLimit(1)
+                }
+            }
+            .foregroundStyle(prominent ? Color.white : Color.primary)
+            .padding(.horizontal, Spacing.l)
+            .frame(minHeight: TouchTarget.large)
+            .background(prominent ? AnyShapeStyle(ActionFill.primary) : AnyShapeStyle(Surface.card), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(detail)")
+    }
+
+    /// Ziele, die die Lage selbst öffnet.
+    private func handle(_ target: OpenItem.Target) {
+        switch target {
+        case .situationReport: sheet = .report
+        case .hospitals: sheet = .hospitals
+        default: onTarget(target)
         }
     }
 
@@ -74,7 +169,7 @@ struct SituationOverview: View {
             } else {
                 ForEach(items) { item in
                     Divider()
-                    OpenItemRow(item: item) { onTarget(item.target) }
+                    OpenItemRow(item: item) { handle(item.target) }
                 }
             }
         }
@@ -154,35 +249,60 @@ struct SituationOverview: View {
 
     // MARK: Kliniken
 
+    /// Verteilung auf Kliniken mit Kontingent (Schritt 71); Tipp öffnet die Kontingente.
     @ViewBuilder
     private func hospitalCard(_ dashboard: SituationDashboard) -> some View {
-        if !dashboard.hospitals.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Verteilung auf Kliniken").font(.title2.weight(.bold))
-                    .padding(Spacing.xl)
-                ForEach(dashboard.hospitals) { load in
-                    Divider()
-                    HStack(spacing: Spacing.m) {
-                        Text(load.name).font(.headline).lineLimit(2)
-                        Spacer(minLength: Spacing.m)
-                        ForEach(TriageSummaryView.order.filter { (load.byTriage[$0] ?? 0) > 0 }, id: \.self) { triage in
-                            Text("\(load.byTriage[triage] ?? 0)")
-                                .font(.headline.weight(.heavy).monospacedDigit())
-                                .foregroundStyle(Color.onTriage(triage))
-                                .frame(minWidth: 40, minHeight: 32)
-                                .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                .accessibilityLabel("\(load.byTriage[triage] ?? 0) \(triage.displayName)")
-                        }
+        let loads = HospitalDistribution.loads(store.state)
+        if !loads.isEmpty {
+            Button { sheet = .hospitals } label: {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Text("Verteilung auf Kliniken").font(.title2.weight(.bold)).foregroundStyle(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(.tertiary)
                     }
-                    .padding(.horizontal, Spacing.xl)
-                    .padding(.vertical, Spacing.s)
-                    .frame(minHeight: TouchTarget.comfortable)
-                    .accessibilityElement(children: .combine)
+                    .padding(Spacing.xl)
+                    ForEach(loads) { load in
+                        Divider()
+                        HStack(spacing: Spacing.m) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(load.name).font(.headline).foregroundStyle(.primary).lineLimit(2)
+                                if !load.overloadedTriages.isEmpty {
+                                    Label("über Kontingent", systemImage: "exclamationmark.triangle.fill")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            Spacer(minLength: Spacing.m)
+                            ForEach([Sichtungskategorie.sk1, .sk2, .sk3], id: \.self) { triage in
+                                let count = load.counts[triage] ?? 0
+                                let limit = load.quota?.limit(for: triage)
+                                if count > 0 || limit != nil {
+                                    Text(limit.map { "\(count)/\($0)" } ?? "\(count)")
+                                        .font(.headline.weight(.heavy).monospacedDigit())
+                                        .foregroundStyle(Color.onTriage(triage))
+                                        .frame(minWidth: 48, minHeight: 32)
+                                        .padding(.horizontal, Spacing.xs)
+                                        .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .strokeBorder(Color.orange, lineWidth: load.isOverloaded(triage) ? 3 : 0)
+                                        }
+                                        .accessibilityLabel(limit.map { "\(triage.displayName): \(count) von \($0)" } ?? "\(count) \(triage.displayName)")
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Spacing.xl)
+                        .padding(.vertical, Spacing.s)
+                        .frame(minHeight: TouchTarget.comfortable)
+                        .accessibilityElement(children: .combine)
+                    }
                 }
+                .padding(.bottom, Spacing.s)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
-            .padding(.bottom, Spacing.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .buttonStyle(.plain)
         }
     }
 

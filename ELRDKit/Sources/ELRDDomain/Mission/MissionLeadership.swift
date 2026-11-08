@@ -116,16 +116,22 @@ public extension Mission {
         leadership = list.isEmpty ? nil : list
     }
 
+    /// Entfernt eine Klinik aus der Kontingentliste.
+    mutating func removeQuota(id: String) {
+        hospitalQuotas?.removeAll { $0.id == id }
+        if hospitalQuotas?.isEmpty == true { hospitalQuotas = nil }
+    }
+
     /// Kontingent einer Klinik, falls erfasst.
     func quota(for hospital: HospitalSnapshot) -> HospitalQuota? {
         hospitalQuotas?.first { $0.matches(hospital) }
     }
 
-    /// Setzt das Kontingent einer Klinik; ganz leere werden entfernt.
+    /// Setzt das Kontingent einer Klinik (auch ohne Grenzen: Klinik steht dann in der Liste).
     mutating func setQuota(_ quota: HospitalQuota) {
         var list = hospitalQuotas ?? []
         list.removeAll { $0.id == quota.id }
-        if quota.sk1 != nil || quota.sk2 != nil || quota.sk3 != nil { list.append(quota) }
+        list.append(quota)
         list.sort { $0.hospitalName.localizedStandardCompare($1.hospitalName) == .orderedAscending }
         hospitalQuotas = list.isEmpty ? nil : list
     }

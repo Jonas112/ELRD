@@ -183,6 +183,28 @@ enum DemoMissions {
         for patient in [added[4], added[5]] {
             try running.perform(EditPatient(patientID: patient.id) { $0.sectionID = casualties.id })
         }
+
+        // Schritte 67–76: Führung, Kontingente, Anhängekarte, Checkliste, Lagemeldung.
+        try running.perform(SetLeadershipPosition(LeadershipPosition(role: .einsatzleiter, name: user.displayName, callsign: "ELRD 1", radioChannel: "TMO 312")))
+        try running.perform(SetLeadershipPosition(LeadershipPosition(role: .lna, name: "Dr. Weber", callsign: "LNA SW", radioChannel: "TMO 312")))
+        try running.perform(SetLeadershipPosition(LeadershipPosition(role: .orgl, name: "M. Krause", callsign: "OrgL SW", radioChannel: "TMO 312")))
+        try running.perform(SetSectionLeader(sectionID: casualties.id, name: "S. Lang", callsign: "RK SWF 10/1", radioChannel: "TMO 313"))
+        try running.perform(SetSectionLeader(sectionID: staging.id, name: "T. Roth", callsign: "RK SWF 11/1", radioChannel: "TMO 314"))
+        if let leo {
+            try running.perform(SetHospitalQuota(HospitalQuota(masterHospitalID: leo.masterHospitalID, hospitalName: leo.name, sk1: 1, sk2: 2, sk3: 4)))
+        }
+        if let josef {
+            try running.perform(SetHospitalQuota(HospitalQuota(masterHospitalID: josef.masterHospitalID, hospitalName: josef.name, sk1: 1, sk2: 1)))
+        }
+        try running.perform(SetPatientTag(patientID: added[0].id, tagNumber: "PAK-0731"))
+        for item in ChecklistTemplate.standard.items.prefix(4) {
+            try running.perform(CheckChecklistItem(item))
+        }
+        try running.perform(AddSituationReport(
+            text: SituationReport.text(for: running.state, now: now),
+            situationNote: "3 Pkw beteiligt, 1 Person eingeklemmt, Patientenablage eingerichtet",
+            hazards: "auslaufender Kraftstoff, fließender Verkehr in Gegenrichtung"
+        ))
     }
 
     /// Rot gezeichneter Pfeil (transparentes PNG) für die Beispielzeichnung.

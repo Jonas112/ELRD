@@ -9,8 +9,9 @@ import ELRDDomain
 /// - SK 2: RTW
 /// - SK 3: KTW (ersatzweise ein übriger RTW)
 ///
-/// Annahme bis zur Klärung: je SK‑1-Patient ein eigenes NEF (Notarztbegleitung
-/// beim Transport). `nefPerSK1` lässt das später umstellen.
+/// SK 1 braucht grundsätzlich einen Notarzt – je SK‑1-Patient ein eigenes NEF
+/// (E92). In großer Not reicht ein RTW allein: Das zeigt `emergencyMissing`
+/// (Notfall-Bedarf ohne NEF) zusätzlich an; nachgefordert wird der Normalbedarf.
 ///
 /// Vorhanden sind alle Einheiten des Einsatzes, die nicht gerade einen Patienten
 /// transportieren – auch Platzhalter (schon angefordert, Fahrzeug unterwegs).
@@ -26,6 +27,8 @@ public struct ResourceDemand: Equatable, Sendable {
     public var used: [UnitType: Int] = [:]
     /// Fehlbedarf je Typ – das wird nachgefordert.
     public var missing: [UnitType: Int] = [:]
+    /// Fehlbedarf im Notfall (SK 1 nur mit RTW, ohne Notarzt).
+    public var emergencyMissing: [UnitType: Int] = [:]
 
     public var hasShortfall: Bool { missing.values.contains { $0 > 0 } }
     public var patientTotal: Int { patients.values.reduce(0, +) }
@@ -43,7 +46,13 @@ public struct ResourceDemand: Equatable, Sendable {
         .joined(separator: ", ")
     }
 
-    public static func calculate(_ state: MissionState, nefPerSK1: Bool = true) -> ResourceDemand {
+    public static func calculate(_ state: MissionState) -> ResourceDemand {
+        var result = calculate(state, nefPerSK1: true)
+        result.emergencyMissing = calculate(state, nefPerSK1: false).missing
+        return result
+    }
+
+    static func calculate(_ state: MissionState, nefPerSK1: Bool) -> ResourceDemand {
         var result = ResourceDemand()
         let patients = state.patients.active
         let busy = Set(patients.filter { $0.status == .inTransport }.flatMap(\.unitIDs))

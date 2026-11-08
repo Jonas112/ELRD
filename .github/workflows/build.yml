@@ -202,7 +202,7 @@ jobs:
               done
             done
           }
-          shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions newMission workspace missionDetails patients patientTiles patientDetail injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry protocolLog messages report settings masterData onboarding}"
+          shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions newMission workspace missionDetails patients patientTiles patientDetail injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals transportBoard handover}"
           # Jedes Gerät nach seinen Fotos herunterfahren: mehrere laufende Simulatoren
           # bremsen den Runner so stark, dass der Lauf das Zeitlimit reißt.
           xcrun simctl shutdown "$DEVICE_ID" || true
@@ -219,7 +219,7 @@ jobs:
             xcrun simctl boot "$PHONE_ID" || true
             xcrun simctl bootstatus "$PHONE_ID" -b
             xcrun simctl install "$PHONE_ID" "$APP"
-            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-login missions newMission workspace missionDetails patients patientDetail injuries unitPicker sections addUnit map journal report settings onboarding}"
+            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-login missions newMission workspace missionDetails patients patientDetail injuries unitPicker sections addUnit map journal report settings onboarding situationReport transportBoard}"
             xcrun simctl shutdown "$PHONE_ID" || true
           elif [ -n "$PHONE_ID" ]; then
             echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPhone übersprungen"
@@ -238,7 +238,7 @@ jobs:
             xcrun simctl boot "$MINI_ID" || true
             xcrun simctl bootstatus "$MINI_ID" -b
             xcrun simctl install "$MINI_ID" "$APP"
-            shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry protocolLog messages report settings masterData onboarding}"
+            shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals transportBoard handover}"
             xcrun simctl shutdown "$MINI_ID" || true
           elif [ -n "$MINI_ID" ]; then
             echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPad mini übersprungen"

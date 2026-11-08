@@ -43,6 +43,7 @@ struct AnalysisTests {
         #expect(demand.missing[.rtw] == 1)
         #expect(demand.missing[.ktw] == 2)
         #expect(demand.missingSummary == "1 RTW, 1 NEF, 2 KTW")
+        #expect(ResourceDemand.summary(demand.emergencyMissing) == "1 RTW, 2 KTW", "in großer Not SK 1 ohne NEF")
     }
 
     @Test func spareRTWServesSK3AndTransportingUnitsDoNotCount() throws {
@@ -125,7 +126,10 @@ struct AnalysisTests {
         #expect(HospitalDistribution.loads(store.state).count == 1, "Name ohne Groß/klein zusammengeführt")
 
         try store.perform(SetHospitalQuota(HospitalQuota(hospitalName: "Klinikum Nord")))
-        #expect(store.state.mission.hospitalQuotas == nil, "leeres Kontingent entfernt")
+        #expect(store.state.mission.hospitalQuotas?.count == 1, "Klinik bleibt ohne Grenzen in der Liste")
+        #expect(HospitalDistribution.load(of: clinic, in: store.state)?.overloadedTriages == [])
+        try store.perform(RemoveHospitalQuota(quotaID: HospitalQuota.key("Klinikum Nord")))
+        #expect(store.state.mission.hospitalQuotas == nil)
     }
 
     // MARK: 72 Anhängekarte

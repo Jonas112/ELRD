@@ -1,10 +1,13 @@
 import SwiftUI
 import ELRDDomain
+import ELRDStore
 
 /// Alle Kliniken: Suche, Liste (gewählte und nächste zuerst), Freitext.
 struct HospitalPickerView: View {
     let choices: [HospitalChoice]
     let current: HospitalSnapshot?
+    /// Freie Plätze laut Kontingent (Schritt 71).
+    var capacity: (HospitalSnapshot) -> HospitalCapacity? = { _ in nil }
     let onSelect: (HospitalSnapshot?) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -41,7 +44,7 @@ struct HospitalPickerView: View {
                     LazyVStack(spacing: Spacing.s) {
                         ForEach(filtered) { choice in
                             Button { choose(choice.hospital.snapshot) } label: {
-                                HospitalRow(choice: choice, isSelected: current?.masterHospitalID == choice.hospital.id)
+                                HospitalRow(choice: choice, isSelected: current?.masterHospitalID == choice.hospital.id, capacity: capacity(choice.hospital.snapshot))
                             }
                             .buttonStyle(.plain)
                         }
@@ -74,6 +77,7 @@ struct HospitalPickerView: View {
 struct HospitalRow: View {
     let choice: HospitalChoice
     let isSelected: Bool
+    var capacity: HospitalCapacity?
 
     var body: some View {
         HStack(spacing: Spacing.m) {
@@ -82,6 +86,14 @@ struct HospitalRow: View {
                 Text(detail).font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer(minLength: Spacing.s)
+            if let capacity {
+                Text(capacity.text)
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(capacity.isFull ? Color.white : Color.primary)
+                    .padding(.horizontal, Spacing.s)
+                    .padding(.vertical, Spacing.xxs)
+                    .background(capacity.isFull ? Color.orange : Surface.elevated, in: Capsule())
+            }
             if isSelected {
                 Image(systemName: "checkmark.circle.fill").font(.title2).foregroundStyle(.tint)
             }
@@ -103,3 +115,23 @@ struct HospitalRow: View {
         return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 }
+
+/// Freie Plätze einer Klinik für die SK des Patienten (Schritt 71).
+struct HospitalCapacity: Equatable {
+    let remaining: Int
+    let triage: Sichtungskategorie
+
+    init?(hospital: HospitalSnapshot, triage: Sichtungskategorie, state: MissionState) {
+        guard let load = HospitalDistribution.load(of: hospital, in: state),
+              let remaining = load.remaining(triage) else { return nil }
+        self.remaining = remaining
+        self.triage = triage
+    }
+
+    var isFull: Bool { remaining <= 0 }
+
+    var text: String {
+        remaining > 0 ? "\(triage.shortName): \(remaining) frei" : "\(triage.shortName): voll"
+    }
+}
+

@@ -129,12 +129,16 @@ struct JournalView: View {
 
     private var composer: some View {
         VStack(alignment: .leading, spacing: Spacing.m) {
-            TextField("Was ist passiert?", text: $text, axis: .vertical)
-                .font(.title3)
-                .lineLimit(2...6)
-                .focused($textFocused)
-                .inputBox()
-                .draftSync($text, field: .journal, mission: store.missionID)
+            HStack(alignment: .top, spacing: Spacing.s) {
+                TextField("Was ist passiert?", text: $text, axis: .vertical)
+                    .font(.title3)
+                    .lineLimit(2...6)
+                    .focused($textFocused)
+                    .inputBox()
+                    .draftSync($text, field: .journal, mission: store.missionID)
+                // Schritt 74: diktieren statt tippen (Erkennung nur auf dem Gerät).
+                DictationButton(text: $text)
+            }
             HStack(spacing: Spacing.s) {
                 if usesCustomTime {
                     DatePicker("Zeitpunkt", selection: $occurredAt, in: ...Date(), displayedComponents: [.date, .hourAndMinute])

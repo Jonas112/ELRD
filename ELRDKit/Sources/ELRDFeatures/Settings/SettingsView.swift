@@ -9,7 +9,7 @@ import ELRDEntitlements
 /// Einstellungen (Schritte 47–51): Allgemein, Fahrzeugbilder, Stammdaten, IVENA,
 /// Abo, Vereinbarungen. Stammdaten ändern nur Administratoren.
 struct SettingsView: View {
-    enum Page: Hashable { case general, vehicleImages, masterData, ivena, subscription, agreements }
+    enum Page: Hashable { case general, missionAids, vehicleImages, masterData, ivena, subscription, agreements }
 
     let masterData: MasterDataEditor?
     let isAdmin: Bool
@@ -23,6 +23,7 @@ struct SettingsView: View {
             List {
                 Section {
                     row(.general, "Allgemein", "gearshape", "Organisation, Banner, ILS-Mail, Standardbericht")
+                    row(.missionAids, "Erinnerungen und Checkliste", "checklist", "Lagemeldung im Takt, Wartezeiten, eigene Checkliste")
                     row(.vehicleImages, "Fahrzeugbilder", "car.2", "Eigene Bilder für RTW, KTW, NEF, RTH")
                 }
                 Section {
@@ -46,6 +47,7 @@ struct SettingsView: View {
             .navigationDestination(for: Page.self) { page in
                 switch page {
                 case .general: GeneralSettingsView()
+                case .missionAids: MissionAidsSettingsView()
                 case .vehicleImages: VehicleImagesView()
                 case .masterData: MasterDataSettingsView(masterData: masterData, isAdmin: isAdmin)
                 case .ivena: IVENASettingsView(masterData: masterData, isAdmin: isAdmin)
@@ -395,6 +397,83 @@ private struct MapCacheSection: View {
                 cache.prune()
                 return cache.sizeInBytes()
             }.value
+        }
+    }
+}
+
+/// Erinnerungen (Schritt 69) und Checkliste (Schritt 76).
+struct MissionAidsSettingsView: View {
+    @Environment(AppSettingsStore.self) private var store: AppSettingsStore?
+    @State private var checklistText = ""
+    @State private var errorMessage: String?
+
+    var body: some View {
+        let settings = store?.settings ?? AppSettings()
+        Form {
+            Section {
+                minutesPicker("Lagemeldung an ILS alle", value: settings.reminders.situationReportMinutes) { value in
+                    save { $0.reminders.situationReportMinutes = value }
+                }
+                minutesPicker("Patient wartet zu lange ab", value: settings.reminders.transportWaitMinutes) { value in
+                    save { $0.reminders.transportWaitMinutes = value }
+                }
+                minutesPicker("Platzhalter ohne Fahrzeug ab", value: settings.reminders.placeholderMinutes) { value in
+                    save { $0.reminders.placeholderMinutes = value }
+                }
+            } header: {
+                Text("Erinnerungen")
+            } footer: {
+                Text("Erscheinen unter „Offene Punkte“ in der Lage. „Aus“ schaltet die Erinnerung ab.")
+            }
+
+            Section {
+                TextEditor(text: $checklistText)
+                    .frame(minHeight: 280)
+                    .font(.body)
+                Button("Speichern") { saveChecklist() }
+                    .disabled(checklistText == settings.effectiveChecklist.lines)
+                if settings.checklist != nil {
+                    Button("Standard wiederherstellen", role: .destructive) {
+                        save { $0.checklist = nil }
+                        checklistText = ChecklistTemplate.standard.lines
+                    }
+                }
+            } header: {
+                Text("Checkliste")
+            } footer: {
+                Text("Ein Punkt je Zeile. Bereits abgehakte Punkte bleiben abgehakt, solange ihr Text gleich bleibt.")
+            }
+        }
+        .navigationTitle("Erinnerungen und Checkliste")
+        .onAppear { checklistText = settings.effectiveChecklist.lines }
+        .settingsError($errorMessage)
+    }
+
+    private func minutesPicker(_ title: String, value: Int, onChange: @escaping (Int) -> Void) -> some View {
+        Picker(title, selection: Binding(get: { value }, set: onChange)) {
+            ForEach(ReminderSettings.choices, id: \.self) { minutes in
+                Text(minutes == 0 ? "Aus" : "\(minutes) min").tag(minutes)
+            }
+        }
+        .frame(minHeight: TouchTarget.minimum)
+    }
+
+    private func saveChecklist() {
+        let current = store?.settings.effectiveChecklist ?? .standard
+        let updated = current.updated(fromLines: checklistText)
+        guard !updated.items.isEmpty else {
+            errorMessage = "Die Checkliste braucht mindestens einen Punkt."
+            return
+        }
+        save { $0.checklist = updated }
+        checklistText = updated.lines
+    }
+
+    private func save(_ change: (inout AppSettings) -> Void) {
+        do {
+            try store?.update(change)
+        } catch {
+            errorMessage = ErrorText.message(for: error)
         }
     }
 }

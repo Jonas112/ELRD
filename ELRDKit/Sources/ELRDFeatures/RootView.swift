@@ -105,7 +105,7 @@ struct SignedInView: View {
                     showsDetailsInitially: environment.demoScreen == .missionDetails,
                     initialSection: environment.demoScreen?.initialWorkspaceSection ?? .overview,
                     initialPatient: environment.demoScreen?.opensPatient == true ? openStore.state.activePatients.first?.id : nil,
-                    initialPatientLayout: environment.demoScreen.map { $0 == .patientTiles ? .tiles : .list } ?? .stored
+                    initialPatientLayout: environment.demoScreen.map { $0 == .patientTiles ? .tiles : $0 == .transportBoard ? .board : .list } ?? .stored
                 ) {
                     environment.unregister(openStore)
                     self.openStore = nil

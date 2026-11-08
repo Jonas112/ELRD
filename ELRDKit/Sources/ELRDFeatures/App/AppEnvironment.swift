@@ -16,6 +16,8 @@ import CloudKit
 public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
         case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, unitPicker, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapCollapsed, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages, report, settings, masterData, onboarding
+        /// Schritte 67–76.
+        case situationReport, checklist, leadership, hospitals, transportBoard, handover
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
@@ -25,7 +27,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
 
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {
-            if [.patients, .patientTiles].contains(self) || opensPatient { return .patients }
+            if [.patients, .patientTiles, .transportBoard].contains(self) || opensPatient { return .patients }
             if [.map, .mapCollapsed, .mapTopo, .mapObject, .mapDrawing].contains(self) { return .map }
             if [.journal, .journalEntry, .protocolLog].contains(self) { return .journal }
             return [.sections, .addUnit, .addPlaceholder, .replacePlaceholder].contains(self) ? .organisation : .overview

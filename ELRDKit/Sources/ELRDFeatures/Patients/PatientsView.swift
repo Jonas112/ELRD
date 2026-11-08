@@ -10,6 +10,10 @@ struct PatientsView: View {
     let store: MissionStore
     @Binding var query: PatientListQuery
     let onQuickAdd: (Sichtungskategorie) -> Void
+    /// Patient öffnen (Board, Kartenscan).
+    var onOpen: (PatientID) -> Void = { _ in }
+
+    @State private var showsScanner = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -23,7 +27,11 @@ struct PatientsView: View {
                             QuickAddBar(nextNumber: nextNumber, isWide: isWide, onAdd: onQuickAdd)
                         }
                         filterBar(isWide: isWide)
-                        list(rows, isWide: isWide)
+                        if query.layout == .board {
+                            TransportBoardView(store: store, now: context.date, onOpen: onOpen)
+                        } else {
+                            list(rows, isWide: isWide)
+                        }
                     }
                     .padding(isWide ? Spacing.xl : Spacing.l)
                     .frame(maxWidth: 1400)
@@ -31,6 +39,9 @@ struct PatientsView: View {
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
+        }
+        .sheet(isPresented: $showsScanner) {
+            TagScannerSheet(store: store, onOpen: onOpen)
         }
     }
 
@@ -85,6 +96,13 @@ struct PatientsView: View {
                 .frame(maxWidth: isWide ? 360 : .infinity)
                 .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 if isWide { Spacer() }
+                Button { showsScanner = true } label: {
+                    Image(systemName: "barcode.viewfinder")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum + 4)
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                }
+                .accessibilityLabel("Anhängekarte scannen")
                 layoutToggle
                 Menu {
                     Picker("Sortierung", selection: $query.sort) {

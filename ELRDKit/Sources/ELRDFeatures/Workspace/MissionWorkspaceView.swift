@@ -677,9 +677,9 @@ struct WorkspaceDetail: View {
     var body: some View {
         switch section {
         case .overview:
-            SituationOverview(store: store, onTarget: onTarget)
+            SituationOverview(store: store, people: people, masterData: masterData, onTarget: onTarget)
         case .patients:
-            PatientsView(store: store, query: $patientQuery, onQuickAdd: onQuickAdd)
+            PatientsView(store: store, query: $patientQuery, onQuickAdd: onQuickAdd) { onTarget(.patient($0)) }
         case .organisation:
             SectionsView(store: store, templates: masterData) { onTarget(.patient($0)) }
         case .map:

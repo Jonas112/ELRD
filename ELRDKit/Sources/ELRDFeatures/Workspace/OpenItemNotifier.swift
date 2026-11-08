@@ -19,7 +19,7 @@ struct ScheduledReminder: Equatable {
 
 enum OpenItemAlerts {
     /// Arten, die als zeitabhängige Erinnerung vorgeplant werden.
-    static let scheduledKinds: Set<OpenItem.Kind> = [.situationReportDue, .longWait, .placeholderOverdue]
+    static let scheduledKinds: Set<OpenItem.Kind> = [.situationReportDue, .longWait, .placeholderOverdue, .arrivalOverdue]
 
     /// Offene Punkte, die seit dem letzten Stand neu sind. Beim ersten Stand eines
     /// Einsatzes (`previous == nil`) ist nichts „neu“ – sonst meldet das Öffnen alles.
@@ -57,8 +57,17 @@ enum OpenItemAlerts {
                 ))
             }
         }
+        // Schritt 92: zur erwarteten Zeit nachfragen.
+        for unit in state.activeUnits where unit.isAwaitingArrival {
+            guard let due = unit.expectedArrival, due > now else { continue }
+            result.append(ScheduledReminder(
+                id: "\(missionKey).arrival.\(unit.id.rawValue.uuidString)", date: due, title: title,
+                body: "\(unit.displayName) sollte jetzt eintreffen – noch nicht da? Bei der ILS nachfragen.",
+                target: .section(.organisation)
+            ))
+        }
         if reminders.placeholderMinutes > 0 {
-            for unit in state.activeUnits where unit.isPlaceholder {
+            for unit in state.activeUnits where unit.isPlaceholder && !unit.isAwaitingArrival {
                 let due = unit.metadata.createdAt.addingTimeInterval(Double(reminders.placeholderMinutes) * 60)
                 guard due > now else { continue }
                 result.append(ScheduledReminder(

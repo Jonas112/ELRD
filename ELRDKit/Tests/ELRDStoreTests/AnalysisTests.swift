@@ -326,4 +326,40 @@ struct AnalysisTests {
             #expect(Set(ExerciseScenario.all.map(\.id)).count == ExerciseScenario.all.count)
         }
     }
+
+    // MARK: 91 Fahrzeugstatus, 92 Eintreffen
+
+    @Test func unitStatusIsLoggedAndClearsArrival() throws {
+        let store = try fixture.newMission()
+        try store.perform(AddPlaceholder(type: .rtw))
+        let placeholder = try #require(store.state.activeUnits.first { $0.isPlaceholder })
+        try store.perform(SetExpectedArrival(unitID: placeholder.id, minutes: 10))
+        var unit = try #require(store.state.activeUnits.first { $0.id == placeholder.id })
+        #expect(unit.expectedArrival == fixture.clock.now.addingTimeInterval(600))
+        #expect(unit.isAwaitingArrival)
+        #expect(!unit.isArrivalOverdue(now: fixture.clock.now))
+        #expect(unit.isArrivalOverdue(now: fixture.clock.now.addingTimeInterval(601)))
+
+        try store.perform(SetUnitStatus(unitID: placeholder.id, status: .onScene))
+        unit = try #require(store.state.activeUnits.first { $0.id == placeholder.id })
+        #expect(unit.status == .onScene)
+        #expect(unit.statusChangedAt == fixture.clock.now)
+        #expect(unit.expectedArrival == nil, "Status 4 erledigt das Eintreffen")
+        #expect(store.state.visibleLog.last?.message.contains("S 4 – Am Einsatzort") == true)
+
+        try store.perform(SetUnitStatus(unitID: placeholder.id, status: nil))
+        #expect(store.state.activeUnits.first { $0.id == placeholder.id }?.statusCode == nil)
+    }
+
+    @Test func realUnitAwaitsArrivalOnlyWhenEnRoute() throws {
+        let store = try fixture.newMission()
+        let rtw = try unit(store, "RK 1", .rtw)
+        try store.perform(SetExpectedArrival(unitID: rtw.id, minutes: 5))
+        var current = try #require(store.state.activeUnits.first { $0.id == rtw.id })
+        #expect(!current.isAwaitingArrival, "eingetragene Einheit ohne Status gilt als da")
+        try store.perform(SetUnitStatus(unitID: rtw.id, status: .enRoute))
+        current = try #require(store.state.activeUnits.first { $0.id == rtw.id })
+        #expect(current.isAwaitingArrival)
+        #expect(UnitStatus(rawValue: 9) == nil)
+    }
 }

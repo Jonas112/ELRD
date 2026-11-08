@@ -200,3 +200,60 @@ public struct ReplacePlaceholder: MissionCommand {
         return after
     }
 }
+
+// MARK: - Status und Eintreffen (Schritte 91, 92)
+
+/// Setzt den FMS-Status einer Einheit (`nil` = unbekannt). Status 4 erledigt ein
+/// erwartetes Eintreffen.
+public struct SetUnitStatus: MissionCommand {
+    public let unitID: UnitID
+    public let status: UnitStatus?
+
+    public init(unitID: UnitID, status: UnitStatus?) {
+        self.unitID = unitID
+        self.status = status
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let unit = draft.get(MissionUnit.self, id: unitID), !unit.metadata.isDeleted else {
+            throw CommandError.notFound(.unit)
+        }
+        guard unit.statusCode != status?.rawValue else { return }
+        let code = status?.rawValue
+        let now = draft.context.now
+        let arrived = status?.hasArrived == true
+        try draft.update(MissionUnit.self, id: unitID) {
+            $0.statusCode = code
+            $0.statusChangedAt = code == nil ? nil : now
+            if arrived { $0.expectedArrival = nil }
+        }
+        let text = status.map { "\($0.shortName) – \($0.displayName)" } ?? "Status gelöscht"
+        draft.log(.unit, "\(unit.displayName): \(text)", subject: .unit(unitID))
+    }
+}
+
+/// Erwartetes Eintreffen in Minuten ab jetzt (`nil` = keine Angabe).
+public struct SetExpectedArrival: MissionCommand {
+    public let unitID: UnitID
+    public let minutes: Int?
+
+    public init(unitID: UnitID, minutes: Int?) {
+        self.unitID = unitID
+        self.minutes = minutes.map { max(0, $0) }
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let unit = draft.get(MissionUnit.self, id: unitID), !unit.metadata.isDeleted else {
+            throw CommandError.notFound(.unit)
+        }
+        let date = minutes.map { draft.context.now.addingTimeInterval(Double($0) * 60) }
+        guard unit.expectedArrival != date else { return }
+        try draft.update(MissionUnit.self, id: unitID) { $0.expectedArrival = date }
+        if let minutes, let date {
+            let time = date.formatted(date: .omitted, time: .shortened)
+            draft.log(.unit, "\(unit.displayName): Eintreffen in \(minutes) min erwartet (\(time) Uhr)", subject: .unit(unitID))
+        } else {
+            draft.log(.unit, "\(unit.displayName): erwartetes Eintreffen gelöscht", subject: .unit(unitID))
+        }
+    }
+}

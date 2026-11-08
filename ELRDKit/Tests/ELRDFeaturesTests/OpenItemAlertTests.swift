@@ -123,4 +123,19 @@ struct OpenItemAlertTests {
         off.reminders.situationReportMinutes = 0
         #expect(LiveActivityController.content(for: store.state, settings: off, now: now).nextReportAt == nil)
     }
+
+    // MARK: 92 Eintreffen überfällig
+
+    @Test func overdueArrivalBecomesOpenItemAndIsPlanned() throws {
+        let store = try PreviewData.makeStore(now: now)
+        let placeholder = try #require(store.state.activeUnits.first { $0.isPlaceholder })
+        try store.perform(SetExpectedArrival(unitID: placeholder.id, minutes: 5))
+        let planned = OpenItemAlerts.upcoming(for: store.state, now: now, reminders: ReminderSettings())
+        #expect(planned.contains { $0.id.hasSuffix("arrival.\(placeholder.id.rawValue.uuidString)") && $0.date == now.addingTimeInterval(300) })
+        #expect(!OpenItem.items(for: store.state, now: now).contains { $0.kind == .arrivalOverdue })
+        let later = OpenItem.items(for: store.state, now: now.addingTimeInterval(420))
+        let item = try #require(later.first { $0.kind == .arrivalOverdue })
+        #expect(item.title.contains("noch nicht eingetroffen"))
+        #expect(item.target == .section(.organisation))
+    }
 }

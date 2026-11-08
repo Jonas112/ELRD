@@ -19,6 +19,8 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         case longWait
         /// Klinik über ihrem Kontingent (Schritt 71).
         case hospitalOverloaded
+        /// Erwartetes Eintreffen überschritten (Schritt 92).
+        case arrivalOverdue
         /// Platzhalter seit langem ohne Fahrzeug (Schritt 69).
         case placeholderOverdue
         case placeholderUnits
@@ -110,9 +112,24 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
             ))
         }
 
+        // Schritt 92: Eintreffen überfällig (Platzhalter oder Status 3 mit erwarteter Zeit).
+        for unit in state.activeUnits where unit.isArrivalOverdue(now: now) {
+            guard let expected = unit.expectedArrival else { continue }
+            items.append(OpenItem(
+                id: "arrival-\(unit.id.rawValue.uuidString)",
+                kind: .arrivalOverdue,
+                triage: nil,
+                title: "\(unit.displayName) noch nicht eingetroffen",
+                detail: "erwartet \(expected.formatted(date: .omitted, time: .shortened)) Uhr, seit \(minutes(since: expected, now)) min überfällig – bei der ILS nachfragen",
+                actionTitle: "Einheiten",
+                target: .section(.organisation)
+            ))
+        }
+
         let placeholders = state.activeUnits.filter(\.isPlaceholder)
+        // Mit erwarteter Zeit zählt diese (oben), nicht die Wartezeit seit Anforderung.
         let overdue = reminders.placeholderMinutes > 0
-            ? placeholders.filter { minutes(since: $0.metadata.createdAt, now) >= reminders.placeholderMinutes }
+            ? placeholders.filter { !$0.isAwaitingArrival && minutes(since: $0.metadata.createdAt, now) >= reminders.placeholderMinutes }
             : []
         if let oldest = overdue.min(by: { $0.metadata.createdAt < $1.metadata.createdAt }) {
             items.append(OpenItem(

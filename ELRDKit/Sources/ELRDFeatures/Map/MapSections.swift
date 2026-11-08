@@ -75,6 +75,32 @@ final class MapCanvasProxy {
         map?.isPitchEnabled = enabled
     }
 
+    /// Karte um eine Fingerbewegung verschieben (Zeichnen mit zwei Fingern).
+    func pan(by translation: CGPoint) {
+        guard let map, map.bounds.width > 0 else { return }
+        var rect = map.visibleMapRect
+        let mapPointsPerPoint = rect.size.width / Double(map.bounds.width)
+        rect.origin.x -= Double(translation.x) * mapPointsPerPoint
+        rect.origin.y -= Double(translation.y) * mapPointsPerPoint
+        map.setVisibleMapRect(rect, animated: false)
+    }
+
+    /// Um einen Faktor zoomen; der Ort unter den Fingern bleibt stehen.
+    func zoom(by scale: CGFloat, around point: CGPoint) {
+        guard let map, scale.isFinite, scale > 0.01 else { return }
+        let rect = map.visibleMapRect
+        let focal = MKMapPoint(map.convert(point, toCoordinateFrom: map))
+        let factor = Double(scale)
+        let size = MKMapSize(width: rect.size.width / factor, height: rect.size.height / factor)
+        // Nicht näher als ca. 20 m Bildbreite.
+        guard size.width > 20 * MKMapPointsPerMeterAtLatitude(focal.coordinate.latitude) || factor < 1 else { return }
+        let origin = MKMapPoint(
+            x: focal.x - (focal.x - rect.origin.x) / factor,
+            y: focal.y - (focal.y - rect.origin.y) / factor
+        )
+        map.setVisibleMapRect(MKMapRect(origin: origin, size: size), animated: false)
+    }
+
     func coordinate(at point: CGPoint) -> GeoCoordinate? {
         guard let map else { return nil }
         let location = map.convert(point, toCoordinateFrom: map)

@@ -234,7 +234,6 @@ struct MissionMapView: View {
             if isDrawing {
                 FreehandCanvas(controller: freehand, tool: freehandTool)
                     // „Karte bewegen“: Berührungen gehen an die Karte, die Zeichnung folgt.
-                    .allowsHitTesting(!freehandTool.isMovingMap)
                     .onAppear { DispatchQueue.main.async { freehand.anchorIfNeeded(proxy) } }
                     .accessibilityLabel("Zeichenfläche über der Karte")
             }
@@ -294,8 +293,7 @@ struct MissionMapView: View {
                     .accessibilityAddTraits(.isStaticText)
             }
             if isDrawing {
-                Label(freehandTool.isMovingMap ? "Karte verschieben und zoomen – die Zeichnung wandert mit" : "Mit Finger oder Stift auf die Karte zeichnen",
-                      systemImage: freehandTool.isMovingMap ? "hand.draw" : "scribble")
+                Label("Ein Finger oder Stift zeichnet · zwei Finger verschieben und zoomen", systemImage: "scribble")
                     .font(.subheadline.weight(.semibold))
                     .padding(.horizontal, Spacing.m)
                     .padding(.vertical, Spacing.s)

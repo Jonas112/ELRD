@@ -8,99 +8,122 @@ struct FreehandTool: Equatable {
     var color: RGBColor = MapObject.defaultColor
     var width: CGFloat = 6
     var isErasing = false
-    /// Karte verschieben und zoomen statt zeichnen; die Zeichnung wandert mit.
-    var isMovingMap = false
 
     static let widths: [(title: String, width: CGFloat)] = [("Dünn", 3), ("Mittel", 6), ("Dick", 12)]
 }
 
 /// Verbindung zur Zeichenfläche: Rückgängig, Anzahl Striche, Bild erzeugen.
 ///
-/// Die Zeichnung hängt an der Karte: Beim Start merkt sich der Controller, welche
-/// Orte die Ecken der Zeichenfläche zeigen. Wird die Karte danach verschoben oder
-/// gezoomt (Norden bleibt oben), folgt die Fläche mit einer Skalierung und
-/// Verschiebung – so passt bereits Gezeichnetes weiter zur Karte und es lässt
-/// sich an anderer Stelle oder in anderem Maßstab weiterzeichnen.
+/// Die Zeichnung hängt an der Karte, als wäre sie schon gespeichert (Jonas): Beim
+/// Start merkt sich der Controller, welche Orte die Ecken der Fläche zeigen. Die
+/// Striche liegen in diesem Ausgangsmaßstab (`base`); bei jedem Verschieben oder
+/// Zoomen wird die Zeichnung in den aktuellen Kartenausschnitt umgerechnet. Die
+/// Fläche selbst bleibt bildschirmfüllend – gezeichnet wird in jedem Maßstab.
+/// Ein Finger oder der Stift zeichnet, zwei Finger verschieben und zoomen.
 @MainActor
 final class FreehandController: ObservableObject {
     weak var canvas: PKCanvasView?
+    /// Karte für das Verschieben und Zoomen mit zwei Fingern.
+    var proxy: MapCanvasProxy?
     @Published private(set) var strokeCount = 0
     /// Orte der linken oberen und rechten unteren Ecke beim Start, Größe der Fläche.
     private var anchor: (topLeft: GeoCoordinate, bottomRight: GeoCoordinate, size: CGSize)?
+    /// Striche im Ausgangsmaßstab (Koordinaten der Fläche beim Start).
+    private var base = PKDrawing()
+    /// Aktuelle Umrechnung Ausgangsmaßstab → Bildschirm.
+    private var current = CGAffineTransform.identity
+    /// Zeichnung wird gerade programmatisch gesetzt (kein Benutzerstrich).
+    private var isApplying = false
 
     /// Ecken der Fläche an der Karte festmachen (einmal, sobald sie ihre Größe hat).
     func anchorIfNeeded(_ proxy: MapCanvasProxy) {
+        self.proxy = proxy
         guard anchor == nil, let canvas, canvas.bounds.width > 1, canvas.bounds.height > 1,
               let topLeft = proxy.coordinate(at: .zero),
               let bottomRight = proxy.coordinate(at: CGPoint(x: canvas.bounds.width, y: canvas.bounds.height)) else { return }
         anchor = (topLeft, bottomRight, canvas.bounds.size)
+        current = .identity
     }
 
-    /// Fläche der Karte folgen lassen (bei jeder Änderung des Ausschnitts).
+    /// Zeichnung dem Kartenausschnitt folgen lassen (bei jeder Änderung des Ausschnitts).
     func followMap(_ proxy: MapCanvasProxy) {
         anchorIfNeeded(proxy)
-        guard let canvas, let mapping = mapping(proxy) else { return }
-        let center = CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY)
-        // Gewünscht: Punkt p der Fläche → origin + scale · p. UIKit dreht/skaliert um die Mitte.
-        let tx = mapping.origin.x + mapping.scale * center.x - center.x
-        let ty = mapping.origin.y + mapping.scale * center.y - center.y
-        canvas.transform = CGAffineTransform(a: mapping.scale, b: 0, c: 0, d: mapping.scale, tx: tx, ty: ty)
-        canvas.layer.borderWidth = abs(mapping.scale - 1) > 0.02 ? 1.5 : 0
+        guard let transform = mapping(proxy), transform != current else { return }
+        current = transform
+        apply()
     }
 
-    /// Wo die linke obere Ecke der Fläche jetzt auf dem Bildschirm liegt und wie stark gezoomt ist.
-    private func mapping(_ proxy: MapCanvasProxy) -> (origin: CGPoint, scale: CGFloat)? {
+    /// Ausgangsmaßstab → Bildschirm: Punkt p → Ecke + Zoom · p (Norden bleibt oben).
+    private func mapping(_ proxy: MapCanvasProxy) -> CGAffineTransform? {
         guard let anchor,
               let origin = proxy.point(for: anchor.topLeft),
               let corner = proxy.point(for: anchor.bottomRight) else { return nil }
         let scale = (corner.x - origin.x) / anchor.size.width
         guard scale.isFinite, scale > 0.001 else { return nil }
-        return (origin, scale)
+        return CGAffineTransform(a: scale, b: 0, c: 0, d: scale, tx: origin.x, ty: origin.y)
+    }
+
+    private func apply() {
+        guard let canvas else { return }
+        isApplying = true
+        canvas.drawing = base.transformed(using: current)
+        isApplying = false
+        strokeCount = base.strokes.count
     }
 
     func reset() {
         anchor = nil
-        canvas?.transform = .identity
-        canvas?.layer.borderWidth = 0
+        base = PKDrawing()
+        current = .identity
+        isApplying = true
+        canvas?.drawing = PKDrawing()
+        isApplying = false
+        strokeCount = 0
     }
 
+    /// Benutzer hat gezeichnet oder radiert: in den Ausgangsmaßstab übernehmen.
     func drawingChanged() {
-        strokeCount = canvas?.drawing.strokes.count ?? 0
+        guard !isApplying, let canvas else { return }
+        base = canvas.drawing.transformed(using: current.inverted())
+        strokeCount = base.strokes.count
     }
 
     /// Letzten Strich entfernen (unabhängig vom Undo-Manager der Ansicht).
     func undo() {
-        guard let canvas, !canvas.drawing.strokes.isEmpty else { return }
-        var drawing = canvas.drawing
-        drawing.strokes.removeLast()
-        canvas.drawing = drawing
-        drawingChanged()
+        guard !base.strokes.isEmpty else { return }
+        base.strokes.removeLast()
+        apply()
     }
 
     func clear() {
-        canvas?.drawing = PKDrawing()
-        drawingChanged()
+        base = PKDrawing()
+        apply()
     }
 
-    /// Zeichnung als transparentes PNG mit den Orten ihrer Ecken.
+    /// Zeichnung als transparentes PNG mit den Orten ihrer Ecken – auch Teile
+    /// außerhalb des aktuellen Ausschnitts.
     func export(_ proxy: MapCanvasProxy) -> (png: Data, topLeft: GeoCoordinate, bottomRight: GeoCoordinate, pixelSize: CGSize)? {
-        guard let canvas, !canvas.drawing.strokes.isEmpty else { return nil }
-        let rect = canvas.drawing.bounds.insetBy(dx: -6, dy: -6).intersection(canvas.bounds)
-        guard !rect.isNull, rect.width > 1, rect.height > 1 else { return nil }
-        let image = canvas.drawing.image(from: rect, scale: 2)
+        guard !base.strokes.isEmpty else { return nil }
+        let zoom = max(current.a, 0.001)
+        // Rand ~6 pt auf dem Bildschirm, im Ausgangsmaßstab umgerechnet.
+        let rect = base.bounds.insetBy(dx: -6 / zoom, dy: -6 / zoom)
+        guard !rect.isNull, rect.width > 0.5, rect.height > 0.5 else { return nil }
+        // Auflösung wie auf dem Bildschirm (Retina), höchstens 4096 px Kantenlänge.
+        var scale = 2 * zoom
+        scale = min(scale, 4096 / max(rect.width, rect.height))
+        scale = max(scale, 0.5)
+        let image = base.image(from: rect, scale: scale)
         guard let png = image.pngData() else { return nil }
-        // Ecken der Fläche → Bildschirm (mit aktueller Verschiebung/Zoom) → Ort.
-        let mapping = mapping(proxy) ?? (CGPoint.zero, 1)
-        func screen(_ point: CGPoint) -> CGPoint {
-            CGPoint(x: mapping.origin.x + mapping.scale * point.x, y: mapping.origin.y + mapping.scale * point.y)
-        }
-        guard let topLeft = proxy.coordinate(at: screen(CGPoint(x: rect.minX, y: rect.minY))),
-              let bottomRight = proxy.coordinate(at: screen(CGPoint(x: rect.maxX, y: rect.maxY))) else { return nil }
-        return (png, topLeft, bottomRight, CGSize(width: rect.width * 2, height: rect.height * 2))
+        let topLeftScreen = CGPoint(x: rect.minX, y: rect.minY).applying(current)
+        let bottomRightScreen = CGPoint(x: rect.maxX, y: rect.maxY).applying(current)
+        guard let topLeft = proxy.coordinate(at: topLeftScreen),
+              let bottomRight = proxy.coordinate(at: bottomRightScreen) else { return nil }
+        return (png, topLeft, bottomRight, CGSize(width: rect.width * scale, height: rect.height * scale))
     }
 }
 
-/// Durchsichtige PencilKit-Fläche über der Karte. Mit Finger und Stift.
+/// Durchsichtige PencilKit-Fläche über der Karte. Ein Finger oder Stift zeichnet,
+/// zwei Finger verschieben und zoomen die Karte (die Zeichnung folgt).
 struct FreehandCanvas: UIViewRepresentable {
     let controller: FreehandController
     let tool: FreehandTool
@@ -113,10 +136,18 @@ struct FreehandCanvas: UIViewRepresentable {
         canvas.isOpaque = false
         canvas.drawingPolicy = .anyInput
         canvas.isScrollEnabled = false
-        canvas.layer.borderColor = UIColor.systemBlue.withAlphaComponent(0.6).cgColor
         canvas.delegate = context.coordinator
         controller.canvas = canvas
         apply(tool, to: canvas)
+
+        let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
+        pan.minimumNumberOfTouches = 2
+        pan.maximumNumberOfTouches = 2
+        pan.delegate = context.coordinator
+        let pinch = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pinch(_:)))
+        pinch.delegate = context.coordinator
+        canvas.addGestureRecognizer(pan)
+        canvas.addGestureRecognizer(pinch)
         return canvas
     }
 
@@ -133,7 +164,7 @@ struct FreehandCanvas: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, PKCanvasViewDelegate {
+    final class Coordinator: NSObject, PKCanvasViewDelegate, UIGestureRecognizerDelegate {
         let controller: FreehandController
 
         init(controller: FreehandController) {
@@ -142,6 +173,35 @@ struct FreehandCanvas: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             controller.drawingChanged()
+        }
+
+        /// Zweiter Finger: angefangenen Strich verwerfen, die Karte bewegt sich.
+        private func cancelStroke() {
+            guard let canvas = controller.canvas else { return }
+            canvas.drawingGestureRecognizer.isEnabled = false
+            canvas.drawingGestureRecognizer.isEnabled = true
+        }
+
+        @objc func pan(_ recognizer: UIPanGestureRecognizer) {
+            if recognizer.state == .began { cancelStroke() }
+            guard recognizer.state == .changed, let view = recognizer.view else { return }
+            let translation = recognizer.translation(in: view)
+            controller.proxy?.pan(by: translation)
+            recognizer.setTranslation(.zero, in: view)
+        }
+
+        @objc func pinch(_ recognizer: UIPinchGestureRecognizer) {
+            if recognizer.state == .began { cancelStroke() }
+            guard recognizer.state == .changed, let view = recognizer.view else { return }
+            controller.proxy?.zoom(by: recognizer.scale, around: recognizer.location(in: view))
+            recognizer.scale = 1
+        }
+
+        nonisolated func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+        ) -> Bool {
+            true
         }
     }
 }
@@ -204,11 +264,6 @@ struct FreehandToolbar: View {
 
     var body: some View {
         VStack(spacing: Spacing.s) {
-            // Zeichnen oder Karte bewegen: beim Bewegen wandert die Zeichnung mit.
-            SegmentedChoice(
-                options: [(false, "✏︎ Zeichnen"), (true, "✋ Karte bewegen / zoomen")],
-                selection: $tool.isMovingMap
-            )
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.s) {
                     ForEach(MapObjectPalette.colors.indices, id: \.self) { index in
@@ -216,7 +271,6 @@ struct FreehandToolbar: View {
                         Button {
                             tool.color = entry.color
                             tool.isErasing = false
-                            tool.isMovingMap = false
                         } label: {
                             Circle()
                                 .fill(Color(entry.color))
@@ -238,12 +292,10 @@ struct FreehandToolbar: View {
                         ChoiceChip(entry.title, isSelected: !tool.isErasing && tool.width == entry.width, minHeight: TouchTarget.minimum + 4) {
                             tool.width = entry.width
                             tool.isErasing = false
-                            tool.isMovingMap = false
                         }
                     }
                     ChoiceChip("Radierer", isSelected: tool.isErasing, minHeight: TouchTarget.minimum + 4) {
                         tool.isErasing.toggle()
-                        tool.isMovingMap = false
                     }
                 }
                 .padding(.horizontal, Spacing.xs)

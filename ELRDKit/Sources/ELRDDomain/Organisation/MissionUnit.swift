@@ -23,6 +23,12 @@ public struct MissionUnit: VersionedEntity, MissionScoped {
     public private(set) var masterUnitID: MasterUnitID?
     /// Abschnitt, in dem die Einheit eingesetzt ist.
     public var sectionID: SectionID?
+    /// FMS-Status als Ziffer (Schritt 91); als Zahl gespeichert, damit unbekannte
+    /// Werte anderer Versionen lesbar bleiben (E95).
+    public var statusCode: Int?
+    public var statusChangedAt: Date?
+    /// Erwartetes Eintreffen (Schritt 92), v. a. für angeforderte Kräfte.
+    public var expectedArrival: Date?
 
     /// Legt eine reale Einheit an (aus Stammdaten oder temporär).
     public init(

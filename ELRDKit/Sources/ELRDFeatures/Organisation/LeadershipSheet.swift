@@ -245,7 +245,7 @@ private struct ParticipantsSection: View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             Text("Teilnehmer").font(.title2.weight(.bold))
             ForEach(participants.sorted { $0.joinedAt < $1.joinedAt }) { participant in
-                let isMe = participant.id == me.rawValue
+                let isMe = participant.id == me?.rawValue
                 VStack(alignment: .leading, spacing: Spacing.s) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(participant.displayName.isEmpty ? "Unbekannt" : participant.displayName)

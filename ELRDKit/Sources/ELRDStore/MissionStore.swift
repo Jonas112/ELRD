@@ -131,7 +131,7 @@ public final class MissionStore {
     /// Name der angemeldeten Person (z. B. „Erstellt von …“ im Bericht).
     public var sessionDisplayName: String { session.displayName }
     /// Angemeldete Person (Teilnehmer, Rechte – Schritt 89).
-    public var sessionUserID: UserID { session.userID }
+    public var sessionUserID: UserID? { session.userID }
 
     /// Ob eine Funktion gerade verfügbar ist (für die Oberfläche).
     public func isEnabled(_ feature: Feature) -> Bool {

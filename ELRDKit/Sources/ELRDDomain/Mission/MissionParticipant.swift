@@ -55,18 +55,20 @@ public struct MissionParticipant: Codable, Hashable, Sendable, Identifiable {
 }
 
 public extension Mission {
-    func participant(_ userID: UserID) -> MissionParticipant? {
-        participants?.first { $0.id == userID.rawValue }
+    func participant(_ userID: UserID?) -> MissionParticipant? {
+        guard let userID else { return nil }
+        return participants?.first { $0.id == userID.rawValue }
     }
 
     /// Rechte einer Person: Einsatzleitung und Nicht-Teilnehmer (lokal) dürfen alles.
-    func permission(of userID: UserID) -> ParticipantPermission {
+    func permission(of userID: UserID?) -> ParticipantPermission {
+        guard let userID else { return .full }
         if commanderID == userID { return .full }
         return participant(userID)?.permission ?? .full
     }
 
     /// Abschnitt, den die Person gewählt hat.
-    func ownSection(of userID: UserID) -> SectionID? {
+    func ownSection(of userID: UserID?) -> SectionID? {
         participant(userID)?.sectionID
     }
 

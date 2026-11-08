@@ -10,9 +10,10 @@ public struct JoinAsParticipant: MissionCommand {
 
     public func execute(_ draft: inout MissionDraft) throws {
         let session = draft.context.session
-        let existing = draft.mission.participant(session.userID)
+        guard let userID = session.userID else { return }
+        let existing = draft.mission.participant(userID)
         if let existing, existing.displayName == session.displayName { return }
-        var participant = existing ?? MissionParticipant(userID: session.userID, displayName: session.displayName, joinedAt: draft.context.now)
+        var participant = existing ?? MissionParticipant(userID: userID, displayName: session.displayName, joinedAt: draft.context.now)
         participant.displayName = session.displayName
         let entry = participant
         try draft.updateMission { $0.upsertParticipant(entry) }
@@ -32,8 +33,9 @@ public struct ChooseOwnSection: MissionCommand {
 
     public func execute(_ draft: inout MissionDraft) throws {
         let session = draft.context.session
-        var participant = draft.mission.participant(session.userID)
-            ?? MissionParticipant(userID: session.userID, displayName: session.displayName, joinedAt: draft.context.now)
+        guard let userID = session.userID else { throw CommandError.invalid("Bitte zuerst anmelden.") }
+        var participant = draft.mission.participant(userID)
+            ?? MissionParticipant(userID: userID, displayName: session.displayName, joinedAt: draft.context.now)
         guard participant.sectionID != sectionID else { return }
         var name = "keinen Abschnitt"
         if let sectionID {
@@ -80,7 +82,7 @@ public struct SetParticipantPermission: MissionCommand {
 /// „Lesen und Schreiben“ für alle Teilnehmer.
 enum AccessPolicy {
     static func check(_ draft: MissionDraft, before mission: Mission) throws {
-        let userID = draft.context.session.userID
+        guard let userID = draft.context.session.userID else { return }
         let permission = mission.permission(of: userID)
         guard permission != .full else { return }
 

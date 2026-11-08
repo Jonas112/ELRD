@@ -16,6 +16,11 @@ public struct JournalEntry: VersionedEntity, MissionScoped {
     public private(set) var attachments: [FileAttachment]
     /// Bild dieses Eintrags dient als Vorschaubild des Einsatzes in der Einsatzliste.
     public var isMissionThumbnail: Bool
+    /// Besondere Einträge (Lagemeldung, Checkliste, Übergabe); `nil` = normaler Eintrag.
+    public var category: JournalCategory?
+    /// Abgehakter Punkt der Checkliste (Schritt 76). Abhaken = Eintrag anlegen,
+    /// zurücknehmen = Eintrag löschen – so kollidieren zwei Geräte nie.
+    public var checklistItemID: String?
 
     public init(
         id: JournalEntryID = JournalEntryID(),
@@ -60,6 +65,16 @@ public enum JournalOrigin: Int, CaseIterable, Codable, Sendable, DisplayNamed {
 }
 
 /// Inhaltsart eines Eintrags für Symbol, Filter und Berichte.
+/// Art eines besonderen Tagebucheintrags.
+public enum JournalCategory: String, Codable, Sendable, CaseIterable {
+    /// Lagemeldung (Schritt 67) – Grundlage der Erinnerung im Takt.
+    case situationReport
+    /// Abgehakter Punkt der Checkliste (Schritt 76).
+    case checklist
+    /// Übergabe an die Ablösung (Schritt 75).
+    case handover
+}
+
 public enum JournalEntryKind: Int, CaseIterable, Sendable, DisplayNamed {
     case text = 0
     case photo = 1

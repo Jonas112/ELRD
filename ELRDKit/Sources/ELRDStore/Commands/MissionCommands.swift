@@ -413,21 +413,28 @@ public struct ReopenMission: MissionCommand {
 public struct AddPatient: MissionCommand {
     public let triage: Sichtungskategorie
     public let sectionID: SectionID?
+    /// Nummer der Patientenanhängekarte (Schritt 72).
+    public let tagNumber: String?
 
-    public init(triage: Sichtungskategorie = .defaultForNewPatient, sectionID: SectionID? = nil) {
+    public init(triage: Sichtungskategorie = .defaultForNewPatient, sectionID: SectionID? = nil, tagNumber: String? = nil) {
         self.triage = triage
         self.sectionID = sectionID
+        self.tagNumber = tagNumber.flatMap(Patient.normalizedTag)
     }
 
     public func execute(_ draft: inout MissionDraft) throws -> Patient {
+        if let tagNumber, let existing = draft.all(Patient.self).first(where: { !$0.isDeleted && $0.tagNumber == tagNumber }) {
+            throw CommandError.invalid("Karte \(tagNumber) gehört schon zu Patient \(existing.number).")
+        }
         let number = Patient.nextNumber(prefix: draft.context.numberPrefix, existing: draft.all(Patient.self))
-        let patient = Patient(
+        var patient = Patient(
             missionID: draft.missionID,
             metadata: draft.context.newMetadata(),
             number: number,
             triage: triage,
             sectionID: sectionID
         )
+        patient.tagNumber = tagNumber
         try draft.insert(patient)
         draft.log(.patient, "Patient \(number) angelegt – \(triage.displayName)", subject: .patient(patient.id))
         return patient

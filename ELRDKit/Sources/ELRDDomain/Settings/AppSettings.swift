@@ -21,6 +21,10 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var acceptedAgreementAt: Date?
     /// Einführung gesehen.
     public var hasCompletedOnboarding: Bool = false
+    /// Erinnerungen (Schritt 69).
+    public var reminders = ReminderSettings()
+    /// Eigene Checkliste (Schritt 76); `nil` = Standard.
+    public var checklist: ChecklistTemplate?
 
     public init() {}
 
@@ -36,6 +40,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         acceptedAgreementVersion = try container.decodeIfPresent(Int.self, forKey: .acceptedAgreementVersion)
         acceptedAgreementAt = try container.decodeIfPresent(Date.self, forKey: .acceptedAgreementAt)
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? defaults.hasCompletedOnboarding
+        reminders = try container.decodeIfPresent(ReminderSettings.self, forKey: .reminders) ?? defaults.reminders
+        checklist = try container.decodeIfPresent(ChecklistTemplate.self, forKey: .checklist)
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).
@@ -46,7 +52,38 @@ public struct AppSettings: Codable, Hashable, Sendable {
         return domain.contains(".") && !domain.hasSuffix(".") && !trimmed.contains(" ")
     }
 
+    /// Checkliste, die gilt (eigene oder Standard).
+    public var effectiveChecklist: ChecklistTemplate { checklist ?? .standard }
+
     public func image(for type: UnitType) -> Data? {
         unitTypeImages[type.rawValue]
     }
 }
+
+/// Wann die App an etwas erinnert (Minuten; 0 = aus).
+public struct ReminderSettings: Codable, Hashable, Sendable {
+    /// Lagemeldung an die ILS im Takt.
+    public var situationReportMinutes: Int = 30
+    /// Patient wartet ohne Transportmittel länger als …
+    public var transportWaitMinutes: Int = 20
+    /// Platzhalter ohne Fahrzeug länger als …
+    public var placeholderMinutes: Int = 15
+
+    public init(situationReportMinutes: Int = 30, transportWaitMinutes: Int = 20, placeholderMinutes: Int = 15) {
+        self.situationReportMinutes = situationReportMinutes
+        self.transportWaitMinutes = transportWaitMinutes
+        self.placeholderMinutes = placeholderMinutes
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = ReminderSettings()
+        situationReportMinutes = try container.decodeIfPresent(Int.self, forKey: .situationReportMinutes) ?? defaults.situationReportMinutes
+        transportWaitMinutes = try container.decodeIfPresent(Int.self, forKey: .transportWaitMinutes) ?? defaults.transportWaitMinutes
+        placeholderMinutes = try container.decodeIfPresent(Int.self, forKey: .placeholderMinutes) ?? defaults.placeholderMinutes
+    }
+
+    /// Auswahl in den Einstellungen.
+    public static let choices = [0, 10, 15, 20, 30, 45, 60]
+}
+

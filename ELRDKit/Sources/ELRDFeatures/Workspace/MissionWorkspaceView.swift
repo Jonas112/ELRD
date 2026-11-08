@@ -197,6 +197,8 @@ public struct MissionWorkspaceView: View {
                 case .section(let section): selection = section
                 case .patient(let id): open(id)
                 case .messages: showsMessages = true
+                // Lagemeldung und Kliniken öffnet die Lage selbst.
+                case .situationReport, .hospitals: selection = .overview
                 }
             }
             .toolbar(.hidden, for: .navigationBar)

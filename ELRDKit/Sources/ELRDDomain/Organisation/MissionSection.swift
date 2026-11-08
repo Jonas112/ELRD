@@ -17,6 +17,11 @@ public struct MissionSection: VersionedEntity, MissionScoped {
     /// Herkunft aus den Stammdaten, falls aus einer Vorlage angelegt.
     public var masterSectionID: MasterSectionID?
 
+    /// Abschnittsleitung (Schritt 73).
+    public var leaderName: String?
+    public var leaderCallsign: String?
+    public var radioChannel: String?
+
     public init(
         id: SectionID = SectionID(),
         missionID: MissionID,

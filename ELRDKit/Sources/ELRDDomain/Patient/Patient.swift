@@ -15,6 +15,8 @@ public struct Patient: VersionedEntity, MissionScoped {
     public var number: SerialNumber
     /// Patientennummer der Leitstelle (ILS).
     public var dispatchPatientNumber: String?
+    /// Nummer der Patientenanhängekarte (Barcode, Schritt 72).
+    public var tagNumber: String?
 
     // MARK: Sichtung und Person
 

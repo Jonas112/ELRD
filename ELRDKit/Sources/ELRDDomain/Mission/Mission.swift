@@ -30,6 +30,15 @@ public struct Mission: VersionedEntity, MissionScoped {
     /// Einsatzleiter (lokaler Benutzer).
     public var commanderID: UserID?
 
+    /// Lage in eigenen Worten (für die Lagemeldung, Schritt 67).
+    public var situationNote: String?
+    /// Gefahren an der Einsatzstelle (für die Lagemeldung).
+    public var hazards: String?
+    /// Aufnahmekontingente der Kliniken je SK (Schritt 71).
+    public var hospitalQuotas: [HospitalQuota]?
+    /// Führungsstruktur (Schritt 73).
+    public var leadership: [LeadershipPosition]?
+
     public init(
         id: MissionID = MissionID(),
         metadata: EntityMetadata,

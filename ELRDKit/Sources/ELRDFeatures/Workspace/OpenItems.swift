@@ -11,8 +11,16 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         // Reihenfolge = Dringlichkeit.
         case criticalWithoutTransport
         case criticalNotRegistered
+        /// Lagemeldung an die ILS fällig (Schritt 69).
+        case situationReportDue
         case notTriaged
         case urgentWithoutTransport
+        /// SK 3 wartet zu lange ohne Transportmittel (Schritt 69).
+        case longWait
+        /// Klinik über ihrem Kontingent (Schritt 71).
+        case hospitalOverloaded
+        /// Platzhalter seit langem ohne Fahrzeug (Schritt 69).
+        case placeholderOverdue
         case placeholderUnits
         case unreadMessages
 
@@ -24,6 +32,8 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         /// Direkt zum Patienten.
         case patient(PatientID)
         case messages
+        case situationReport
+        case hospitals
     }
 
     public let id: String
@@ -35,18 +45,41 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
     public let actionTitle: String
     public let target: Target
 
-    public static func items(for state: MissionState, now: Date) -> [OpenItem] {
+    public static func items(for state: MissionState, now: Date, reminders: ReminderSettings = ReminderSettings()) -> [OpenItem] {
         var items: [OpenItem] = []
         let patients = Patient.sortedByNumber(state.patients)
 
+        // Schritt 69: Lagemeldung im Takt (ab Einsatzbeginn bzw. letzter Lagemeldung).
+        if reminders.situationReportMinutes > 0, !state.mission.isClosed {
+            let last = state.lastSituationReportAt ?? state.mission.startedAt
+            let since = minutes(since: last, now)
+            if since >= reminders.situationReportMinutes {
+                items.append(OpenItem(
+                    id: "situationReport",
+                    kind: .situationReportDue,
+                    triage: nil,
+                    title: "Lagemeldung an ILS fällig",
+                    detail: state.lastSituationReportAt == nil ? "noch keine Lagemeldung, Einsatz läuft seit \(since) min" : "letzte vor \(since) min",
+                    actionTitle: "Lagemeldung",
+                    target: .situationReport
+                ))
+            }
+        }
+
+        let tooLong = reminders.transportWaitMinutes
         for patient in patients where patient.outcome == nil {
             // Ohne RTW/KTW/RTH gilt ein Patient als „ohne Transportmittel“, auch mit NEF (E66).
             let needsTransport = !patient.hasTransportUnit(in: state.units)
+            let waited = minutes(since: patient.metadata.createdAt, now)
+            let overdue = tooLong > 0 && waited >= tooLong
+            let problem = overdue ? "wartet zu lange" : "hat kein Transportmittel"
             switch patient.triage {
             case .sk1 where needsTransport:
-                items.append(patientItem(patient, .criticalWithoutTransport, "hat kein Transportmittel", waiting(patient, now), "Einheit zuweisen"))
+                items.append(patientItem(patient, .criticalWithoutTransport, problem, waiting(patient, now), "Einheit zuweisen"))
             case .sk2 where needsTransport:
-                items.append(patientItem(patient, .urgentWithoutTransport, "hat kein Transportmittel", waiting(patient, now), "Einheit zuweisen"))
+                items.append(patientItem(patient, .urgentWithoutTransport, problem, waiting(patient, now), "Einheit zuweisen"))
+            case .sk3 where needsTransport && overdue:
+                items.append(patientItem(patient, .longWait, problem, waiting(patient, now), "Einheit zuweisen"))
             case .ungesichtet where patient.status == .waiting:
                 items.append(patientItem(patient, .notTriaged, "noch nicht gesichtet", "angelegt vor \(minutes(since: patient.metadata.createdAt, now)) min", "Sichten"))
             default:
@@ -62,8 +95,39 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
             }
         }
 
+        for load in HospitalDistribution.loads(state) where !load.overloadedTriages.isEmpty {
+            let detail = load.overloadedTriages.map { triage in
+                "\(triage.shortName) \(load.counts[triage] ?? 0) von \(load.quota?.limit(for: triage) ?? 0)"
+            }
+            items.append(OpenItem(
+                id: "hospital-\(load.id)",
+                kind: .hospitalOverloaded,
+                triage: nil,
+                title: "\(load.name) über Kontingent",
+                detail: detail.joined(separator: ", "),
+                actionTitle: "Kliniken",
+                target: .hospitals
+            ))
+        }
+
         let placeholders = state.activeUnits.filter(\.isPlaceholder)
-        if !placeholders.isEmpty {
+        let overdue = reminders.placeholderMinutes > 0
+            ? placeholders.filter { minutes(since: $0.metadata.createdAt, now) >= reminders.placeholderMinutes }
+            : []
+        if let oldest = overdue.min(by: { $0.metadata.createdAt < $1.metadata.createdAt }) {
+            items.append(OpenItem(
+                id: "placeholdersOverdue",
+                kind: .placeholderOverdue,
+                triage: nil,
+                title: overdue.count == 1 ? "1 Platzhalter seit \(minutes(since: oldest.metadata.createdAt, now)) min ohne Fahrzeug" : "\(overdue.count) Platzhalter lange ohne Fahrzeug",
+                detail: "bei der ILS nachfragen – ältester seit \(minutes(since: oldest.metadata.createdAt, now)) min",
+                actionTitle: "Fahrzeug eintragen",
+                target: .section(.organisation)
+            ))
+        }
+        let recent = placeholders.filter { unit in !overdue.contains { $0.id == unit.id } }
+        if !recent.isEmpty {
+            let placeholders = recent
             let summary = Dictionary(grouping: placeholders, by: \.type)
                 .sorted { $0.key.rawValue < $1.key.rawValue }
                 .map { "\($0.value.count) \($0.key.shortName)" }
@@ -125,18 +189,3 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
     }
 }
 
-/// Patienten nach Versorgungsstand für die Lage.
-public struct PatientStatusCounts: Equatable, Sendable {
-    public let waiting: Int
-    public let assigned: Int
-    public let inTransport: Int
-    public let released: Int
-
-    public init(patients: [Patient]) {
-        let active = patients.active
-        waiting = active.filter { $0.status == .waiting }.count
-        assigned = active.filter { $0.status == .assigned }.count
-        inTransport = active.filter { $0.status == .inTransport }.count
-        released = active.filter { $0.status == .released }.count
-    }
-}

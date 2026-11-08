@@ -37,8 +37,8 @@ public struct PatientWhereabouts: Identifiable, Equatable, Sendable {
             case .transported(let start)?:
                 place = .transported
                 whereabouts = patient.destination?.name ?? "Transport, Ziel unbekannt"
-                if !assigned.isEmpty { detail.append("mit \(assigned.joined(separator: ", "))") }
-                detail.append("ab \(time(start)) Uhr")
+                let with = assigned.isEmpty ? "" : "mit \(assigned.joined(separator: ", ")) "
+                detail.append("\(with)ab \(time(start)) Uhr")
             case .released(let at, let handledBy)?:
                 place = .released
                 whereabouts = "Vor Ort entlassen"

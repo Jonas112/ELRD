@@ -125,7 +125,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | # | Schritt | Status |
 |---|---|---|
 | 67 | Lagemeldung auf Knopfdruck: aus den Daten (Lage, Verletzte je SK, Gefahren, Abschnitte, Nachforderungen), zum Vorlesen am Funk, landet im Tagebuch. Kein vorgeschriebenes ILS-Schema – eigener, schlanker Aufbau | ⬜ |
-| 68 | Nachforderungs-Rechner: Bedarf je Patient nach SK (SK1 mindestens RTW + NA oder RTH, SK2 mindestens RTW, SK3 mindestens KTW) gegen verfügbare Einheiten, Fehlbedarf anzeigen, per Tipp als Platzhalter nachfordern | ⬜ |
+| 68 | Nachforderungs-Rechner: Bedarf je Patient nach SK (SK1: RTW + NEF oder RTH allein, SK2 mindestens RTW, SK3 mindestens KTW – E87) gegen verfügbare Einheiten, Fehlbedarf anzeigen, per Tipp als Platzhalter nachfordern | ⬜ |
 | 69 | Erinnerungen: Lagemeldung an ILS im Takt, Patient wartet zu lange auf Transport, Platzhalter ohne Fahrzeug | ⬜ |
 | 70 | Transport-Board der Patientenablage: wartet → eingeteilt → abgefahren, Reihenfolge, Ziehen zwischen Spalten | ⬜ |
 | 71 | Klinikverteilung mit Kontingenten je SK und Warnung bei Überlastung | ⬜ |
@@ -192,7 +192,7 @@ Zurückgestellt: Diktat fürs Tagebuch (Spracherkennung auf dem Gerät), Überga
 - **iPhone (2026-11-07):** `TARGETED_DEVICE_FAMILY = 1,2`, iPhone hoch und quer. Arbeitsbereich unten: schmale Zähler und „+“ ohne Text, wenn sonst nichts in eine Zeile passt. Bildschirmfotos `phone-…` (iPhone Pro, hell) bei `[fotos]`. Nach den ersten Fotos angepasst: Kopfzeile im Einsatz mit 44-pt-Knöpfen, wenn der Titel sonst nicht passt; offene Punkte mit Knopf unter dem Text; Einsatzliste (Neuer Einsatz kleiner, laufender Einsatz, frühere Einsätze, Suche) mit schmalen Varianten über `ViewThatFits`; `FlowLayout` kappt zu breite Elemente. Breiten-Wahl über feste `idealWidth`, damit sie nicht von der Textlänge abhängt. CI: Geräte werden nach ihren Fotos heruntergefahren (sonst Zeitlimit), Reihenfolge iPad Pro → iPhone → iPad mini, ab 35 min keine weiteren Geräte.
 
 ## Offene Fragen an Jonas
-0. **Nachforderungs-Rechner (68):** Bedeutet „SK1 mindestens 1 RTW, 1 NA oder RTH“: RTW + (NA oder RTH) – oder (RTW + NA) oder RTH allein? Zählt ein NA (NEF) für mehrere SK1-Patienten gleichzeitig?
+0. **Nachforderungs-Rechner (68):** Regel geklärt (E87: RTW + NEF oder RTH). Offen: Zählt ein NEF für mehrere SK1-Patienten gleichzeitig (Notarzt fährt nacheinander mit), oder braucht jeder SK1 ein eigenes NEF?
 1. **Abo (E76):** Gratismonat in App Store Connect und 30 Tage lokaler Test – beides behalten? TestFlight frei oder mit Abo?
 2. **Datenschutzerklärung Fassung 2:** juristisch prüfen lassen; Hinweis auf OpenStreetMap-Nutzungsbedingungen (Kachel-Server sind für geringe Last gedacht – bei vielen Nutzern eigener Kachel-Anbieter nötig).
 3. **Backend:** Fragen 1–5 in `SYNC.md` (Betrieb, Anmeldung, Freigabe, Dateien, Abgleich ohne Netz).

@@ -90,6 +90,41 @@ Ausgangslage: Die App arbeitet lokal zuerst. Jede Änderung ist ein Ereignis, un
    - Passt, wenn alle Geräte Apple-Geräte mit Apple-ID sind.
 3. **Nur falls nötig: C.** Etwa wenn die ILS im Browser mitlesen soll, Android-Geräte dazukommen oder der Verband die Daten selbst hosten muss. Die Schnittstelle (`SyncTransport`, HTTP-Vorschlag oben) ist dafür schon festgelegt.
 
+### Variante B im Detail: CloudKit (Stand 2026-11-08)
+
+**Aufbau:**
+- Jeder Einsatz bekommt eine eigene Zone in der privaten iCloud-Datenbank des Geräts, das ihn anlegt (Eigentümer = Apple-ID dieses Geräts).
+- Die Zone wird über `CKShare` geteilt. Mitarbeitende sehen sie in ihrer *geteilten* Datenbank.
+- Jedes `ChangeEvent` ist ein `CKRecord` (Name = Ereignis-ID, dadurch doppelt senden unschädlich). Dateien (Fotos, PDFs) sind `CKAsset`.
+- `CloudKitTransport` setzt `SyncTransport` um: Senden = Datensätze speichern, Abholen = Zonenänderungen ab dem `CKServerChangeToken` (= unser Cursor). Zusammenführen bleibt `EntityHistory` – keine neue Konfliktlogik.
+- `CKSyncEngine` (ab iOS 17, passt zur Mindestversion) übernimmt Abonnement, Push, Warteschlange, Wiederholen und Drosselung. Je Datenbank (privat, geteilt) eine Instanz.
+
+**Aktualität:**
+- Änderungen lösen einen stillen Push aus; Apple nennt „innerhalb von Sekunden“. Realistisch 1–5 s, bei schlechtem Netz länger.
+- Stiller Push ist nicht garantiert (das System darf ihn verzögern oder zusammenfassen). Deshalb holt die App im Vordergrund zusätzlich alle 10–15 s selbst ab und sofort beim Öffnen.
+- Ohne Netz wird lokal weitergearbeitet; die Warteschlange geht beim nächsten Netz raus. Vor Ort ohne Netz bleibt Variante A.
+
+**Unterschiedliche Apple-IDs:**
+- Ja – genau dafür ist `CKShare` gedacht. Jede Person braucht nur irgendeine Apple-ID mit iCloud auf dem Gerät.
+- Beitritt: Teilen mit „Jeder mit dem Link kann bearbeiten“ (`publicPermission = .readWrite`); der Link wird auf dem Einsatzleiter-iPad als QR-Code angezeigt. Scannen → System öffnet ELRD → Annehmen. Apple-IDs der anderen muss man nicht kennen.
+- Nach dem Einsatz (oder sofort nach dem Beitritt aller) kann der Link abgeschaltet werden; Beigetretene bleiben als feste Teilnehmer (Rechte vorher auf `readWrite` setzen, sonst verlieren sie den Zugriff).
+- Rollen: Bearbeiten/Lesen pro Teilnehmer über CloudKit; „Einsatzleiter“ prüfen wir zusätzlich in der App.
+
+**Einschränkungen:**
+- Speicher zählt beim **Eigentümer** (iCloud-Speicher der Apple-ID des anlegenden Geräts) – Fotos beachten.
+- Die Zone gehört dem Eigentümer: Löscht er sie oder beendet das Teilen, verlieren die anderen den Cloud-Zugriff (lokale Kopien bleiben). Eigentum ist nicht übertragbar; ein Wechsel der Einsatzleitung ist trotzdem möglich (Rolle in der App).
+- Verwaltete Dienst-iPads: Wenn das MDM iCloud sperrt, geht CloudKit dort nicht. Mit verwalteten Apple-Accounts muss die IT iCloud für die App erlauben.
+- Keine Web-Ansicht und kein Android.
+- Testen nur auf echten Geräten mit zwei Apple-IDs (im CI-Simulator nicht möglich).
+
+**Datenschutz:**
+- Normale Felder verschlüsselt Apple mit eigenen Schlüsseln (Apple könnte technisch lesen).
+- `encryptedValues` (Ende-zu-Ende, Schlüssel im iCloud-Schlüsselbund) funktioniert auch in geteilten Datenbanken; Dateien (`CKAsset`) werden ebenso über den Schlüsselbund geschützt. Unsere Ereignisse liegen daher komplett in einem verschlüsselten Feld; nur Ereignis-ID und Zeit bleiben lesbar.
+- Folge: Der iCloud-Schlüsselbund muss auf den Geräten an sein. Setzt jemand den Schlüsselbund zurück, sind seine Cloud-Daten weg – die App lädt dann aus der lokalen Kopie neu hoch.
+- Ein eigener Einsatzschlüssel per QR-Code ist damit nicht mehr nötig (einfacher als zuerst gedacht).
+
+**Kosten:** für uns keine laufenden; Speicher tragen die Nutzer (iCloud). Aufwand: ca. 3 Schritte (Transport + Engine, Teilen/QR-Beitritt, Fehlerfälle/Gerätetest).
+
 **In allen Varianten gleich:**
 - Rollen je Einsatz: Einsatzleiter (alles), Mitarbeit (bearbeiten), Lesen.
 - Beitritt per QR-Code.

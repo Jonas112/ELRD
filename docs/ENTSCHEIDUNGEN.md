@@ -90,4 +90,4 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E84 | 2026-11-07 | Einsatz als Datei = dieselben Änderungsereignisse wie beim Abgleich (`MissionArchive`); Abgleich vor Ort über MultipeerConnectivity mit Bestätigung auf beiden Geräten | Ein Weg für Datei, Gerät-zu-Gerät und Server; Übernahme idempotent; keine Fremdbibliothek |
 | E85 | 2026-11-07 | Oberflächentests als eigenes Xcode-Ziel, in CI nur auf Anforderung (`[uitests]`) | Kernabläufe absichern, ohne jeden Lauf zu verlängern (sparsam, Jonas) |
 | E86 | 2026-11-07 | App auch für iPhone (Jonas); gleiche Oberfläche, schmale Varianten wo nötig | Einsatzkräfte ohne iPad sollen mitarbeiten können |
-
+| E87 | 2026-11-08 | Mindestbedarf je Patient (Nachforderungs-Rechner, Schritt 68): SK 1 = RTW **und** NEF **oder** RTH allein; SK 2 = RTW; SK 3 = KTW | Vorgabe Jonas |

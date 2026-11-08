@@ -97,7 +97,7 @@ Ausgangslage: Die App arbeitet lokal zuerst. Jede Änderung ist ein Ereignis, un
 - Die Zone wird über `CKShare` geteilt. Mitarbeitende sehen sie in ihrer *geteilten* Datenbank.
 - Jedes `ChangeEvent` ist ein `CKRecord` (Name = Ereignis-ID, dadurch doppelt senden unschädlich). Dateien (Fotos, PDFs) sind `CKAsset`.
 - `CloudKitTransport` setzt `SyncTransport` um: Senden = Datensätze speichern, Abholen = Zonenänderungen ab dem `CKServerChangeToken` (= unser Cursor). Zusammenführen bleibt `EntityHistory` – keine neue Konfliktlogik.
-- `CKSyncEngine` (ab iOS 17, passt zur Mindestversion) übernimmt Abonnement, Push, Warteschlange, Wiederholen und Drosselung. Je Datenbank (privat, geteilt) eine Instanz.
+- Umgesetzt mit eigener Engine statt `CKSyncEngine` (E89): Unsere `SyncEngine` hat Ausgang, Cursor und Zusammenführen schon; CloudKit ist nur Transport (`CloudKitTransport` → `CloudZoneStore`).
 
 **Aktualität:**
 - Änderungen lösen einen stillen Push aus; Apple nennt „innerhalb von Sekunden“. Realistisch 1–5 s, bei schlechtem Netz länger.
@@ -136,3 +136,39 @@ Ausgangslage: Die App arbeitet lokal zuerst. Jede Änderung ist ein Ereignis, un
 2. Soll die ILS oder Leitstelle mitlesen (Web), oder reicht der Bericht?
 3. Wie viele Geräte arbeiten typischerweise gleichzeitig an einem Einsatz?
 4. Wer ist datenschutzrechtlich verantwortlich (Kreisverband)? Gibt es Vorgaben zum Hosting?
+
+## iCloud-Teilen: Umsetzung (2026-11-08)
+
+**Module:** `ELRDCloud` mit
+- `CloudZoneStore` (Schnittstelle) und `CloudKitZoneStore` (CloudKit). Der Container wird erst beim ersten Zugriff erzeugt – Simulator-Builds ohne iCloud-Berechtigung (CI) starten sonst nicht.
+- `CloudKitTransport` (`SyncTransport` + `SyncFileTransport` auf die Zone).
+- `CloudSyncCoordinator` (wann abgleichen, Wartezeiten, Teilen/Beitreten/Trennen, Kontowechsel).
+- `CloudMissionDirectory` (Gerätedokument `cloudMissions`: Konto, Zone und Link je Einsatz).
+
+**Ablage:** Zone `elrd-mission-<uuid>`; Datensatz `ELRDEvent` (Name = Ereignis-ID, verschlüsseltes Feld `payload` = JSON des `ChangeEvent`), `ELRDFile` (Name `file-<sha256>`, Feld `asset`). Zonenweiter `CKShare`, `publicPermission = .readWrite`.
+
+**Wettläufe und wie sie gelöst sind:**
+
+| Situation | Lösung |
+|---|---|
+| Push, Zeitgeber (15 s im Vordergrund), eigene Änderung, Vordergrund lösen gleichzeitig aus | `SyncEngine`: je Einsatz ein laufender Lauf, alle Aufrufe währenddessen teilen sich *einen* Folgelauf (der die neuen Änderungen sicher enthält). Koordinator: dasselbe Muster eine Ebene höher; eigene Änderungen 1,5 s gesammelt |
+| Lauf überholt Lauf | Hochlade-Stand nur vorwärts (`advancePushed`) |
+| Abbruch zwischen Übernehmen und Stand sichern | erst übernehmen, dann Stand; erneutes Abholen ist idempotent |
+| Paket teilweise gespeichert | atomar je Paket; zu große Pakete werden geteilt; Stand rückt erst nach Erfolg vor |
+| Erneutes Hochladen (Abbruch, zwei Geräte gleiche Datei) | fester Datensatzname, `.allKeys` = identisch überschreiben |
+| Änderungsstand beim Dienst abgelaufen | einmal von vorn abholen, nichts doppelt |
+| Zweimal „Teilen“ getippt / zwei iPads desselben Kontos teilen gleichzeitig | eine Aufgabe je Einsatz; Zonenname fest aus Einsatz-ID; Freigabe mit `.ifServerRecordUnchanged`, bei Konflikt gilt die vorhandene |
+| Link zweimal geöffnet | eine Aufgabe je Link; Verknüpfen idempotent |
+| Verlassen / Teilen beenden / Kontowechsel während eines Laufs | Einsatz sperren, auf Ende aller Läufe warten (`waitUntilIdle`), erst dann Stand und Verbindung verwerfen |
+| Fremde Ereignisse kamen per Datei oder iPad in der Nähe | Zähler `foreignAccounted`: mehr fremde Ereignisse als über den Server gekommen → einmal weiterleiten |
+| Dienst ausgelastet / kein Netz | Wartezeit (Vorgabe des Dienstes, sonst 5 → 300 s), höchstens ein geplanter Neuversuch, Auslöser in der Wartezeit fragen nicht an |
+| Übernommene Änderungen während ein Fenster offen ist | offene Einsätze werden neu geladen; eine Aktion auf altem Stand wird wie bisher erkannt (`staleWrite`) und wiederholt |
+| Schlüsselbund beim Teilenden zurückgesetzt | Zone löschen, neu anlegen, alles aus der lokalen Kopie hochladen; andere müssen neu beitreten |
+
+**Einrichtung (einmalig, Jonas, in Xcode/Apple-Developer):**
+1. Xcode → Ziel ELRD → *Signing & Capabilities*: **iCloud** hinzufügen, *CloudKit* anhaken, Container **`iCloud.ELRD.App`** anlegen/auswählen. **Push Notifications** hinzufügen. **Background Modes** → *Remote notifications* (steht schon in der Info.plist). Die Datei `ELRD.entitlements` ist bereits eingetragen.
+2. Ändert sich die Bundle-ID (offene Frage `ELRD.App` vs. `ELRD.RescueCommander`), Container-ID in `ELRD.entitlements` und `CloudKitZoneStore.containerIdentifier` mitziehen.
+3. Erster Test auf zwei Geräten (Entwicklungsumgebung): legt die Datensatztypen `ELRDEvent`/`ELRDFile` automatisch an.
+4. **Vor TestFlight:** CloudKit Console → Schema *Deploy to Production*. Sonst funktioniert es in TestFlight nicht.
+5. Gerätetest: siehe `GERAETETEST.md`, Abschnitt iCloud.
+

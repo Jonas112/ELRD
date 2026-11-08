@@ -50,3 +50,15 @@ Legende: ✅ geht · ⚠️ geht, aber holprig · ❌ geht nicht
 
 ## 9. Abo (TestFlight-Build)
 - [ ] Testzeitraum wird angezeigt, Kauf in der Sandbox, „Käufe wiederherstellen“
+
+## iCloud-Teilen (zwei Geräte, zwei Apple-IDs)
+
+1. Gerät A: Einsatz anlegen, Einsatzdaten → „Mit iCloud teilen“ → QR-Code erscheint.
+2. Gerät B (andere Apple-ID): QR-Code mit der Kamera scannen → ELRD öffnet sich, Einsatz erscheint mit allen Patienten.
+3. Auf beiden gleichzeitig Patienten anlegen und ändern (auch dasselbe Feld) → nach wenigen Sekunden überall gleich; Nummern nie doppelt.
+4. Gerät B in den Flugmodus, ändern, wieder online → Änderungen kommen an („Änderungen noch nicht übertragen“ zählt herunter).
+5. Fotos/Sprachnotizen auf B → erscheinen auf A.
+6. App auf B im Hintergrund, auf A ändern → beim Zurückholen von B sofort aktuell.
+7. Gerät A: „Teilen beenden“ → B zeigt „Nicht mehr geteilt“, Daten auf B bleiben.
+8. B: in den Einstellungen von iCloud abmelden → Hinweis in den Einsatzdaten; wieder anmelden → geht weiter.
+

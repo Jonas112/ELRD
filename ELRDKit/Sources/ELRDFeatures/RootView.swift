@@ -1,6 +1,7 @@
 import SwiftUI
 import ELRDAuth
 import ELRDStore
+import ELRDCloud
 
 /// Einstiegsansicht der App: Start → Ersteinrichtung / Anmeldung → Arbeitsbereich.
 public struct RootView: View {
@@ -24,6 +25,7 @@ public struct RootView: View {
                     .environment(environment.reportLibrary)
                     .environment(environment.subscriptions)
                     .environment(environment.drafts)
+                    .environment(environment.cloud)
             } else if let startupError {
                 ContentUnavailableView {
                     Label("ELRD konnte nicht starten", systemImage: "exclamationmark.triangle")
@@ -46,14 +48,18 @@ public struct RootView: View {
         .task(id: startAttempt) {
             guard environment == nil else { return }
             do {
-                environment = try await AppEnvironment.make(options: options)
+                let made = try await AppEnvironment.make(options: options)
+                environment = made
+                await made.startCloud()
             } catch {
                 startupError = ErrorText.message(for: error)
             }
         }
         // Entwürfe sichern, bevor die App in den Hintergrund geht oder gesperrt wird.
+        // Zurück im Vordergrund: verbundene Einsätze abgleichen (Push kann ausbleiben).
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { environment?.drafts.flush() }
+            if phase == .active, let cloud = environment?.cloud, cloud.hasLinks { cloud.syncAll() }
         }
     }
 }
@@ -101,9 +107,12 @@ struct SignedInView: View {
                     initialPatient: environment.demoScreen?.opensPatient == true ? openStore.state.activePatients.first?.id : nil,
                     initialPatientLayout: environment.demoScreen.map { $0 == .patientTiles ? .tiles : .list } ?? .stored
                 ) {
+                    environment.unregister(openStore)
                     self.openStore = nil
                     list?.reload()
                 }
+                .onAppear { environment.register(openStore) }
+                .id(ObjectIdentifier(openStore))
             } else if let list {
                 MissionListView(
                     model: list,
@@ -123,6 +132,18 @@ struct SignedInView: View {
         .fullScreenCover(isPresented: $showsOnboarding) {
             OnboardingView(masterData: masterData) { showsOnboarding = false }
         }
+        // Einladung über iCloud (Link aus Nachrichten/Kamera): annehmen und Einsatz öffnen.
+        .task(id: CloudInbox.shared.pendingShares.count) {
+            guard !CloudInbox.shared.pendingShares.isEmpty else { return }
+            do {
+                if let mission = try await environment.acceptPendingShares(), let list {
+                    list.reload()
+                    if openStore == nil { openStore = try? list.open(mission) }
+                }
+            } catch {
+                list?.reportError(ErrorText.message(for: error))
+            }
+        }
         // Nach „Region laden“ stehen neue Kliniken gleich in der Klinikauswahl.
         .onChange(of: masterData?.revision) {
             catalogs = PatientCatalogs.load(from: environment.repository)
@@ -134,6 +155,7 @@ struct SignedInView: View {
             journalTemplates = JournalTemplateEditor(repository: environment.repository)
             let model = MissionListModel(environment: environment, user: user)
             list = model
+            environment.onMissionsChanged = { [weak model] in model?.reload() }
             // Beispieldaten: Einführung nur auf dem eigenen Bildschirmfoto.
             let settings = environment.settings.settings
             showsOnboarding = environment.isDemo

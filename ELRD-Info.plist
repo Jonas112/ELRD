@@ -48,6 +48,13 @@
 	<!-- Abgleich vor Ort (Schritt 66, MultipeerConnectivity). -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Gleicht Einsätze mit iPads in der Nähe ab – ohne Internet und ohne Server.</string>
+	<!-- iCloud-Teilen: Einladungslinks öffnen ELRD; stille Push-Mitteilungen bei Änderungen. -->
+	<key>CKSharingSupported</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_elrd-sync._tcp</string>

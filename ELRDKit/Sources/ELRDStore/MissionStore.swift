@@ -49,6 +49,9 @@ public final class MissionStore {
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let entitlements: any EntitlementProvider
 
+    /// Nach jeder gespeicherten Aktion (z. B. iCloud-Abgleich anstoßen).
+    @ObservationIgnored public var didCommit: ((MissionID) -> Void)?
+
     /// Abgleich dieses Einsatzes mit einem iPad in der Nähe (Schritt 66).
     public func makeNearbyExchange(files: AttachmentFileStore?) -> NearbyExchange {
         NearbyExchange(missionID: missionID, repository: repository, clock: deviceClock, files: files)
@@ -107,12 +110,15 @@ public final class MissionStore {
     /// Aktion einmal auf dem neuen Stand wiederholt.
     @discardableResult
     public func perform<Command: MissionCommand>(_ command: Command) throws -> Command.Output {
+        let output: Command.Output
         do {
-            return try performOnce(command)
+            output = try performOnce(command)
         } catch PersistenceError.staleWrite {
             try reload()
-            return try performOnce(command)
+            output = try performOnce(command)
         }
+        didCommit?(missionID)
+        return output
     }
 
     /// Lädt den Einsatz neu (z. B. nach Änderungen in einem anderen Fenster).

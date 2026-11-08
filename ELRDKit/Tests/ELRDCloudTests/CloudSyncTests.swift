@@ -375,6 +375,35 @@ struct CloudSyncTests {
         #expect(owner.coordinator.link(for: store.missionID) == nil)
     }
 
+    // MARK: App-Anbindung
+
+    @Test func storeReportsEachCommit() throws {
+        let owner = try device("A", "alice")
+        let store = try owner.createMission()
+        var reported: [MissionID] = []
+        store.didCommit = { reported.append($0) }
+        try store.perform(AddPatient(triage: .sk1))
+        try store.perform(AddPatient(triage: .sk2))
+        #expect(reported == [store.missionID, store.missionID])
+    }
+
+    @Test func demoStoreSupportsSharingFlow() async throws {
+        let owner = try device("A", "alice")
+        let store = try owner.createMission()
+        let demo = CloudSyncCoordinator(
+            repository: owner.repository,
+            clock: owner.deviceClock,
+            deviceID: owner.identity.deviceID,
+            files: owner.files,
+            store: InMemoryCloudZoneStore()
+        )
+        let url = try await demo.startSharing(store.missionID, title: "MANV")
+        await demo.syncNow(store.missionID)
+        #expect(demo.state(for: store.missionID).phase == .idle)
+        #expect(demo.pendingCount(for: store.missionID) == 0)
+        #expect(try await demo.join(url) == store.missionID)
+    }
+
     // MARK: Transport
 
     @Test func zoneNameRoundTripsMissionID() {

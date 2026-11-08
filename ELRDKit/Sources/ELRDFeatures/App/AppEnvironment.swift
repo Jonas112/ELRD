@@ -6,6 +6,8 @@ import ELRDAuth
 import ELRDEntitlements
 import ELRDStammdaten
 import ELRDStore
+import ELRDCloud
+import CloudKit
 
 /// Startoptionen, u. a. für automatische Bildschirmfotos in der CI.
 ///
@@ -68,6 +70,10 @@ public final class AppEnvironment {
     public let reportLibrary: ReportLibraryStore
     /// Ungesendete Texte (Schritt 52).
     public let drafts: TextDraftStore
+    /// Abgleich über iCloud (bei Beispieldaten ein Ersatz im Arbeitsspeicher).
+    public let cloud: CloudSyncCoordinator?
+    /// CloudKit-Zugang (Einladungen annehmen, die das System übergibt).
+    let cloudStore: CloudKitZoneStore?
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
     /// Gewünschter Beispielbildschirm (nur Demo).
@@ -94,6 +100,85 @@ public final class AppEnvironment {
         self.subscriptions = entitlements as? StoreKitEntitlements
         self.isDemo = isDemo
         self.demoScreen = demoScreen
+        if isDemo {
+            // Beispieldaten: iCloud-Ersatz im Arbeitsspeicher, CloudKit bleibt unberührt.
+            cloudStore = nil
+            cloud = CloudSyncCoordinator(
+                repository: repository,
+                clock: deviceClock,
+                deviceID: device.deviceID,
+                files: attachments,
+                store: InMemoryCloudZoneStore()
+            )
+        } else {
+            let store = CloudKitZoneStore()
+            cloudStore = store
+            cloud = CloudSyncCoordinator(
+                repository: repository,
+                clock: deviceClock,
+                deviceID: device.deviceID,
+                files: attachments,
+                store: store
+            )
+        }
+        cloud?.onImported = { [weak self] missions in self?.reloadOpenStores(missions) }
+    }
+
+    // MARK: iCloud-Abgleich
+
+    /// Geöffnete Einsätze (schwach gehalten), damit übernommene Änderungen sofort sichtbar werden.
+    @ObservationIgnored private var openStores: [WeakMissionStore] = []
+    /// Wird nach übernommenen Änderungen aufgerufen (Einsatzliste neu laden).
+    @ObservationIgnored var onMissionsChanged: (() -> Void)?
+    @ObservationIgnored private var accountObserver: Task<Void, Never>?
+
+    /// Einsatz geöffnet: eigene Änderungen an iCloud melden, regelmäßig nachsehen.
+    func register(_ store: MissionStore) {
+        openStores.removeAll { $0.store == nil || $0.store === store }
+        openStores.append(WeakMissionStore(store: store))
+        guard let cloud else { return }
+        store.didCommit = { [weak cloud] mission in cloud?.noteLocalChange(mission) }
+        cloud.startPolling(store.missionID)
+    }
+
+    func unregister(_ store: MissionStore) {
+        openStores.removeAll { $0.store == nil || $0.store === store }
+        cloud?.stopPolling()
+    }
+
+    private func reloadOpenStores(_ missions: Set<MissionID>) {
+        for entry in openStores {
+            guard let store = entry.store, missions.contains(store.missionID) else { continue }
+            try? store.reload()
+        }
+        onMissionsChanged?()
+    }
+
+    /// Beim Start: nur wenn schon Einsätze verbunden sind, iCloud ansprechen.
+    func startCloud() async {
+        guard let cloud, !isDemo else { return }
+        CloudInbox.shared.attach(cloud)
+        if accountObserver == nil {
+            accountObserver = Task { [weak cloud] in
+                for await _ in NotificationCenter.default.notifications(named: .CKAccountChanged) {
+                    guard let cloud, cloud.hasLinks else { continue }
+                    await cloud.accountDidChange()
+                }
+            }
+        }
+        if cloud.hasLinks { await cloud.activate() }
+    }
+
+    /// Vom System übergebene Einladungen annehmen; liefert den zuletzt beigetretenen Einsatz.
+    func acceptPendingShares() async throws -> MissionID? {
+        guard let cloud, let cloudStore else { return nil }
+        var joined: MissionID?
+        for metadata in CloudInbox.shared.takeShares() {
+            let zone = try await cloudStore.accept(metadata)
+            joined = try await cloud.joinAccepted(zone, url: metadata.share.url)
+        }
+        if joined != nil { onMissionsChanged?() }
+        return joined
     }
 
     /// Startet passend zu den Startoptionen.
@@ -172,6 +257,12 @@ public final class AppEnvironment {
         if screen.needsMissions, let user = users.currentUser {
             try DemoMissions.seed(in: environment, user: user)
         }
+        // Bildschirmfoto „Einsatzdaten“: laufender Einsatz ist geteilt.
+        if screen == .missionDetails, let cloud = environment.cloud,
+           let running = try MissionOverview.load(from: repository).first(where: { $0.endedAt == nil }) {
+            _ = try await cloud.startSharing(running.id, title: running.title)
+            await cloud.syncNow(running.id)
+        }
         return environment
     }
 
@@ -194,4 +285,9 @@ public final class AppEnvironment {
 public extension DocumentKey {
     /// Identität dieses Geräts (`DeviceIdentity`).
     static let device = DocumentKey(rawValue: "device")
+}
+
+/// Schwacher Verweis auf einen geöffneten Einsatz.
+private struct WeakMissionStore {
+    weak var store: MissionStore?
 }

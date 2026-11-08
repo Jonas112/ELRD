@@ -292,6 +292,23 @@ public final class CloudSyncCoordinator {
         for mission in (try? directory().missions) ?? [] { requestSync(mission) }
     }
 
+    /// Alle verbundenen Einsätze abgleichen und darauf warten – höchstens `timeout`
+    /// Sekunden (Push im Hintergrund: das System gibt nur kurz Zeit).
+    public func syncAllNow(timeout: Double) async {
+        if !activated { await activate() }
+        let missions = (try? directory().missions) ?? []
+        guard !missions.isEmpty else { return }
+        let sleep = self.sleep
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { @MainActor in
+                for mission in missions { await self.syncNow(mission) }
+            }
+            group.addTask { try? await sleep(timeout) }
+            await group.next()
+            group.cancelAll()
+        }
+    }
+
     /// Solange ein Einsatz offen ist, regelmäßig nachsehen (Push kann ausbleiben).
     public func startPolling(_ mission: MissionID) {
         polling?.cancel()

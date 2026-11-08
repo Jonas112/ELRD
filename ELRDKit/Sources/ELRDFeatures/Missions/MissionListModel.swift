@@ -111,6 +111,15 @@ final class MissionListModel {
 
     var result: MissionListFilter.Result { filter.apply(to: missions, now: now()) }
 
+    /// Fehler von außen anzeigen (z. B. Einladung konnte nicht angenommen werden).
+    func reportError(_ message: String) {
+        loadError = message
+    }
+
+    func clearError() {
+        loadError = nil
+    }
+
     func reload() {
         do {
             missions = try MissionOverview.load(from: repository)

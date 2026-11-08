@@ -3,6 +3,7 @@ import UIKit
 import UniformTypeIdentifiers
 import ELRDDomain
 import ELRDStore
+import ELRDCloud
 
 /// Startbildschirm nach der Anmeldung: neuer Einsatz, laufender Einsatz, frühere Einsätze.
 ///
@@ -27,6 +28,8 @@ struct MissionListView: View {
     @State private var pendingPurge: MissionSummary?
     @State private var importNotice: String?
     @State private var showsNearby = false
+    @State private var showsJoin = false
+    @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
     @AppStorage("missionList.showsAllYears") private var showsAllYears = false
 
     init(
@@ -70,6 +73,9 @@ struct MissionListView: View {
                     Menu {
                         Button("Einsatz aus Datei öffnen …", systemImage: "doc") { showsImporter = true }
                         Button("Einsatz von iPad in der Nähe übernehmen …", systemImage: "arrow.triangle.2.circlepath") { showsNearby = true }
+                        if cloud != nil {
+                            Button("Geteiltem Einsatz beitreten (iCloud-Link) …", systemImage: "person.2.badge.plus") { showsJoin = true }
+                        }
                     } label: {
                         Image(systemName: "square.and.arrow.down")
                             .font(.title3.weight(.semibold))
@@ -124,6 +130,19 @@ struct MissionListView: View {
         }
         .sheet(isPresented: $showsNearby) {
             NearbySyncView(session: makeNearbySession())
+        }
+        .sheet(isPresented: $showsJoin) {
+            if let cloud {
+                JoinCloudMissionSheet(cloud: cloud) { mission in
+                    model.reload()
+                    do { onOpen(try model.open(mission)) } catch { actionError = ErrorText.message(for: error) }
+                }
+            }
+        }
+        .alert("Hinweis", isPresented: Binding(get: { model.loadError != nil }, set: { if !$0 { model.clearError() } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(model.loadError ?? "")
         }
         .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.data, .json]) { result in
             switch result {

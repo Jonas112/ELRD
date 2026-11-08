@@ -1,6 +1,7 @@
 import SwiftUI
 import ELRDDomain
 import ELRDStore
+import ELRDCloud
 
 /// Einsatzdaten bearbeiten, Einsatz beenden oder wieder öffnen.
 ///
@@ -15,6 +16,7 @@ struct MissionDetailsView: View {
     @State private var confirmsClose = false
     @State private var showsNearby = false
     @Environment(\.attachmentStore) private var attachments
+    @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
 
     init(store: MissionStore, people: [PersonChoice]) {
         self.store = store
@@ -35,6 +37,9 @@ struct MissionDetailsView: View {
                     commanderSection
                 }
                 .disabled(mission.isClosed)
+
+                // Mehrere Geräte: früh im Einsatz gebraucht, daher weit oben.
+                if let cloud { CloudShareSection(store: store, cloud: cloud) }
 
                 if !problems.isEmpty {
                     Section {

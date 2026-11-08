@@ -6,11 +6,17 @@ import ELRDDomain
 /// Stelle im Ereignisstrom eines Einsatzes auf dem Server. Der Server vergibt
 /// fortlaufende Nummern in der Reihenfolge, in der Ereignisse bei ihm ankommen
 /// (nicht nach HLC) – so verpasst ein Gerät beim Abholen nie etwas.
+///
+/// Dienste mit eigenem, undurchsichtigem Stand (CloudKit: `CKServerChangeToken`)
+/// legen ihn in `token` ab; `position` zählt dann nur mit.
 public struct SyncCursor: Hashable, Codable, Sendable, Comparable {
     public let position: Int64
+    /// Undurchsichtiger Stand des Dienstes (nur zurückgeben, nie auswerten).
+    public let token: Data?
 
-    public init(_ position: Int64) {
+    public init(_ position: Int64, token: Data? = nil) {
         self.position = position
+        self.token = token
     }
 
     public static func < (lhs: SyncCursor, rhs: SyncCursor) -> Bool { lhs.position < rhs.position }
@@ -70,7 +76,26 @@ public enum SyncError: Error, Equatable, Sendable {
     case missionNotShared
     /// Keine Verbindung – später automatisch erneut.
     case offline
+    /// Der Dienst bittet, es frühestens nach so vielen Sekunden erneut zu versuchen.
+    case retryLater(seconds: Double)
+    /// Der Stand beim Abholen ist beim Dienst abgelaufen – von vorn abholen
+    /// (unschädlich, Übernahme ist idempotent).
+    case cursorExpired
+    /// Speicher beim Dienst voll (bei iCloud: Speicher der Person, die den Einsatz teilt).
+    case storageFull
+    /// Schlüssel für die Ende-zu-Ende-Verschlüsselung wurden zurückgesetzt
+    /// (iCloud-Schlüsselbund); die Cloud-Kopie muss neu aufgebaut werden.
+    case encryptionReset
     case server(String)
+
+    /// Ob ein späterer Versuch von selbst gelingen kann.
+    public var isTransient: Bool {
+        switch self {
+        case .offline, .retryLater, .cursorExpired: true
+        case .server: true
+        case .notConnected, .unauthorized, .missionNotShared, .storageFull, .encryptionReset: false
+        }
+    }
 }
 
 extension SyncError: LocalizedError {
@@ -80,6 +105,10 @@ extension SyncError: LocalizedError {
         case .unauthorized: "Anmeldung am Server abgelaufen. Bitte erneut anmelden."
         case .missionNotShared: "Dieser Einsatz ist für dein Konto nicht freigegeben."
         case .offline: "Keine Verbindung zum Server. Änderungen werden später übertragen."
+        case .retryLater: "Der Dienst ist gerade ausgelastet. Es geht gleich automatisch weiter."
+        case .cursorExpired: "Der Abgleich beginnt von vorn. Dabei geht nichts verloren."
+        case .storageFull: "Der iCloud-Speicher ist voll. Änderungen bleiben auf diesem Gerät, bis wieder Platz ist."
+        case .encryptionReset: "Die Verschlüsselung in iCloud wurde zurückgesetzt. Der Einsatz wird neu hochgeladen."
         case .server(let message): "Server meldet: \(message)"
         }
     }
@@ -102,6 +131,10 @@ public actor InMemorySyncServer: SyncTransport, SyncFileTransport {
     private var known: Set<ChangeEventID> = []
     /// Für Tests: nächster Aufruf scheitert mit diesem Fehler.
     private var nextFailure: SyncError?
+    /// Für Tests: Wartezeit je Aufruf (macht Überschneidungen sichtbar).
+    private var delay: Duration = .zero
+    /// Für Tests: Anzahl der Aufrufe von `push`.
+    public private(set) var pushCalls = 0
 
     public init() {}
 
@@ -109,7 +142,13 @@ public actor InMemorySyncServer: SyncTransport, SyncFileTransport {
         nextFailure = error
     }
 
+    public func setDelay(_ delay: Duration) {
+        self.delay = delay
+    }
+
     public func push(_ events: [ChangeEvent], mission: MissionID) async throws {
+        pushCalls += 1
+        try await pause()
         try checkFailure()
         for event in events where event.missionID == mission && known.insert(event.id).inserted {
             logs[mission, default: []].append(event)
@@ -117,6 +156,7 @@ public actor InMemorySyncServer: SyncTransport, SyncFileTransport {
     }
 
     public func pull(mission: MissionID, after cursor: SyncCursor?, limit: Int) async throws -> SyncPage {
+        try await pause()
         try checkFailure()
         let log = logs[mission] ?? []
         let start = Int(cursor?.position ?? 0)
@@ -157,6 +197,10 @@ public actor InMemorySyncServer: SyncTransport, SyncFileTransport {
     /// Anzahl gespeicherter Ereignisse eines Einsatzes.
     public func eventCount(mission: MissionID) -> Int { logs[mission]?.count ?? 0 }
 
+    private func pause() async throws {
+        if delay > .zero { try await Task.sleep(for: delay) }
+    }
+
     private func checkFailure() throws {
         if let failure = nextFailure {
             nextFailure = nil
@@ -174,11 +218,29 @@ public struct SyncCheckpoint: Hashable, Codable, Sendable {
     /// Position beim Abholen.
     public var pullCursor: SyncCursor?
     public var lastSyncAt: Date?
+    /// Fremde Ereignisse, deren Weg zum Server geklärt ist: vom Server abgeholt
+    /// oder von hier weitergeleitet. Liegen mehr fremde Ereignisse vor (Datei,
+    /// iPad in der Nähe), leitet das Gerät sie weiter – sonst fehlten sie Geräten,
+    /// die nur über den Server abgleichen.
+    public var foreignAccounted: Int?
 
     public init(pushedThrough: HybridTimestamp? = nil, pullCursor: SyncCursor? = nil, lastSyncAt: Date? = nil) {
         self.pushedThrough = pushedThrough
         self.pullCursor = pullCursor
         self.lastSyncAt = lastSyncAt
+    }
+
+    /// Setzt den Hochlade-Stand nur vorwärts (überholte Läufe dürfen ihn nie zurücksetzen).
+    public mutating func advancePushed(to timestamp: HybridTimestamp?) {
+        guard let timestamp else { return }
+        pushedThrough = pushedThrough.map { max($0, timestamp) } ?? timestamp
+    }
+
+    /// Fremde Ereignisse, die noch weitergeleitet werden müssen (`nil` = keine).
+    public func relay(_ events: [ChangeEvent], device: DeviceID) -> [ChangeEvent]? {
+        let foreign = events.filter { $0.deviceID != device }
+        guard foreign.count > (foreignAccounted ?? 0) else { return nil }
+        return foreign.sorted { $0.timestamp < $1.timestamp }
     }
 
     /// Eigene, noch nicht hochgeladene Ereignisse in HLC-Reihenfolge. Fremde

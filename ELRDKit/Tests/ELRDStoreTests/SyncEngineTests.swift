@@ -413,3 +413,151 @@ struct NearbyExchangeTests {
         #expect(onB.progress.importedEvents == 0)
     }
 }
+
+@Suite("Abgleich ohne Wettläufe (iCloud-Teilen)")
+@MainActor
+struct SyncConcurrencyTests {
+    let server = InMemorySyncServer()
+    let clock = TestClock()
+
+    /// Wartet, bis der Abgleich des Einsatzes begonnen hat.
+    private func waitUntilSyncing(_ engine: SyncEngine, _ mission: MissionID) async {
+        while !engine.isSyncing(mission) { await Task.yield() }
+    }
+
+    @Test func overlappingCallsShareOneFollowUpRun() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let store = try a.createMission()
+        await server.setDelay(.milliseconds(80))
+
+        let first = Task { try await a.engine.sync(store.missionID) }
+        await waitUntilSyncing(a.engine, store.missionID)
+        // Änderung während des ersten Laufs: muss im Folgelauf mitgehen.
+        let patient = try store.perform(AddPatient(triage: .sk1))
+        let second = Task { try await a.engine.sync(store.missionID) }
+        let third = Task { try await a.engine.sync(store.missionID) }
+
+        _ = try await first.value
+        let secondReport = try await second.value
+        let thirdReport = try await third.value
+
+        #expect(a.engine.completedRuns == 2, "zweiter und dritter Aufruf teilen sich einen Folgelauf")
+        #expect(secondReport == thirdReport)
+        #expect(secondReport.pushed > 0, "Änderung aus dem laufenden Abgleich nachgereicht")
+        #expect(try a.engine.pendingCount(for: store.missionID) == 0)
+        let total = try a.repository.changeEvents(in: store.missionID).count
+        #expect(await server.eventCount(mission: store.missionID) == total)
+        #expect(!a.engine.isSyncing(store.missionID))
+
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        try await b.engine.sync(store.missionID)
+        #expect(try b.open(store.missionID).state.activePatients.map(\.id) == [patient.id])
+    }
+
+    @Test func manyTriggersNeverPushTwiceInParallel() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let store = try a.createMission()
+        await server.setDelay(.milliseconds(20))
+        var tasks: [Task<SyncReport, any Error>] = []
+        for round in 0..<10 {
+            if round.isMultiple(of: 3) { try store.perform(AddPatient(triage: .sk2)) }
+            tasks.append(Task { try await a.engine.sync(store.missionID) })
+            await Task.yield()
+        }
+        var pushed = 0
+        for task in tasks { pushed += try await task.value.pushed }
+        let total = try a.repository.changeEvents(in: store.missionID).count
+        #expect(await server.eventCount(mission: store.missionID) == total)
+        #expect(a.engine.completedRuns <= 10)
+        // Jedes Ereignis genau einmal in einem Lauf hochgeladen (geteilte Ergebnisse doppelt gezählt).
+        #expect(pushed >= total)
+        #expect(try a.engine.pendingCount(for: store.missionID) == 0)
+    }
+
+    @Test func pushedStateNeverMovesBackwards() throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let store = try a.createMission()
+        clock.advance(5)
+        try store.perform(AddPatient(triage: .sk1))
+        let own = try a.repository.changeEvents(in: store.missionID).sorted { $0.timestamp < $1.timestamp }
+        var checkpoint = SyncCheckpoint()
+        checkpoint.advancePushed(to: own.last?.timestamp)
+        checkpoint.advancePushed(to: own.first?.timestamp)
+        #expect(checkpoint.pushedThrough == own.last?.timestamp, "überholter Lauf setzt nicht zurück")
+        checkpoint.advancePushed(to: nil)
+        #expect(checkpoint.pushedThrough == own.last?.timestamp)
+    }
+
+    @Test func expiredCursorStartsOverWithoutDuplicates() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let store = try a.createMission()
+        try await a.engine.sync(store.missionID)
+        let first = try await b.engine.sync(store.missionID)
+        #expect(first.imported.newEvents > 0)
+
+        let patient = try store.perform(AddPatient(triage: .sk1))
+        try await a.engine.sync(store.missionID)
+
+        await server.failNextCall(with: .cursorExpired)
+        let again = try await b.engine.sync(store.missionID)
+        let added = try a.repository.changeEvents(in: store.missionID).count - first.imported.newEvents
+        #expect(again.imported.newEvents == added, "von vorn abgeholt, nur Neues übernommen")
+        #expect(try b.open(store.missionID).state.activePatients.map(\.id) == [patient.id])
+    }
+
+    @Test func eventsFromFileAreRelayedOnce() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let c = try SyncDevice(prefix: "C", server: server, clock: clock)
+        let store = try a.createMission()
+        let patient = try store.perform(AddPatient(triage: .sk1))
+        // A ist nie online; C bekommt den Einsatz als Datei.
+        let archive = try MissionArchive.make(mission: store.missionID, repository: a.repository, files: nil, now: clock.now)
+        _ = try archive.importInto(repository: c.repository, clock: c.deviceClock, files: nil)
+
+        let first = try await c.engine.sync(store.missionID)
+        #expect(first.relayed == archive.events.count)
+        let second = try await c.engine.sync(store.missionID)
+        #expect(second.relayed == 0, "nur einmal weiterleiten")
+
+        // D sieht den Einsatz allein über den Server.
+        let d = try SyncDevice(prefix: "D", server: server, clock: clock)
+        try await d.engine.sync(store.missionID)
+        #expect(try d.open(store.missionID).state.activePatients.map(\.id) == [patient.id])
+
+        // Neue Datei mit weiteren fremden Ereignissen → wieder weiterleiten.
+        try store.perform(AddPatient(triage: .sk2))
+        let newer = try MissionArchive.make(mission: store.missionID, repository: a.repository, files: nil, now: clock.now)
+        _ = try newer.importInto(repository: c.repository, clock: c.deviceClock, files: nil)
+        let third = try await c.engine.sync(store.missionID)
+        #expect(third.relayed > 0)
+        try await d.engine.sync(store.missionID)
+        #expect(try d.open(store.missionID).state.activePatients.count == 2)
+    }
+
+    @Test func receivedFromServerIsNotRelayed() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let b = try SyncDevice(prefix: "B", server: server, clock: clock)
+        let store = try a.createMission()
+        try store.perform(AddPatient(triage: .sk1))
+        try await a.engine.sync(store.missionID)
+        try await b.engine.sync(store.missionID)
+        let report = try await b.engine.sync(store.missionID)
+        #expect(report.relayed == 0)
+        #expect(report.pushed == 0)
+    }
+
+    @Test func waitUntilIdleCoversQueuedRun() async throws {
+        let a = try SyncDevice(prefix: "A", server: server, clock: clock)
+        let store = try a.createMission()
+        await server.setDelay(.milliseconds(40))
+        let first = Task { try await a.engine.sync(store.missionID) }
+        await waitUntilSyncing(a.engine, store.missionID)
+        let second = Task { try await a.engine.sync(store.missionID) }
+        await Task.yield()
+        await a.engine.waitUntilIdle(store.missionID)
+        #expect(!a.engine.isSyncing(store.missionID))
+        _ = try await first.value
+        _ = try await second.value
+    }
+}

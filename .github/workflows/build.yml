@@ -59,7 +59,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" != "push" ] || [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
             echo "APP_CHANGED=true" >> "$GITHUB_ENV"
-          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(ELRD/|ELRD\.xcodeproj/|ELRDUITests/)'; then
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(ELRD/|ELRD\.xcodeproj/|ELRDUITests/|ELRDWidgets|\.github/workflows/)'; then
             echo "APP_CHANGED=true" >> "$GITHUB_ENV"
           else
             echo "APP_CHANGED=false" >> "$GITHUB_ENV"
@@ -110,8 +110,9 @@ jobs:
           if [ -z "$DEVICE" ]; then echo "::error title=Tests::Kein iOS-Simulator gefunden"; exit 1; fi
           echo "::notice title=Simulator::${DEVICE#*|}"
           cd ELRDKit
+          # Seit Schritt 90 hat das Package zwei Produkte: Tests laufen über das Sammelschema.
           xcodebuild \
-            -scheme ELRDKit \
+            -scheme ELRDKit-Package \
             -destination "id=${DEVICE%%|*}" \
             test > ../test.log 2>&1 || true
           cd ..

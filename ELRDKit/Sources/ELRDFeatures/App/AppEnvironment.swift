@@ -258,6 +258,11 @@ public final class AppEnvironment {
         }
         if screen.needsMissions, let user = users.currentUser {
             try DemoMissions.seed(in: environment, user: user)
+            // Banner für die Einsatzliste (Schritt 78) – nur Beispieldaten.
+            try environment.settings.update { settings in
+                settings.organisationName = "BRK Kreisverband Musterstadt"
+                settings.bannerImage = DemoMissions.demoBannerPNG()
+            }
         }
         // Bildschirmfoto „Einsatzdaten“: laufender Einsatz ist geteilt.
         if screen == .missionDetails, let cloud = environment.cloud,

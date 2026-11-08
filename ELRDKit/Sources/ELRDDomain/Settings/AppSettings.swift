@@ -23,8 +23,15 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var hasCompletedOnboarding: Bool = false
     /// Erinnerungen (Schritt 69).
     public var reminders = ReminderSettings()
-    /// Eigene Checkliste (Schritt 76); `nil` = Standard.
+    /// Eigene Checkliste (Schritt 76); `nil` = Standard. Seit Schritt 78 nur noch
+    /// Ausgangspunkt für `checklists`, falls dort noch nichts steht.
     public var checklist: ChecklistTemplate?
+    /// Einsatzarten zur Auswahl (Schritt 78); `nil` = mitgelieferte.
+    public var missionTypes: [MissionTypeSetting]?
+    /// Checklisten (Schritt 78); `nil` = nur die Standardliste.
+    public var checklists: [NamedChecklist]?
+    /// Checkliste für Einsätze ohne Einsatzart (und Arten ohne eigene Zuordnung).
+    public var defaultChecklistID: String?
 
     public init() {}
 
@@ -42,6 +49,9 @@ public struct AppSettings: Codable, Hashable, Sendable {
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? defaults.hasCompletedOnboarding
         reminders = try container.decodeIfPresent(ReminderSettings.self, forKey: .reminders) ?? defaults.reminders
         checklist = try container.decodeIfPresent(ChecklistTemplate.self, forKey: .checklist)
+        missionTypes = try container.decodeIfPresent([MissionTypeSetting].self, forKey: .missionTypes)
+        checklists = try container.decodeIfPresent([NamedChecklist].self, forKey: .checklists)
+        defaultChecklistID = try container.decodeIfPresent(String.self, forKey: .defaultChecklistID)
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).
@@ -52,8 +62,42 @@ public struct AppSettings: Codable, Hashable, Sendable {
         return domain.contains(".") && !domain.hasSuffix(".") && !trimmed.contains(" ")
     }
 
-    /// Checkliste, die gilt (eigene oder Standard).
-    public var effectiveChecklist: ChecklistTemplate { checklist ?? .standard }
+    /// Checkliste für Einsätze ohne Einsatzart.
+    public var effectiveChecklist: ChecklistTemplate { checklist(for: nil) }
+
+    /// Einsatzarten zur Auswahl, in eingestellter Reihenfolge.
+    public var effectiveMissionTypes: [MissionTypeSetting] {
+        missionTypes ?? MissionType.defaultOrder.map { MissionTypeSetting(type: $0) }
+    }
+
+    /// Alle Checklisten; mindestens die Standardliste.
+    public var effectiveChecklists: [NamedChecklist] {
+        if let checklists, !checklists.isEmpty { return checklists }
+        return [NamedChecklist(id: NamedChecklist.standardID, name: "Standard", items: (checklist ?? .standard).items)]
+    }
+
+    /// Checkliste, die für einen Einsatz gilt: die der Einsatzart, sonst die für
+    /// Einsätze ohne Einsatzart, sonst die erste.
+    public func namedChecklist(for type: MissionType?) -> NamedChecklist {
+        let lists = effectiveChecklists
+        if let type, let id = effectiveMissionTypes.first(where: { $0.type == type })?.checklistID,
+           let list = lists.first(where: { $0.id == id }) {
+            return list
+        }
+        if let id = defaultChecklistID, let list = lists.first(where: { $0.id == id }) { return list }
+        return lists[0]
+    }
+
+    public func checklist(for type: MissionType?) -> ChecklistTemplate {
+        namedChecklist(for: type).template
+    }
+
+    /// Auswahl für einen Einsatz: eingestellte Arten plus seine eigene, falls sie fehlt.
+    public func missionTypeChoices(including current: MissionType?) -> [MissionType] {
+        var types = effectiveMissionTypes.map(\.type)
+        if let current, !types.contains(current) { types.append(current) }
+        return types
+    }
 
     public func image(for type: UnitType) -> Data? {
         unitTypeImages[type.rawValue]

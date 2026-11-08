@@ -54,3 +54,44 @@ public struct ChecklistTemplate: Hashable, Codable, Sendable {
     public var lines: String { items.map(\.title).joined(separator: "\n") }
 }
 
+// MARK: - Mehrere Checklisten und Einsatzarten (Schritt 78)
+
+/// Benannte Checkliste (z. B. „MANV“, „Brand“).
+public struct NamedChecklist: Hashable, Codable, Sendable, Identifiable {
+    public var id: String
+    public var name: String
+    public var items: [ChecklistItem]
+
+    public init(id: String = UUID().uuidString, name: String, items: [ChecklistItem]) {
+        self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.items = items.filter { !$0.title.isEmpty }
+    }
+
+    public var template: ChecklistTemplate { ChecklistTemplate(items: items) }
+
+    public static let standardID = "standard"
+}
+
+/// Einsatzart in den Einstellungen mit zugeordneter Checkliste.
+public struct MissionTypeSetting: Hashable, Codable, Sendable, Identifiable {
+    public var type: MissionType
+    /// `nil` = Checkliste für Einsätze ohne eigene Zuordnung.
+    public var checklistID: String?
+
+    public init(type: MissionType, checklistID: String? = nil) {
+        self.type = type
+        self.checklistID = checklistID
+    }
+
+    public var id: String { type.rawValue }
+}
+
+public extension MissionType {
+    /// Reihenfolge der mitgelieferten Arten (häufige zuerst).
+    static let defaultOrder: [MissionType] = [
+        .verkehrsunfall, .brand, .bma, .mehrfachErkrankte, .gefahrgut,
+        .vermisstensuche, .polizeiSonderlage, .bergrettung, .wasserrettung, .sonstiges,
+    ]
+}
+

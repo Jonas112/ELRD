@@ -25,6 +25,10 @@ struct PatientDetailView: View {
     @State private var showsHospitals = false
     @State private var showsUnits = false
     @State private var editsTag = false
+    /// Seltene Angaben (Nummer, ILS, Alter, Geschlecht, Merkmale) eingeklappt.
+    @State private var showsPersonDetails = false
+    /// IVENA eingeklappt; Zusammenfassung mit PZC bleibt sichtbar.
+    @State private var showsIVENA = false
     @State private var tagText = ""
     @State private var confirmsRelease = false
     /// Kreislauf und „intubiert“ untereinander, wenn die Spalte schmal ist.
@@ -218,15 +222,21 @@ struct PatientDetailView: View {
             let hints = binding.wrappedValue.duplicateHints(patientID: patientID, among: store.state.patients)
             DetailCard(title: "Person") {
                 HStack(alignment: .top, spacing: Spacing.s) {
+                    field("Vorname", text: binding.firstName, field: .firstName).textContentType(.givenName)
+                    field("Nachname", text: binding.lastName, field: .lastName).textContentType(.familyName)
+                }
+                disclosure(
+                    isExpanded: $showsPersonDetails,
+                    summary: personSummary(patient, now: now),
+                    title: "Nr., ILS, Alter, Geschlecht, Merkmale"
+                )
+                if showsPersonDetails {
+                HStack(alignment: .top, spacing: Spacing.s) {
                     field("Nr.", text: binding.number, field: .number)
                         .textInputAutocapitalization(.characters)
                         .frame(width: 110)
                     field("ILS-Patientennummer", text: binding.dispatchNumber, field: .dispatch)
                         .textInputAutocapitalization(.characters)
-                }
-                HStack(alignment: .top, spacing: Spacing.s) {
-                    field("Vorname", text: binding.firstName, field: .firstName).textContentType(.givenName)
-                    field("Nachname", text: binding.lastName, field: .lastName).textContentType(.familyName)
                 }
                 HStack(alignment: .top, spacing: Spacing.s) {
                     field("Geburtsdatum", prompt: "TT.MM.JJJJ", text: binding.birthDate, field: .birthDate)
@@ -237,7 +247,7 @@ struct PatientDetailView: View {
                             .frame(width: 130)
                     } else {
                         VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text("Alter").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                            Text("Alter").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             Text(patient.age(at: now).map { "\($0) J" } ?? "–")
                                 .font(.title3.monospacedDigit())
                                 .frame(minHeight: TouchTarget.comfortable)
@@ -256,12 +266,13 @@ struct PatientDetailView: View {
                         .controlSize(.large)
                         .frame(minHeight: TouchTarget.comfortable)
                 }
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Erkennungsmerkmale / Fundort").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Erkennungsmerkmale / Fundort").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     TextField("z. B. Fahrer Pkw rot, Beifahrersitz, blaue Jacke", text: binding.identifyingFeatures, axis: .vertical)
                         .lineLimit(2...4)
                         .focused($focus, equals: .features)
                         .inputBox()
+                }
                 }
                 ForEach(problems, id: \.message) { problem in
                     Label(problem.message, systemImage: "exclamationmark.triangle.fill")
@@ -287,7 +298,7 @@ struct PatientDetailView: View {
                 if appSettings?.settings.showsIVENA ?? true { ivenaSection(patient) }
                 injuriesSection(patient)
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Notiz").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                    Text("Notiz").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     TextField("Maßnahmen, Medikamente, Besonderheiten …", text: binding.notes, axis: .vertical)
                         .lineLimit(4...10)
                         .focused($focus, equals: .notes)
@@ -311,7 +322,7 @@ struct PatientDetailView: View {
     /// Kreislauf (3 Zustände) und intubiert – ein Tipp speichert sofort.
     private func circulationSection(_ patient: Patient) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("Kreislauf").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text("Kreislauf").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             // Schmale Spalte (iPad mini hoch): „intubiert“ unter den Kreislauf, damit nichts gekürzt wird.
             let layout = stacksCirculation
                 ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.s))
@@ -340,15 +351,25 @@ struct PatientDetailView: View {
     /// IVENA: RMI, Priorität, PZC; bei Priorität 1 zusätzlich der ABCD-Status.
     private func ivenaSection(_ patient: Patient) -> some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("IVENA").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                Spacer()
-                let code = patient.allocationCode(at: Date())
-                Text("PZC ").font(.subheadline).foregroundStyle(.secondary)
-                    + Text(code.description).font(.title3.weight(.heavy).monospacedDigit())
-                        .foregroundStyle(code.isComplete ? Color.primary : Color.secondary)
+            let code = patient.allocationCode(at: Date())
+            Button { withAnimation(.snappy) { showsIVENA.toggle() } } label: {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("IVENA").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Spacer()
+                    Text("PZC ").font(.subheadline).foregroundStyle(.secondary)
+                        + Text(code.description).font(.title3.weight(.heavy).monospacedDigit())
+                            .foregroundStyle(code.isComplete ? Color.primary : Color.secondary)
+                    Image(systemName: showsIVENA ? "chevron.up" : "chevron.down")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(minHeight: TouchTarget.minimum)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
+            .accessibilityHint(showsIVENA ? "Einklappen" : "RMI, Dringlichkeit und ABCD bearbeiten")
+            if showsIVENA || patient.treatmentPriority == .sofortigeIntervention {
             RMIField(catalog: catalogs.rmi, code: patient.rmiCode) { code in
                 update { $0.rmiCode = code }
             }
@@ -357,8 +378,9 @@ struct PatientDetailView: View {
                 selection: patientBinding(patient, \.treatmentPriority),
                 tint: { Color.treatmentPriority($0) }
             )
+            }
             if patient.treatmentPriority == .sofortigeIntervention {
-                Text("ABCD-Status · Info für die Klinik").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                Text("ABCD-Status · Info für die Klinik").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 ABCDPicker(status: patient.abcd ?? ABCDStatus()) { letter, level in
                     update { patient in
                         var status = patient.abcd ?? ABCDStatus()
@@ -390,7 +412,7 @@ struct PatientDetailView: View {
     /// Verletzungen: Liste mit Entfernen, „+ Verletzung“ öffnet die Auswahl.
     private func injuriesSection(_ patient: Patient) -> some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
-            Text("Verletzungen").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text("Verletzungen").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             HStack(alignment: .top, spacing: Spacing.m) {
                 // Kleine Körpergrafik mit Markierungen; Tipp öffnet die Auswahl an dieser
                 // Stelle – auch ohne erfasste Verletzung (Jonas).
@@ -475,44 +497,17 @@ struct PatientDetailView: View {
         }
     }
 
-    /// Transportmittel schlank wie die Zielklinik: Zugeordnete mit „ändern“, sonst
-    /// die ersten freien Transportmittel und „Alle Einheiten …“ (eigene Liste).
+    /// Transportmittel: nur zugeordnete Einheiten; Auswahl über die Liste (Knopf).
     private func unitSection(_ patient: Patient) -> some View {
-        let groups = UnitAssignmentGroups(UnitChoice.ordered(units: store.state.units, patients: store.state.patients, for: patientID))
-        return VStack(alignment: .leading, spacing: Spacing.s) {
-            Text("Transportmittel").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            if groups.assigned.isEmpty {
-                Label("Noch keine Einheit zugeordnet", systemImage: "exclamationmark.circle")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.orange)
-                FlowLayout(spacing: Spacing.s) {
-                    ForEach(groups.freeTransport.prefix(3)) { choice in
-                        ChoiceChip(choice.unit.isPlaceholder ? choice.unit.displayName : "\(choice.unit.typeDisplayName) \(choice.unit.displayName)",
-                                   isSelected: false, minHeight: 52, background: Surface.elevated) {
-                            perform(AssignUnit(patientID: patientID, unitID: choice.id))
-                        }
-                    }
-                    Button(groups.freeTransport.isEmpty ? "Einheit wählen oder anlegen …" : "Alle Einheiten …") { showsUnits = true }
-                        .font(.headline)
-                        .frame(minHeight: 52)
-                }
-            } else {
-                Button { showsUnits = true } label: {
-                    HStack {
-                        Text(groups.assigned.map { $0.unit.isPlaceholder ? $0.unit.displayName : "\($0.unit.typeDisplayName) \($0.unit.displayName)" }.joined(separator: ", "))
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                            .multilineTextAlignment(.leading)
-                        Spacer()
-                        Text("ändern").font(.subheadline.weight(.semibold))
-                    }
-                    .padding(.horizontal, Spacing.m)
-                    .frame(minHeight: TouchTarget.comfortable)
-                    .background(ActionFill.selected, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint("Öffnet die Liste der Einheiten")
-            }
+        let assigned = store.state.units.filter { patient.unitIDs.contains($0.id) }
+        return VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("Transportmittel").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            selectionButton(
+                value: assigned.isEmpty ? nil : assigned.map { $0.isPlaceholder ? $0.displayName : "\($0.typeDisplayName) \($0.displayName)" }.joined(separator: ", "),
+                placeholder: "Einheit wählen oder anlegen …",
+                symbol: "box.truck",
+                accent: nil
+            ) { showsUnits = true }
         }
         .sheet(isPresented: $showsUnits) {
             UnitPickerSheet(store: store, patientID: patientID, masterUnits: catalogs.units)
@@ -530,27 +525,17 @@ struct PatientDetailView: View {
         }
     }
 
-    /// Zielklinik: gewählte mit „ändern“, sonst die ersten Vorschläge und „Alle …“.
+    /// Zielklinik: nur die gewählte; Auswahl über die Liste (Knopf).
     private func destinationSection(_ patient: Patient) -> some View {
-        let suggestions = Array(hospitalChoices(patient).prefix(3))
-        return VStack(alignment: .leading, spacing: Spacing.s) {
-            Text("Zielklinik").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            if let destination = patient.destination {
-                Button { showsHospitals = true } label: {
-                    HStack {
-                        Circle().fill(Color.registration(patient.registrationState)).frame(width: 12, height: 12)
-                            .accessibilityHidden(true)
-                        Text(destination.name).font(.headline).foregroundStyle(.primary)
-                        Spacer()
-                        Text("ändern").font(.subheadline.weight(.semibold))
-                    }
-                    .padding(.horizontal, Spacing.m)
-                    .frame(minHeight: TouchTarget.comfortable)
-                    .background(ActionFill.selected, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .strokeBorder(Color.registration(patient.registrationState), lineWidth: 2))
-                }
-                .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("Zielklinik").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            selectionButton(
+                value: patient.destination?.name,
+                placeholder: "Klinik wählen …",
+                symbol: "cross.case",
+                accent: patient.destination == nil ? nil : Color.registration(patient.registrationState)
+            ) { showsHospitals = true }
+            if patient.destination != nil {
                 SegmentedChoice(
                     options: [(HospitalRegistrationState.nichtAngefragt, "nicht angefragt"), (.angefragt, "angefragt"), (.angemeldet, "angemeldet")],
                     selection: Binding(
@@ -559,22 +544,8 @@ struct PatientDetailView: View {
                     ),
                     tint: { Color.registration($0) }
                 )
-            } else {
-                FlowLayout(spacing: Spacing.s) {
-                    ForEach(suggestions) { choice in
-                        ChoiceChip(
-                            choice.distanceText.map { "\(choice.hospital.name) · \($0)" } ?? choice.hospital.name,
-                            isSelected: false, minHeight: 52, background: Surface.elevated
-                        ) {
-                            perform(SetDestination(patientID: patientID, hospital: choice.hospital.snapshot))
-                        }
-                    }
-                    Button("Alle Kliniken …") { showsHospitals = true }
-                        .font(.headline)
-                        .frame(minHeight: 52)
-                }
             }
-            Text("Schockraum").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text("Schockraum").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             SegmentedChoice(
                 options: [(TraumaRoom.none, "keiner"), (.a, "A"), (.b, "B")],
                 selection: patientBinding(patient, \.traumaRoom)
@@ -627,7 +598,7 @@ struct PatientDetailView: View {
     }
 
     private func hospitalChoices(_ patient: Patient) -> [HospitalChoice] {
-        HospitalChoice.ordered(hospitals: catalogs.hospitals, patients: store.state.patients, near: store.state.mission.coordinate)
+        HospitalChoice.ordered(hospitals: catalogs.hospitals, patients: store.state.patients, near: store.state.mission.coordinate, quotas: store.state.mission.hospitalQuotas ?? [])
     }
 
     /// Führt einen Befehl aus; Fehler erscheinen oben als „nicht gespeichert“.
@@ -641,9 +612,74 @@ struct PatientDetailView: View {
 
     // MARK: Bausteine
 
+    /// Eingeklappter Bereich: Zusammenfassung und „mehr“/„weniger“.
+    private func disclosure(isExpanded: Binding<Bool>, summary: String, title: String) -> some View {
+        Button { withAnimation(.snappy) { isExpanded.wrappedValue.toggle() } } label: {
+            HStack(spacing: Spacing.s) {
+                Text(summary.isEmpty ? title : summary)
+                    .font(.subheadline)
+                    .foregroundStyle(summary.isEmpty ? Color.secondary : Color.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: Spacing.s)
+                Text(isExpanded.wrappedValue ? "weniger" : "mehr")
+                    .font(.subheadline.weight(.semibold))
+                Image(systemName: isExpanded.wrappedValue ? "chevron.up" : "chevron.down")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .frame(minHeight: TouchTarget.minimum)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(isExpanded.wrappedValue ? "Einklappen" : "Weitere Angaben bearbeiten")
+    }
+
+    private func personSummary(_ patient: Patient, now: Date) -> String {
+        var parts = ["Nr. \(patient.number)"]
+        if let ils = patient.dispatchPatientNumber, !ils.isEmpty { parts.append("ILS \(ils)") }
+        if let age = patient.age(at: now) { parts.append("\(age) J") }
+        if patient.gender != .unklar { parts.append(patient.gender == .maennlich ? "männlich" : "weiblich") }
+        if patient.isChild { parts.append("Kind") }
+        if let features = patient.identifyingFeatures, !features.isEmpty { parts.append(features) }
+        return parts.count == 1 ? "" : parts.joined(separator: " · ")
+    }
+
+    /// Gewählter Wert mit „ändern“ – oder ein Knopf, der die Auswahl öffnet.
+    private func selectionButton(value: String?, placeholder: String, symbol: String, accent: Color?, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.m) {
+                if let accent {
+                    Circle().fill(accent).frame(width: 12, height: 12).accessibilityHidden(true)
+                } else {
+                    Image(systemName: value == nil ? "plus.circle.fill" : symbol)
+                        .font(.title3)
+                        .foregroundStyle(value == nil ? ActionFill.primary : Color.secondary)
+                }
+                Text(value ?? placeholder)
+                    .font(.headline)
+                    .foregroundStyle(value == nil ? ActionFill.primary : Color.primary)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: Spacing.s)
+                if value != nil {
+                    Text("ändern").font(.subheadline.weight(.semibold))
+                }
+            }
+            .padding(.horizontal, Spacing.m)
+            .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable, alignment: .leading)
+            .background(value == nil ? Surface.elevated : ActionFill.selected, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                if let accent {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(accent, lineWidth: 2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(value.map { "\($0), ändern" } ?? placeholder)
+    }
+
     private func field(_ label: String, prompt: String? = nil, text: Binding<String>, field: Field) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(label).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             TextField(label, text: text, prompt: Text(prompt ?? ""))
                 .autocorrectionDisabled()
                 .focused($focus, equals: field)
@@ -722,8 +758,8 @@ struct DetailCard<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.l) {
-            Text(title).font(.title3.weight(.bold))
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            Text(title).font(.headline).foregroundStyle(.secondary)
             content
         }
         .padding(Spacing.l)

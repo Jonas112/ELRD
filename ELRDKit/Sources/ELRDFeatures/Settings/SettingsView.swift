@@ -23,7 +23,7 @@ struct SettingsView: View {
             List {
                 Section {
                     row(.general, "Allgemein", "gearshape", "Organisation, Banner, ILS-Mail, Standardbericht")
-                    row(.missionAids, "Erinnerungen und Checkliste", "checklist", "Lagemeldung im Takt, Wartezeiten, eigene Checkliste")
+                    row(.missionAids, "Erinnerungen, Einsatzarten, Checklisten", "checklist", "Lagemeldung im Takt, Wartezeiten, Checkliste je Einsatzart")
                     row(.vehicleImages, "Fahrzeugbilder", "car.2", "Eigene Bilder für RTW, KTW, NEF, RTH")
                 }
                 Section {
@@ -134,7 +134,7 @@ struct GeneralSettingsView: View {
             } header: {
                 Text("Banner / Logo")
             } footer: {
-                Text("Oben links im Bericht. Am besten ein Logo mit hellem oder durchsichtigem Hintergrund.")
+                Text("Oben in der Einsatzliste und oben links im Bericht. Am besten ein Logo mit hellem oder durchsichtigem Hintergrund.")
             }
 
             Section {
@@ -401,14 +401,15 @@ private struct MapCacheSection: View {
     }
 }
 
-/// Erinnerungen (Schritt 69) und Checkliste (Schritt 76).
+/// Erinnerungen (Schritt 69), Einsatzarten und Checklisten (Schritte 76, 78).
 struct MissionAidsSettingsView: View {
     @Environment(AppSettingsStore.self) private var store: AppSettingsStore?
-    @State private var checklistText = ""
+    @State private var newType = ""
     @State private var errorMessage: String?
 
     var body: some View {
         let settings = store?.settings ?? AppSettings()
+        let lists = settings.effectiveChecklists
         Form {
             Section {
                 minutesPicker("Lagemeldung an ILS alle", value: settings.reminders.situationReportMinutes) { value in
@@ -427,25 +428,106 @@ struct MissionAidsSettingsView: View {
             }
 
             Section {
-                TextEditor(text: $checklistText)
-                    .frame(minHeight: 280)
-                    .font(.body)
-                Button("Speichern") { saveChecklist() }
-                    .disabled(checklistText == settings.effectiveChecklist.lines)
-                if settings.checklist != nil {
-                    Button("Standard wiederherstellen", role: .destructive) {
-                        save { $0.checklist = nil }
-                        checklistText = ChecklistTemplate.standard.lines
+                ForEach(settings.effectiveMissionTypes) { entry in
+                    Picker(selection: Binding(
+                        get: { entry.checklistID },
+                        set: { id in updateTypes { types in
+                            if let index = types.firstIndex(where: { $0.id == entry.id }) { types[index].checklistID = id }
+                        } }
+                    )) {
+                        Text("Standard (wie ohne Einsatzart)").tag(String?.none)
+                        ForEach(lists) { list in Text(list.name).tag(Optional(list.id)) }
+                    } label: {
+                        Text(entry.type.displayName).font(.headline)
+                    }
+                    .frame(minHeight: TouchTarget.minimum)
+                }
+                .onDelete { offsets in updateTypes { $0.remove(atOffsets: offsets) } }
+                .onMove { from, to in updateTypes { $0.move(fromOffsets: from, toOffset: to) } }
+                HStack {
+                    TextField("Neue Einsatzart, z. B. Großveranstaltung", text: $newType)
+                        .onSubmit(addType)
+                    Button("Hinzufügen", action: addType)
+                        .disabled(MissionType(customName: newType) == nil)
+                }
+                .frame(minHeight: TouchTarget.minimum)
+                let missing = MissionType.defaultOrder.filter { type in !settings.effectiveMissionTypes.contains { $0.type == type } }
+                if !missing.isEmpty {
+                    Menu {
+                        ForEach(missing, id: \.self) { type in
+                            Button(type.displayName) { updateTypes { $0.append(MissionTypeSetting(type: type)) } }
+                        }
+                    } label: {
+                        Label("Mitgelieferte Einsatzart wieder aufnehmen", systemImage: "plus.circle")
                     }
                 }
             } header: {
-                Text("Checkliste")
+                HStack {
+                    Text("Einsatzarten und ihre Checkliste")
+                    Spacer()
+                    EditButton().textCase(nil)
+                }
             } footer: {
-                Text("Ein Punkt je Zeile. Bereits abgehakte Punkte bleiben abgehakt, solange ihr Text gleich bleibt.")
+                Text("Diese Arten stehen bei „Neuer Einsatz“ zur Auswahl. Wischen entfernt eine Art; bestehende Einsätze behalten ihre Art.")
+            }
+
+            Section {
+                Picker("Checkliste", selection: Binding(
+                    get: { settings.namedChecklist(for: nil).id },
+                    set: { id in save { $0.defaultChecklistID = id } }
+                )) {
+                    ForEach(lists) { list in Text(list.name).tag(list.id) }
+                }
+                .frame(minHeight: TouchTarget.minimum)
+            } header: {
+                Text("Ohne Einsatzart")
+            } footer: {
+                Text("Gilt für Einsätze ohne Einsatzart und für Arten mit „Standard“.")
+            }
+
+            Section {
+                ForEach(lists) { list in
+                    NavigationLink {
+                        ChecklistEditorView(checklistID: list.id)
+                    } label: {
+                        LabeledContent(list.name, value: "\(list.items.count) Punkte")
+                    }
+                    .frame(minHeight: TouchTarget.minimum)
+                }
+                .onDelete { offsets in
+                    guard lists.count - offsets.count >= 1 else {
+                        errorMessage = "Mindestens eine Checkliste muss bleiben."
+                        return
+                    }
+                    let removed = Set(offsets.map { lists[$0].id })
+                    save { settings in
+                        var all = settings.effectiveChecklists
+                        all.removeAll { removed.contains($0.id) }
+                        settings.checklists = all
+                        settings.missionTypes = settings.effectiveMissionTypes.map { entry in
+                            var entry = entry
+                            if let id = entry.checklistID, removed.contains(id) { entry.checklistID = nil }
+                            return entry
+                        }
+                        if let id = settings.defaultChecklistID, removed.contains(id) { settings.defaultChecklistID = nil }
+                    }
+                }
+                Button {
+                    save { settings in
+                        var all = settings.effectiveChecklists
+                        all.append(NamedChecklist(name: "Neue Checkliste \(all.count + 1)", items: ChecklistTemplate.standard.items.map { ChecklistItem(title: $0.title) }))
+                        settings.checklists = all
+                    }
+                } label: {
+                    Label("Neue Checkliste", systemImage: "plus")
+                }
+            } header: {
+                Text("Checklisten")
+            } footer: {
+                Text("Eine neue Liste startet mit den Standardpunkten. Antippen zum Umbenennen und Bearbeiten.")
             }
         }
-        .navigationTitle("Erinnerungen und Checkliste")
-        .onAppear { checklistText = settings.effectiveChecklist.lines }
+        .navigationTitle("Erinnerungen und Checklisten")
         .settingsError($errorMessage)
     }
 
@@ -458,20 +540,89 @@ struct MissionAidsSettingsView: View {
         .frame(minHeight: TouchTarget.minimum)
     }
 
-    private func saveChecklist() {
-        let current = store?.settings.effectiveChecklist ?? .standard
-        let updated = current.updated(fromLines: checklistText)
-        guard !updated.items.isEmpty else {
-            errorMessage = "Die Checkliste braucht mindestens einen Punkt."
+    private func addType() {
+        guard let type = MissionType(customName: newType) else { return }
+        let existing = store?.settings.effectiveMissionTypes ?? []
+        guard !existing.contains(where: { $0.type == type }) else {
+            errorMessage = "„\(type.displayName)“ gibt es schon."
             return
         }
-        save { $0.checklist = updated }
-        checklistText = updated.lines
+        updateTypes { $0.append(MissionTypeSetting(type: type)) }
+        newType = ""
+    }
+
+    private func updateTypes(_ change: (inout [MissionTypeSetting]) -> Void) {
+        save { settings in
+            var types = settings.effectiveMissionTypes
+            change(&types)
+            settings.missionTypes = types
+        }
     }
 
     private func save(_ change: (inout AppSettings) -> Void) {
         do {
             try store?.update(change)
+        } catch {
+            errorMessage = ErrorText.message(for: error)
+        }
+    }
+}
+
+/// Name und Punkte einer Checkliste (eine Zeile je Punkt).
+struct ChecklistEditorView: View {
+    let checklistID: String
+
+    @Environment(AppSettingsStore.self) private var store: AppSettingsStore?
+    @State private var name = ""
+    @State private var text = ""
+    @State private var loaded = false
+    @State private var errorMessage: String?
+
+    private var current: NamedChecklist? {
+        store?.settings.effectiveChecklists.first { $0.id == checklistID }
+    }
+
+    var body: some View {
+        Form {
+            Section("Name") {
+                TextField("Name", text: $name)
+                    .frame(minHeight: TouchTarget.minimum)
+            }
+            Section {
+                TextEditor(text: $text)
+                    .frame(minHeight: 320)
+            } header: {
+                Text("Punkte")
+            } footer: {
+                Text("Ein Punkt je Zeile. Abgehakte Punkte bleiben abgehakt, solange ihr Text gleich bleibt.")
+            }
+        }
+        .navigationTitle(name.isEmpty ? "Checkliste" : name)
+        .onAppear {
+            guard !loaded, let current else { return }
+            name = current.name
+            text = current.template.lines
+            loaded = true
+        }
+        .onDisappear(perform: commit)
+        .settingsError($errorMessage)
+    }
+
+    private func commit() {
+        guard let current else { return }
+        let items = current.template.updated(fromLines: text).items
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !items.isEmpty else {
+            errorMessage = "Die Checkliste braucht mindestens einen Punkt."
+            return
+        }
+        do {
+            try store?.update { settings in
+                var all = settings.effectiveChecklists
+                guard let index = all.firstIndex(where: { $0.id == checklistID }) else { return }
+                all[index] = NamedChecklist(id: checklistID, name: trimmed.isEmpty ? current.name : trimmed, items: items)
+                settings.checklists = all
+            }
         } catch {
             errorMessage = ErrorText.message(for: error)
         }

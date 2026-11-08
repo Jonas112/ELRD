@@ -30,6 +30,7 @@ struct MissionListView: View {
     @State private var showsNearby = false
     @State private var showsJoin = false
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @AppStorage("missionList.showsAllYears") private var showsAllYears = false
 
     init(
@@ -56,6 +57,7 @@ struct MissionListView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xxl) {
+                    banner
                     topRow(running: result.running)
                     finishedSection(result)
                     if !model.deletedMissions.isEmpty { deletedSection }
@@ -167,6 +169,30 @@ struct MissionListView: View {
             Button("Endgültig löschen", role: .destructive) { purge(summary) }
         } message: { _ in
             Text("Alle Daten, Fotos und Sprachnotizen dieses Einsatzes werden von diesem iPad entfernt. Das lässt sich nicht rückgängig machen.")
+        }
+    }
+
+    /// Banner/Logo und Organisation aus den Einstellungen (Allgemein).
+    @ViewBuilder
+    private var banner: some View {
+        let settings = appSettings?.settings ?? AppSettings()
+        if let data = settings.bannerImage, let image = UIImage(data: data) {
+            HStack(spacing: Spacing.l) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 72)
+                    .accessibilityHidden(true)
+                if !settings.organisationName.isEmpty {
+                    Text(settings.organisationName)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 0)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(settings.organisationName.isEmpty ? "Banner" : settings.organisationName)
         }
     }
 

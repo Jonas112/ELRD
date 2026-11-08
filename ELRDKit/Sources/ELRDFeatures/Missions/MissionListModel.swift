@@ -17,10 +17,7 @@ struct NewMissionForm: Equatable {
     var dispatchNumber = ""
 
     /// Einsatzarten in der Reihenfolge der Auswahl (häufige zuerst).
-    static let typeOrder: [MissionType] = [
-        .verkehrsunfall, .brand, .bma, .mehrfachErkrankte, .gefahrgut,
-        .vermisstensuche, .polizeiSonderlage, .bergrettung, .wasserrettung, .sonstiges,
-    ]
+    static let typeOrder: [MissionType] = MissionType.defaultOrder
 
     /// Baut die Anfrage; Standardabschnitte kommen aus den Stammdaten.
     func request(automaticSections: [MasterSection]) -> NewMissionRequest {

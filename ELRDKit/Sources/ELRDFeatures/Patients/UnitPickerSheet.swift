@@ -16,14 +16,13 @@ struct UnitPickerSearch: Equatable {
         choices.filter { matches("\($0.unit.typeDisplayName) \($0.unit.displayName)") }
     }
 
-    /// Stammdaten-Fahrzeuge, die noch nicht im Einsatz sind – nur bei Suchtext,
-    /// damit die Liste schlank bleibt (eine Region hat Dutzende Fahrzeuge).
+    /// Stammdaten-Fahrzeuge, die noch nicht im Einsatz sind (ohne Suchtext alle),
+    /// Transportmittel zuerst.
     func masterUnits(_ master: [MasterUnit], excluding units: [MissionUnit]) -> [MasterUnit] {
-        guard !words.isEmpty else { return [] }
         let inMission = Set(units.active.compactMap { $0.callsign?.lowercased() })
         let matching = master
             .filter { !inMission.contains($0.callsign.lowercased()) }
-            .filter { matches("\($0.typeDisplayName) \($0.callsign)") }
+            .filter { words.isEmpty || matches("\($0.typeDisplayName) \($0.callsign)") }
         return matching.sorted {
             (UnitChoice.typeRank($0.type), $0.callsign) < (UnitChoice.typeRank($1.type), $1.callsign)
         }
@@ -87,10 +86,6 @@ struct UnitPickerSheet: View {
 
                     if !master.isEmpty {
                         masterSection(master)
-                    } else if search.text.isEmpty, !masterUnits.isEmpty {
-                        Label("Weitere \(masterUnits.count) Fahrzeuge aus den Stammdaten: oben Funkrufname eintippen.", systemImage: "magnifyingglass")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding(Spacing.xl)
@@ -139,7 +134,7 @@ struct UnitPickerSheet: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: Spacing.s)], spacing: Spacing.s) {
-                ForEach(units.prefix(24)) { unit in
+                ForEach(units) { unit in
                     Button { addMaster(unit) } label: {
                         HStack(spacing: Spacing.m) {
                             Text(unit.typeDisplayName)

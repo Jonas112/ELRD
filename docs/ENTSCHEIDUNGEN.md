@@ -100,4 +100,7 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E94 | 2026-11-08 | Diktat nur mit Spracherkennung auf dem Gerät (`requiresOnDeviceRecognition`); ohne Offline-Modell kein Knopf | Einsatz- und Patientendaten gehen nicht an Apple-Server |
 | E95 | 2026-11-08 | Neue Entitätsfelder immer optional (`nil` = nicht erfasst) | Ältere gespeicherte Stände und Ereignisse anderer Geräte bleiben lesbar |
 | E96 | 2026-11-08 | Klinikkontingente je Einsatz am Einsatz (ganze Liste, letzte Änderung gilt); Klinik ohne Grenzen bleibt sichtbar, bis sie entfernt wird | Kontingente ändern sich selten gleichzeitig; einfacher als eigene Entität |
+| E97 | 2026-11-08 | `MissionType` als erweiterbarer Typ mit Text-Kürzel statt fester Aufzählung; mitgelieferte Arten behalten ihre Kürzel, eigene Arten nutzen ihren Namen | Einsatzarten einstellbar (Jonas); ältere Einsätze und andere Geräte bleiben kompatibel |
+| E98 | 2026-11-08 | Je Einsatzart höchstens eine Checkliste; Arten ohne Zuordnung und Einsätze ohne Art nutzen die Liste „ohne Einsatzart“ | Vorgabe Jonas |
+| E99 | 2026-11-08 | Am Patienten keine Schnellauswahl für Fahrzeuge und Kliniken mehr – nur Zugeordnetes, Auswahl über die Liste | Vorgabe Jonas: schlanker, übersichtlicher |
 

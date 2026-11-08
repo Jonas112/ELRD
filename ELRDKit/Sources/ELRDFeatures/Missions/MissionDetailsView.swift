@@ -17,6 +17,7 @@ struct MissionDetailsView: View {
     @State private var showsNearby = false
     @Environment(\.attachmentStore) private var attachments
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @State private var cloudInvite: CloudInvite?
     @State private var confirmsCloudDisconnect = false
     @State private var cloudError: String?
@@ -128,7 +129,7 @@ struct MissionDetailsView: View {
             VStack(alignment: .leading, spacing: Spacing.s) {
                 Text("Einsatzart").foregroundStyle(.secondary)
                 FlowLayout(spacing: Spacing.s) {
-                    ForEach(NewMissionForm.typeOrder, id: \.self) { type in
+                    ForEach((appSettings?.settings ?? AppSettings()).missionTypeChoices(including: mission.type), id: \.self) { type in
                         ChoiceChip(type.chipLabel, isSelected: form.type == type, minHeight: 48, background: Surface.elevated) {
                             form.type = form.type == type ? nil : type
                         }

@@ -217,7 +217,10 @@ struct MissionMapView: View {
                 onSelectObject: { editing = EditingMapObject(id: $0) },
                 onMoveObject: { id, coordinate in changeShape(id) { $0.moved(to: coordinate) } },
                 onResizeObject: { id, handle in changeShape(id) { $0.resized(handle: handle) } },
-                attachments: attachments
+                attachments: attachments,
+                onMoveMission: { coordinate in
+                    if perform(SetMissionCoordinate(coordinate)) { show("Einsatzort verschoben") }
+                }
             )
             .dropDestination(for: String.self) { items, point in
                 guard canEdit,
@@ -435,7 +438,9 @@ struct MissionMapView: View {
         }
     }
 
-    /// Einsatzort: hinspringen oder (neu) auf die Kartenmitte setzen.
+    /// Einsatzort: hinspringen oder ändern. Ein Tipp öffnet die Auswahl – das
+    /// Ändern war hinter langem Drücken versteckt (Jonas). Außerdem lässt sich die
+    /// rote Fahne direkt auf der Karte ziehen.
     @ViewBuilder
     private func missionControl(_ mission: Mission) -> some View {
         if let coordinate = mission.coordinate, canEdit {
@@ -443,15 +448,19 @@ struct MissionMapView: View {
                 Button { focus = MapFocusRequest(target: .coordinate(coordinate)) } label: {
                     Label("Zum Einsatzort", systemImage: "flag.fill")
                 }
-                Button { placing = .mission } label: {
-                    Label("Einsatzort verschieben", systemImage: "arrow.up.and.down.and.arrow.left.and.right")
+                Button {
+                    focus = MapFocusRequest(target: .coordinate(coordinate))
+                    placing = .mission
+                } label: {
+                    Label("Einsatzort ändern (Kreuz)", systemImage: "scope")
+                }
+                Button { placeMissionAtMyLocation() } label: {
+                    Label("Einsatzort = mein Standort", systemImage: "location.fill")
                 }
             } label: {
                 MapControlLabel(title: "Einsatzort", systemImage: "flag.fill")
-            } primaryAction: {
-                focus = MapFocusRequest(target: .coordinate(coordinate))
             }
-            .accessibilityLabel("Zum Einsatzort")
+            .accessibilityLabel("Einsatzort: hinspringen oder ändern")
         } else {
             MapControlButton(title: "Einsatzort", systemImage: "flag.fill") {
                 if let coordinate = mission.coordinate { focus = MapFocusRequest(target: .coordinate(coordinate)) }

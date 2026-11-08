@@ -43,13 +43,16 @@ struct UnitChoice: Identifiable, Equatable {
     }
 }
 
-/// Kliniken zur Auswahl: im Einsatz schon gewählte zuerst, dann die nächsten.
+/// Kliniken zur Auswahl: mit Kapazitätsmeldung zuerst, dann im Einsatz schon
+/// gewählte, dann die nächsten.
 struct HospitalChoice: Identifiable, Equatable {
     let hospital: MasterHospital
     /// Luftlinie in km, falls Einsatzort und Klinik Koordinaten haben.
     let distanceKm: Double?
     /// Anzahl der Patienten in diesem Einsatz mit dieser Zielklinik.
     let usedInMission: Int
+    /// Die Klinik hat für diesen Einsatz Kapazitäten gemeldet (Kontingent, Schritt 71).
+    var hasCapacityReport = false
 
     var id: MasterHospitalID { hospital.id }
 
@@ -57,16 +60,23 @@ struct HospitalChoice: Identifiable, Equatable {
         distanceKm.map { $0 < 10 ? String(format: "%.1f km", $0) : "\(Int($0.rounded())) km" }
     }
 
-    static func ordered(hospitals: [MasterHospital], patients: [Patient], near location: GeoCoordinate?) -> [HospitalChoice] {
+    static func ordered(
+        hospitals: [MasterHospital],
+        patients: [Patient],
+        near location: GeoCoordinate?,
+        quotas: [HospitalQuota] = []
+    ) -> [HospitalChoice] {
         let used = Dictionary(grouping: patients.active.compactMap(\.destination?.masterHospitalID), by: { $0 }).mapValues(\.count)
         let choices = hospitals.map { hospital in
             HospitalChoice(
                 hospital: hospital,
                 distanceKm: location.flatMap { here in hospital.coordinate.map { here.distance(to: $0) / 1000 } },
-                usedInMission: used[hospital.id] ?? 0
+                usedInMission: used[hospital.id] ?? 0,
+                hasCapacityReport: quotas.contains { $0.matches(hospital.snapshot) && ($0.sk1 != nil || $0.sk2 != nil || $0.sk3 != nil) }
             )
         }
         return choices.sorted { lhs, rhs in
+            if lhs.hasCapacityReport != rhs.hasCapacityReport { return lhs.hasCapacityReport }
             if (lhs.usedInMission > 0) != (rhs.usedInMission > 0) { return lhs.usedInMission > 0 }
             switch (lhs.distanceKm, rhs.distanceKm) {
             case let (l?, r?) where l != r: return l < r

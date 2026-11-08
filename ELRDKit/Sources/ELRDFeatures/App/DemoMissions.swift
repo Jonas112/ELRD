@@ -231,6 +231,22 @@ enum DemoMissions {
         return image.pngData()
     }
 
+    /// Schlichtes Beispiel-Logo (rotes Kreuz auf weißem Grund).
+    static func demoBannerPNG() -> Data? {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 2
+        format.opaque = false
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 120, height: 120), format: format)
+        let image = renderer.image { _ in
+            UIColor.white.setFill()
+            UIBezierPath(roundedRect: CGRect(x: 0, y: 0, width: 120, height: 120), cornerRadius: 24).fill()
+            UIColor(red: 0.83, green: 0.18, blue: 0.18, alpha: 1).setFill()
+            UIBezierPath(rect: CGRect(x: 45, y: 15, width: 30, height: 90)).fill()
+            UIBezierPath(rect: CGRect(x: 15, y: 45, width: 90, height: 30)).fill()
+        }
+        return image.pngData()
+    }
+
     /// Einfaches Bild im Stil einer Lagekarte (Grünfläche, Straße, roter Kreis).
     static func demoSnapshotJPEG() -> Data? {
         let format = UIGraphicsImageRendererFormat()

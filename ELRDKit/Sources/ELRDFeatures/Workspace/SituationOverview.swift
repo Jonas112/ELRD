@@ -81,8 +81,8 @@ struct SituationOverview: View {
             Group {
                 switch tool {
                 case .report: SituationReportSheet(store: store)
-                case .checklist: ChecklistSheet(store: store, template: settings.effectiveChecklist)
-                case .handover: HandoverSheet(store: store, people: people, template: settings.effectiveChecklist)
+                case .checklist: ChecklistSheet(store: store, template: settings.checklist(for: store.state.mission.type))
+                case .handover: HandoverSheet(store: store, people: people, template: settings.checklist(for: store.state.mission.type))
                 case .hospitals: HospitalQuotaSheet(store: store, hospitals: masterData?.hospitals ?? [])
                 case .leadership: LeadershipSheet(store: store)
                 }
@@ -93,7 +93,7 @@ struct SituationOverview: View {
 
     /// Lagemeldung, Checkliste, Führung, Kliniken, Übergabe – je ein großer Knopf.
     private var toolBar: some View {
-        let template = settings.effectiveChecklist
+        let template = settings.checklist(for: store.state.mission.type)
         let checked = store.state.checkedItems
         let done = template.items.filter { checked[$0.id] != nil }.count
         let last = store.state.lastSituationReportAt

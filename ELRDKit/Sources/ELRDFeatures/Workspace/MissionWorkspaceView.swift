@@ -343,29 +343,52 @@ struct SituationBar: View {
     }
 
     /// Titel und Laufzeit; ein Tipp öffnet die Einsatzdaten.
+    /// Titel des Einsatzes als deutlich erkennbarer Knopf zu den Einsatzdaten
+    /// (Jonas: der Pfeil allein wurde übersehen).
     private var missionTitle: some View {
         Button(action: onDetails) {
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                HStack(spacing: Spacing.xs) {
+            HStack(spacing: Spacing.s) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text(mission.title)
                         .font(.title3.weight(.bold))
                         .lineLimit(1)
-                    Image(systemName: "chevron.down.circle.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    TimelineView(.periodic(from: .now, by: 60)) { context in
+                        Text(subtitle(now: context.date))
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    Text(subtitle(now: context.date))
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                ViewThatFits(in: .horizontal) {
+                    Label("Einsatzdaten", systemImage: "square.and.pencil")
+                        .font(.subheadline.weight(.bold))
                         .lineLimit(1)
+                        .fixedSize()
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, Spacing.m)
+                        .frame(minHeight: 36)
+                        .background(ActionFill.primary, in: Capsule())
+                    Image(systemName: "square.and.pencil")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(ActionFill.primary, in: Circle())
                 }
+                .layoutPriority(-1)
             }
+            .padding(.leading, Spacing.m)
+            .padding(.trailing, Spacing.s)
             .frame(minHeight: TouchTarget.comfortable, alignment: .leading)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(ActionFill.primary.opacity(0.35), lineWidth: 1)
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .accessibilityHint("Öffnet die Einsatzdaten")
     }
 

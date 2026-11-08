@@ -438,27 +438,37 @@ struct HospitalQuotaSheet: View {
                 .foregroundStyle(Color.onTriage(triage))
                 .frame(minWidth: 52, minHeight: 32)
                 .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            Text(limit.map { "\(count) von \($0)" } ?? "\(count) · ohne Kontingent")
-                .font(.body.monospacedDigit())
-                .foregroundStyle((limit.map { count > $0 } ?? false) ? Color.orange : Color.primary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(limit.map { "\(count) von \($0)" } ?? "\(count) Patienten")
+                    .font(.body.weight(.semibold).monospacedDigit())
+                    .foregroundStyle((limit.map { count > $0 } ?? false) ? Color.orange : Color.primary)
+                if limit != nil {
+                    // Zurücksetzen bewusst unter der Zahl: Plus und Minus bleiben an ihrem Platz.
+                    Button("Kontingent entfernen") { setLimit(load, triage, nil) }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("ohne Kontingent").font(.caption).foregroundStyle(.secondary)
+                }
+            }
             Spacer()
             Button { setLimit(load, triage, limit.map { max(0, $0 - 1) } ?? count) } label: {
-                Image(systemName: "minus.circle").font(.title2)
+                Image(systemName: "minus.circle.fill").font(.title)
+                    .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
             }
             .buttonStyle(.borderless)
+            .disabled(limit == 0)
             .accessibilityLabel("\(triage.shortName) Kontingent verringern")
+            Text(limit.map(String.init) ?? "–")
+                .font(.title3.weight(.heavy).monospacedDigit())
+                .frame(minWidth: 36)
             Button { setLimit(load, triage, (limit ?? count) + 1) } label: {
-                Image(systemName: "plus.circle").font(.title2)
+                Image(systemName: "plus.circle.fill").font(.title)
+                    .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
             }
             .buttonStyle(.borderless)
             .accessibilityLabel("\(triage.shortName) Kontingent erhöhen")
-            if limit != nil {
-                Button { setLimit(load, triage, nil) } label: {
-                    Image(systemName: "xmark.circle").font(.title3).foregroundStyle(.secondary)
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("\(triage.shortName) Kontingent entfernen")
-            }
         }
         .frame(minHeight: TouchTarget.comfortable)
         .disabled(store.state.mission.isClosed)

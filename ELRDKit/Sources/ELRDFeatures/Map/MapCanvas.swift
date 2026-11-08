@@ -42,6 +42,8 @@ struct MapCanvas: UIViewRepresentable {
     var onResizeObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
     /// Dateiablage für Zeichnungen.
     var attachments: AttachmentFileStore?
+    /// Fahne des Einsatzorts verschoben (Schritt 79).
+    var onMoveMission: (GeoCoordinate) -> Void = { _ in }
 
     /// Ausschnitt um den Einsatzort (mindestens ca. 800 m) und alles, was schon
     /// auf der Karte liegt (mit Rand); ohne Einsatzort ganz Deutschland.
@@ -96,6 +98,7 @@ struct MapCanvas: UIViewRepresentable {
         context.coordinator.onSelectObject = onSelectObject
         context.coordinator.onMoveObject = onMoveObject
         context.coordinator.onResizeObject = onResizeObject
+        context.coordinator.onMoveMission = onMoveMission
         context.coordinator.attachments = attachments
         context.coordinator.updateSections(sections, on: map)
         context.coordinator.updateObjects(objects, on: map)
@@ -113,6 +116,7 @@ struct MapCanvas: UIViewRepresentable {
         coordinator.onSelectObject = onSelectObject
         coordinator.onMoveObject = onMoveObject
         coordinator.onResizeObject = onResizeObject
+        coordinator.onMoveMission = onMoveMission
         coordinator.attachments = attachments
         coordinator.updateSections(sections, on: map)
         coordinator.updateObjects(objects, on: map)
@@ -143,6 +147,7 @@ struct MapCanvas: UIViewRepresentable {
         var onSelectObject: (MapObjectID) -> Void = { _ in }
         var onMoveObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
         var onResizeObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
+        var onMoveMission: (GeoCoordinate) -> Void = { _ in }
         var attachments: AttachmentFileStore?
         /// Gezeichnete Objekte: Stand, Fläche, Beschriftung und Größen-Griff je Kennung.
         private var drawn: [MapObjectID: (object: MapObject, overlay: any MKOverlay, label: MapObjectAnnotation, handle: MapResizeHandle?)] = [:]
@@ -245,6 +250,8 @@ struct MapCanvas: UIViewRepresentable {
                     onMoveObject(label.objectID, moved)
                 } else if let handle = annotation as? MapResizeHandle {
                     onResizeObject(handle.objectID, moved)
+                } else if annotation === marker {
+                    onMoveMission(moved)
                 }
             case .canceling:
                 view.setDragState(.none, animated: true)
@@ -294,6 +301,8 @@ struct MapCanvas: UIViewRepresentable {
                     marker.coordinate = coordinate.clLocation
                 }
                 if marker.title != title { marker.title = title }
+                // Fahne lässt sich ziehen, solange bearbeitet werden darf.
+                if let view = map.view(for: marker) { view.isDraggable = canEdit }
                 return
             }
             let created = MKPointAnnotation()
@@ -376,6 +385,7 @@ struct MapCanvas: UIViewRepresentable {
             view.glyphImage = UIImage(systemName: "flag.fill")
             view.displayPriority = .required
             view.titleVisibility = .visible
+            view.isDraggable = canEdit
             return view
         }
     }

@@ -4,6 +4,7 @@ import ELRDDomain
 /// „Neuer Einsatz“: nur Stichwort, Einsatzart, Ort und optional Meldebild/ILS-Nummer.
 /// Beginn ist „jetzt“, Einsatzleiter ist der angemeldete Benutzer.
 struct NewMissionView: View {
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     let commanderName: String
     let start: (NewMissionForm) throws -> Void
 
@@ -75,7 +76,7 @@ struct NewMissionView: View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             sectionLabel("Einsatzart")
             FlowLayout(spacing: Spacing.s) {
-                ForEach(NewMissionForm.typeOrder, id: \.self) { type in
+                ForEach((appSettings?.settings ?? AppSettings()).missionTypeChoices(including: form.type), id: \.self) { type in
                     ChoiceChip(type.chipLabel, isSelected: form.type == type) {
                         form.type = form.type == type ? nil : type
                     }

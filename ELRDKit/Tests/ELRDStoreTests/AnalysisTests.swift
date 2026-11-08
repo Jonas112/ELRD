@@ -191,4 +191,35 @@ struct AnalysisTests {
         #expect(edited.items.count == 2)
         #expect(edited.items[1].id == template.items[1].id)
     }
+
+    // MARK: 78 Einsatzarten und Checklisten
+
+    @Test func missionTypesStayCompatibleAndCustomTypesWork() throws {
+        let data = try JSONEncoder().encode(MissionType.verkehrsunfall)
+        #expect(String(decoding: data, as: UTF8.self) == "\"VU\"", "gespeichert wie bisher")
+        #expect(try JSONDecoder().decode(MissionType.self, from: Data("\"Brand\"".utf8)) == .brand)
+        let custom = try #require(MissionType(customName: " Großveranstaltung "))
+        #expect(custom.displayName == "Großveranstaltung")
+        #expect(!custom.isBuiltIn)
+        #expect(MissionType(customName: "verkehrsunfall") == .verkehrsunfall, "Name einer mitgelieferten Art")
+        #expect(MissionType(legacyValue: "Großveranstaltung") == nil)
+    }
+
+    @Test func checklistFollowsMissionType() {
+        var settings = AppSettings()
+        #expect(settings.checklist(for: .brand) == ChecklistTemplate.standard, "ohne Einstellung: Standard")
+        let fire = NamedChecklist(id: "brand", name: "Brand", items: [ChecklistItem(id: "atemschutz", title: "Atemschutz-Sammelplatz")])
+        let none = NamedChecklist(id: "ohne", name: "Ohne Art", items: [ChecklistItem(id: "x", title: "Lage klären")])
+        settings.checklists = settings.effectiveChecklists + [fire, none]
+        settings.missionTypes = [MissionTypeSetting(type: .brand, checklistID: "brand"), MissionTypeSetting(type: .verkehrsunfall)]
+        settings.defaultChecklistID = "ohne"
+        #expect(settings.checklist(for: .brand).items.map(\.id) == ["atemschutz"])
+        #expect(settings.checklist(for: .verkehrsunfall).items.map(\.id) == ["x"], "Art ohne eigene Liste: Standard für ohne Einsatzart")
+        #expect(settings.checklist(for: nil).items.map(\.id) == ["x"])
+        #expect(settings.missionTypeChoices(including: .gefahrgut) == [.brand, .verkehrsunfall, .gefahrgut], "eigene Art des Einsatzes bleibt wählbar")
+
+        let restored = try? JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+        #expect(restored == settings)
+    }
 }
+

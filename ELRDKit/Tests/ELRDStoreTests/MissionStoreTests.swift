@@ -133,7 +133,9 @@ struct MissionStoreTests {
         #expect(store.state.visibleLog.last?.subject == .patient(patient.id))
 
         let triageEvent = try store.changeEvents().last { $0.entityType == .patient }
-        #expect(triageEvent?.changes == [.set(field: "triage", value: .number(1))])
+        // Seit Schritt 86 zusätzlich der Sichtungsverlauf (im selben Ereignis).
+        #expect(triageEvent?.changes.first == .set(field: "triage", value: .number(1)))
+        #expect(triageEvent?.changes.map(\.field) == ["triage", "triageHistory"])
 
         // Gleiche Kategorie erneut: keine Änderung, kein Protokolleintrag.
         let logCount = store.state.logEntries.count

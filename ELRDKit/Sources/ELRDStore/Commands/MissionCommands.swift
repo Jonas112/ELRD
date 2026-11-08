@@ -75,6 +75,7 @@ public struct NewMissionRequest: Sendable {
     }
 
     /// Übungslage einspielen: Patienten ungesichtet, Befunde in der Notiz.
+    @MainActor
     static func play(_ scenario: ExerciseScenario, into draft: inout MissionDraft) throws {
         for entry in scenario.patients {
             let patient = try AddPatient(triage: .ungesichtet).execute(&draft)

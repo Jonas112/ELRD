@@ -32,6 +32,9 @@ enum MissionInfoChapter {
             blocks.append(.metrics(triageMetrics(input.patients, theme: theme)))
             blocks.append(.paragraph(statusLine(input.patients), style: .muted))
         }
+        if options.showsTimeline {
+            blocks.append(contentsOf: timelineBlocks(input))
+        }
         if options.showsMapImage, let map = mapImage(input) {
             blocks.append(.heading("Lagekarte", level: 2))
             blocks.append(.image(map.image, caption: map.caption, maxHeight: 340))
@@ -62,6 +65,33 @@ enum MissionInfoChapter {
             return count > 0 ? "\(count) \(status.displayName.lowercased())" : nil
         }
         return parts.isEmpty ? "Keine Patienten erfasst." : "Stand: " + parts.joined(separator: " · ")
+    }
+
+    /// Verlauf (Schritt 86): Meilensteine mit Zeit ab Beginn, Wartezeiten je SK.
+    static func timelineBlocks(_ input: ReportInput) -> [ReportBlock] {
+        let metrics = MissionMetrics(mission: input.mission, patients: input.patients, journal: input.journal, now: input.createdAt)
+        var blocks: [ReportBlock] = [.heading("Verlauf", level: 2)]
+        let rows = metrics.milestones.map { milestone -> [ReportTable.Cell] in
+            let offset = metrics.minutesFromStart(milestone.date).map { "+\($0) min" } ?? ""
+            let text = milestone.detail.map { "\(milestone.title) – \($0)" } ?? milestone.title
+            return [ReportTable.Cell(ReportFormat.time(milestone.date)), ReportTable.Cell(offset), ReportTable.Cell(text)]
+        }
+        blocks.append(.table(ReportTable(
+            columns: [
+                ReportTable.Column("Zeit", width: .fixed(56)),
+                ReportTable.Column("ab Beginn", width: .fixed(70), alignsRight: true),
+                ReportTable.Column("Ereignis", width: .flexible(1)),
+            ],
+            rows: rows
+        )))
+        let waits = [Sichtungskategorie.sk1, .sk2, .sk3].compactMap { category -> String? in
+            guard let wait = metrics.waits[category] else { return nil }
+            return "\(category.shortName): Ø \(wait.averageMinutes) min, längste \(wait.maximumMinutes) min (\(wait.count))"
+        }
+        if !waits.isEmpty {
+            blocks.append(.paragraph("Wartezeit bis Transportbeginn – " + waits.joined(separator: " · "), style: .muted))
+        }
+        return blocks
     }
 
     /// Vorschaubild des Einsatzes, sonst der letzte Kartenausschnitt.

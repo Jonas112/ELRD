@@ -21,6 +21,8 @@ public struct Patient: VersionedEntity, MissionScoped {
     // MARK: Sichtung und Person
 
     public var triage: Sichtungskategorie
+    /// Sichtungsverlauf (Schritt 86); `nil` bei älteren Patienten (E95).
+    public var triageHistory: [TriageChange]?
     public var firstName: String
     public var lastName: String
     /// Alter in Jahren, wenn kein Geburtsdatum bekannt ist (geschätzt oder erfragt).

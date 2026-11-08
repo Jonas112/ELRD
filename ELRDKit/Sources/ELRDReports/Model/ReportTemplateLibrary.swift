@@ -48,6 +48,7 @@ public struct ReportTemplateLibrary: Codable, Hashable, Sendable {
         var info = ReportChapterOptions()
         info.showsSummary = false
         info.showsMapImage = false
+        info.showsTimeline = false
         var patients = ReportChapterOptions()
         patients.usesPatientSheets = true
         return ReportTemplate(id: hospitalID, name: "Klinikbericht", chapters: [

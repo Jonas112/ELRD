@@ -8,7 +8,7 @@ import ELRDStore
 /// Bereich „Tagebuch“: oben schnell eintragen (Text, Zeit, Textbausteine),
 /// darunter alle Einträge, neueste zuerst. Kartenausschnitte erscheinen mit Bild.
 struct JournalView: View {
-    enum Mode: Hashable { case journal, log }
+    enum Mode: Hashable { case journal, log, timeline }
 
     let store: MissionStore
     let templates: JournalTemplateEditor?
@@ -16,7 +16,13 @@ struct JournalView: View {
     /// ⌘J aus dem Menü: Eingabe fokussieren (wird danach zurückgesetzt).
     var focusComposer: Binding<Bool> = .constant(false)
 
-    @State private var mode: Mode = AppLaunchOptions.current.demoScreen == .protocolLog ? .log : .journal
+    @State private var mode: Mode = {
+        switch AppLaunchOptions.current.demoScreen {
+        case .protocolLog: .log
+        case .missionTimeline: .timeline
+        default: .journal
+        }
+    }()
     @State private var protocolFilter = ProtocolFilter()
 
     @Environment(\.attachmentStore) private var attachments
@@ -34,8 +40,8 @@ struct JournalView: View {
             VStack(alignment: .leading, spacing: Spacing.l) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(mode == .log ? "Protokoll" : "Tagebuch").font(.title2.weight(.bold))
-                        Text(mode == .log ? "\(store.state.visibleLog.count) Aktionen, nur lesen" : entries.count == 1 ? "1 Eintrag" : "\(entries.count) Einträge")
+                        Text(mode == .log ? "Protokoll" : mode == .timeline ? "Verlauf" : "Tagebuch").font(.title2.weight(.bold))
+                        Text(subtitle(entries.count))
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -53,9 +59,11 @@ struct JournalView: View {
                         .accessibilityLabel("Neuer Tagebucheintrag")
                     }
                 }
-                SegmentedChoice(options: [(Mode.journal, "Tagebuch"), (.log, "Protokoll")], selection: $mode)
-                    .frame(maxWidth: 420)
-                if mode == .log {
+                SegmentedChoice(options: [(Mode.journal, "Tagebuch"), (.log, "Protokoll"), (.timeline, "Verlauf")], selection: $mode)
+                    .frame(maxWidth: 520)
+                if mode == .timeline {
+                    MissionTimelineView(store: store)
+                } else if mode == .log {
                     ProtocolList(
                         entries: Array(store.state.visibleLog.reversed()),
                         people: people,
@@ -95,6 +103,14 @@ struct JournalView: View {
                 editing = entries.first { $0.origin == .manual }
             }
             if AppLaunchOptions.current.demoScreen == .journalNew, canEdit { showsComposer = true }
+        }
+    }
+
+    private func subtitle(_ entryCount: Int) -> String {
+        switch mode {
+        case .log: "\(store.state.visibleLog.count) Aktionen, nur lesen"
+        case .timeline: "Kennzahlen und Meilensteine"
+        case .journal: entryCount == 1 ? "1 Eintrag" : "\(entryCount) Einträge"
         }
     }
 

@@ -221,5 +221,53 @@ struct AnalysisTests {
         let restored = try? JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
         #expect(restored == settings)
     }
-}
 
+    // MARK: 86 Verlauf und Kennzahlen
+
+    @Test func metricsFollowTriageAndTransport() throws {
+        let store = try fixture.newMission()
+        let start = store.state.mission.startedAt
+        fixture.clock.advance(120)
+        let first = try store.perform(AddPatient(triage: .ungesichtet))
+        fixture.clock.advance(180)
+        try store.perform(SetTriage(patientID: first.id, triage: .sk2))
+        let second = try store.perform(AddPatient(triage: .sk1))
+        var metrics = MissionMetrics(mission: store.state.mission, patients: store.state.patients, journal: store.state.journal, now: fixture.clock.now)
+        #expect(metrics.minutesFromStart(metrics.firstPatientAt) == 2)
+        #expect(metrics.minutesFromStart(metrics.firstTriageAt) == 5)
+        #expect(metrics.minutesFromStart(metrics.allTriagedAt) == 5)
+        #expect(metrics.lastPatientGoneAt == nil)
+        #expect(store.state.patients.first { $0.id == first.id }?.triageHistory?.map(\.triage) == [.ungesichtet, .sk2])
+
+        // SK-Verlauf: erst 1 ungesichtet, dann SK 2 + SK 1.
+        #expect(metrics.triageSeries.first?.count(.ungesichtet) == 1)
+        #expect(metrics.triageSeries.last?.count(.sk2) == 1)
+        #expect(metrics.triageSeries.last?.count(.sk1) == 1)
+        #expect(metrics.triageSeries.last?.count(.ungesichtet) == 0)
+
+        let rtw = try unit(store, "RK 1", .rtw)
+        try store.perform(AssignUnit(patientID: second.id, unitID: rtw.id))
+        fixture.clock.advance(600)
+        try store.perform(StartTransport(patientID: second.id))
+        try store.perform(ReleasePatient(patientID: first.id))
+        metrics = MissionMetrics(mission: store.state.mission, patients: store.state.patients, journal: store.state.journal, now: fixture.clock.now)
+        #expect(metrics.minutesFromStart(metrics.firstTransportAt) == 15)
+        #expect(metrics.waits[.sk1] == MissionMetrics.Wait(count: 1, averageMinutes: 10, maximumMinutes: 10))
+        #expect(metrics.lastPatientGoneAt != nil)
+        #expect(metrics.milestones.first?.kind == .start)
+        #expect(metrics.milestones.map(\.kind).contains(.lastPatientGone))
+        #expect(metrics.milestones.map(\.date) == metrics.milestones.map(\.date).sorted())
+        _ = start
+    }
+
+    @Test func olderPatientsWithoutHistoryStillCount() throws {
+        let store = try fixture.newMission()
+        try store.perform(AddPatient(triage: .sk3))
+        var patient = try #require(store.state.patients.first)
+        patient.triageHistory = nil
+        #expect(patient.firstTriagedAt == patient.metadata.createdAt, "ohne Verlauf: seit der Anlage")
+        #expect(patient.triage(at: patient.metadata.createdAt.addingTimeInterval(-1)) == nil)
+        patient.recordTriage(.sk2, at: patient.metadata.createdAt.addingTimeInterval(60))
+        #expect(patient.triageHistory?.map(\.triage) == [.sk3, .sk2])
+    }
+}

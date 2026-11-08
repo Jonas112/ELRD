@@ -435,6 +435,7 @@ public struct AddPatient: MissionCommand {
             sectionID: sectionID
         )
         patient.tagNumber = tagNumber
+        patient.triageHistory = [TriageChange(at: draft.context.now, triage: triage)]
         try draft.insert(patient)
         draft.log(.patient, "Patient \(number) angelegt – \(triage.displayName)", subject: .patient(patient.id))
         return patient
@@ -457,7 +458,8 @@ public struct SetTriage: MissionCommand {
         }
         guard before.triage != triage else { return }
         let target = triage
-        try draft.update(Patient.self, id: patientID) { $0.triage = target }
+        let now = draft.context.now
+        try draft.update(Patient.self, id: patientID) { $0.recordTriage(target, at: now) }
         draft.log(
             .patient,
             "Patient \(before.number): \(before.triage.displayName) → \(triage.displayName)",

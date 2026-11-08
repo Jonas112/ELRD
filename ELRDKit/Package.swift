@@ -26,6 +26,7 @@ let package = Package(
                 "ELRDEntitlements",
                 "ELRDReports",
                 "ELRDStammdaten",
+                "ELRDCloud",
                 "ELRDFeatures",
             ]
         ),
@@ -60,6 +61,9 @@ let package = Package(
             swiftSettings: commonSettings
         ),
 
+        // Abgleich über iCloud (CloudKit, geteilte Zonen je Einsatz).
+        .target(name: "ELRDCloud", dependencies: ["ELRDDomain", "ELRDSync", "ELRDPersistence", "ELRDStore"], swiftSettings: commonSettings),
+
         // SwiftUI-Oberflächen und Designsystem.
         .target(
             name: "ELRDFeatures",
@@ -72,6 +76,7 @@ let package = Package(
                 "ELRDEntitlements",
                 "ELRDReports",
                 "ELRDStammdaten",
+                "ELRDCloud",
             ],
             resources: [.copy("Rechtliches")],
             swiftSettings: commonSettings
@@ -85,6 +90,7 @@ let package = Package(
         .testTarget(name: "ELRDEntitlementsTests", dependencies: ["ELRDEntitlements"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDFeaturesTests", dependencies: ["ELRDFeatures", "ELRDStore", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDReportsTests", dependencies: ["ELRDReports", "ELRDStore", "ELRDDomain", "ELRDPersistence", "ELRDSync"], swiftSettings: commonSettings),
+        .testTarget(name: "ELRDCloudTests", dependencies: ["ELRDCloud", "ELRDStore", "ELRDPersistence", "ELRDSync", "ELRDDomain"], swiftSettings: commonSettings),
         .testTarget(name: "ELRDStoreTests", dependencies: ["ELRDStore", "ELRDPersistence", "ELRDSync", "ELRDDomain", "ELRDEntitlements"], swiftSettings: commonSettings),
     ],
     swiftLanguageModes: [.v5]

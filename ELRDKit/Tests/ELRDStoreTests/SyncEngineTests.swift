@@ -431,7 +431,8 @@ struct SyncConcurrencyTests {
         await server.setDelay(.milliseconds(80))
 
         let first = Task { try await a.engine.sync(store.missionID) }
-        await waitUntilSyncing(a.engine, store.missionID)
+        // Warten, bis der erste Lauf seinen Stand gelesen hat und hochlädt.
+        while await server.pushCalls == 0 { await Task.yield() }
         // Änderung während des ersten Laufs: muss im Folgelauf mitgehen.
         let patient = try store.perform(AddPatient(triage: .sk1))
         let second = Task { try await a.engine.sync(store.missionID) }

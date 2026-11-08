@@ -26,6 +26,7 @@ public struct RootView: View {
                     .environment(environment.subscriptions)
                     .environment(environment.drafts)
                     .environment(environment.cloud)
+                    .environment(environment.notifier)
             } else if let startupError {
                 ContentUnavailableView {
                     Label("ELRD konnte nicht starten", systemImage: "exclamationmark.triangle")

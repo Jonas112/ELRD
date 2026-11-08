@@ -32,6 +32,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var checklists: [NamedChecklist]?
     /// Checkliste für Einsätze ohne Einsatzart (und Arten ohne eigene Zuordnung).
     public var defaultChecklistID: String?
+    /// Führungspersonal zur Auswahl in „Führung und Kräfte“ (Schritt 81).
+    public var leadershipPeople: [LeadershipPerson] = []
 
     public init() {}
 
@@ -52,6 +54,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         missionTypes = try container.decodeIfPresent([MissionTypeSetting].self, forKey: .missionTypes)
         checklists = try container.decodeIfPresent([NamedChecklist].self, forKey: .checklists)
         defaultChecklistID = try container.decodeIfPresent(String.self, forKey: .defaultChecklistID)
+        leadershipPeople = try container.decodeIfPresent([LeadershipPerson].self, forKey: .leadershipPeople) ?? []
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).
@@ -112,6 +115,8 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
     public var transportWaitMinutes: Int = 20
     /// Platzhalter ohne Fahrzeug länger als …
     public var placeholderMinutes: Int = 15
+    /// Mitteilungen, auch bei gesperrtem Gerät (Schritt 83).
+    public var notifiesWhenLocked: Bool = true
 
     public init(situationReportMinutes: Int = 30, transportWaitMinutes: Int = 20, placeholderMinutes: Int = 15) {
         self.situationReportMinutes = situationReportMinutes
@@ -125,6 +130,7 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
         situationReportMinutes = try container.decodeIfPresent(Int.self, forKey: .situationReportMinutes) ?? defaults.situationReportMinutes
         transportWaitMinutes = try container.decodeIfPresent(Int.self, forKey: .transportWaitMinutes) ?? defaults.transportWaitMinutes
         placeholderMinutes = try container.decodeIfPresent(Int.self, forKey: .placeholderMinutes) ?? defaults.placeholderMinutes
+        notifiesWhenLocked = try container.decodeIfPresent(Bool.self, forKey: .notifiesWhenLocked) ?? defaults.notifiesWhenLocked
     }
 
     /// Auswahl in den Einstellungen.

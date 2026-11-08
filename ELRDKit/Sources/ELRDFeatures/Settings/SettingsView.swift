@@ -9,7 +9,7 @@ import ELRDEntitlements
 /// Einstellungen (Schritte 47–51): Allgemein, Fahrzeugbilder, Stammdaten, IVENA,
 /// Abo, Vereinbarungen. Stammdaten ändern nur Administratoren.
 struct SettingsView: View {
-    enum Page: Hashable { case general, missionAids, vehicleImages, masterData, ivena, subscription, agreements }
+    enum Page: Hashable { case general, missionAids, leadershipPeople, vehicleImages, masterData, ivena, subscription, agreements }
 
     let masterData: MasterDataEditor?
     let isAdmin: Bool
@@ -24,6 +24,7 @@ struct SettingsView: View {
                 Section {
                     row(.general, "Allgemein", "gearshape", "Organisation, Banner, ILS-Mail, Standardbericht")
                     row(.missionAids, "Erinnerungen, Einsatzarten, Checklisten", "checklist", "Lagemeldung im Takt, Wartezeiten, Checkliste je Einsatzart")
+                    row(.leadershipPeople, "Führungspersonal", "person.3.sequence", "ELRD, LNA, OrgL, Abschnittsleiter zur Auswahl")
                     row(.vehicleImages, "Fahrzeugbilder", "car.2", "Eigene Bilder für RTW, KTW, NEF, RTH")
                 }
                 Section {
@@ -48,6 +49,7 @@ struct SettingsView: View {
                 switch page {
                 case .general: GeneralSettingsView()
                 case .missionAids: MissionAidsSettingsView()
+                case .leadershipPeople: LeadershipPeopleSettingsView()
                 case .vehicleImages: VehicleImagesView()
                 case .masterData: MasterDataSettingsView(masterData: masterData, isAdmin: isAdmin)
                 case .ivena: IVENASettingsView(masterData: masterData, isAdmin: isAdmin)
@@ -421,26 +423,50 @@ struct MissionAidsSettingsView: View {
                 minutesPicker("Platzhalter ohne Fahrzeug ab", value: settings.reminders.placeholderMinutes) { value in
                     save { $0.reminders.placeholderMinutes = value }
                 }
+                Toggle(isOn: Binding(
+                    get: { settings.reminders.notifiesWhenLocked },
+                    set: { on in save { $0.reminders.notifiesWhenLocked = on } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Mitteilungen bei gesperrtem Gerät").font(.headline)
+                        Text("Neue offene Punkte und fällige Erinnerungen auf dem Sperrbildschirm – ohne Patientennamen.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
             } header: {
                 Text("Erinnerungen")
             } footer: {
-                Text("Erscheinen unter „Offene Punkte“ in der Lage. „Aus“ schaltet die Erinnerung ab.")
+                Text("Erscheinen unter „Offene Punkte“ in der Lage; neue Punkte zusätzlich als Hinweis oben. „Aus“ schaltet die Erinnerung ab.")
             }
 
             Section {
                 ForEach(settings.effectiveMissionTypes) { entry in
-                    Picker(selection: Binding(
-                        get: { entry.checklistID },
-                        set: { id in updateTypes { types in
-                            if let index = types.firstIndex(where: { $0.id == entry.id }) { types[index].checklistID = id }
-                        } }
-                    )) {
-                        Text("Standard (wie ohne Einsatzart)").tag(String?.none)
-                        ForEach(lists) { list in Text(list.name).tag(Optional(list.id)) }
-                    } label: {
+                    // Name oben, Zuordnung darunter linksbündig – passt auch aufs iPhone.
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
                         Text(entry.type.displayName).font(.headline)
+                        Menu {
+                            Picker("Checkliste", selection: Binding(
+                                get: { entry.checklistID },
+                                set: { id in updateTypes { types in
+                                    if let index = types.firstIndex(where: { $0.id == entry.id }) { types[index].checklistID = id }
+                                } }
+                            )) {
+                                Text("Standard (wie ohne Einsatzart)").tag(String?.none)
+                                ForEach(lists) { list in Text(list.name).tag(Optional(list.id)) }
+                            }
+                        } label: {
+                            HStack(spacing: Spacing.xs) {
+                                Image(systemName: "checklist")
+                                Text("Checkliste: \(entry.checklistID.flatMap { id in lists.first { $0.id == id }?.name } ?? "Standard")")
+                                    .lineLimit(1)
+                                Image(systemName: "chevron.up.chevron.down").font(.caption)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
                     }
-                    .frame(minHeight: TouchTarget.minimum)
+                    .padding(.vertical, Spacing.xxs)
+                    .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum, alignment: .leading)
                 }
                 .onDelete { offsets in updateTypes { $0.remove(atOffsets: offsets) } }
                 .onMove { from, to in updateTypes { $0.move(fromOffsets: from, toOffset: to) } }
@@ -622,6 +648,110 @@ struct ChecklistEditorView: View {
                 guard let index = all.firstIndex(where: { $0.id == checklistID }) else { return }
                 all[index] = NamedChecklist(id: checklistID, name: trimmed.isEmpty ? current.name : trimmed, items: items)
                 settings.checklists = all
+            }
+        } catch {
+            errorMessage = ErrorText.message(for: error)
+        }
+    }
+}
+
+/// Führungspersonal (Schritt 81): Name, Funkrufname, Kanal und passende Funktionen.
+struct LeadershipPeopleSettingsView: View {
+    @Environment(AppSettingsStore.self) private var store: AppSettingsStore?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        let people = store?.settings.leadershipPeople ?? []
+        List {
+            Section {
+                if people.isEmpty {
+                    Text("Noch niemand eingetragen.").foregroundStyle(.secondary)
+                }
+                ForEach(people) { person in
+                    NavigationLink {
+                        LeadershipPersonEditor(personID: person.id)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(person.name.isEmpty ? "Ohne Namen" : person.name).font(.headline)
+                            Text(detail(person)).font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        .frame(minHeight: TouchTarget.minimum, alignment: .leading)
+                    }
+                }
+                .onDelete { offsets in
+                    save { $0.leadershipPeople.remove(atOffsets: offsets) }
+                }
+                Button {
+                    save { $0.leadershipPeople.append(LeadershipPerson(name: "Neue Person")) }
+                } label: {
+                    Label("Person hinzufügen", systemImage: "plus")
+                }
+            } footer: {
+                Text("In „Führung und Kräfte“ lassen sich diese Personen per Tipp übernehmen; Freitext bleibt möglich.")
+            }
+        }
+        .navigationTitle("Führungspersonal")
+        .settingsError($errorMessage)
+    }
+
+    private func detail(_ person: LeadershipPerson) -> String {
+        let roles = person.roles.isEmpty ? "alle Funktionen" : person.roles.map(\.shortName).joined(separator: ", ")
+        return [roles, person.callsign, person.radioChannel].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    private func save(_ change: (inout AppSettings) -> Void) {
+        do { try store?.update(change) } catch { errorMessage = ErrorText.message(for: error) }
+    }
+}
+
+struct LeadershipPersonEditor: View {
+    let personID: UUID
+
+    @Environment(AppSettingsStore.self) private var store: AppSettingsStore?
+    @State private var draft: LeadershipPerson?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        Form {
+            if let binding = Binding($draft) {
+                Section {
+                    TextField("Name", text: binding.name).frame(minHeight: TouchTarget.minimum)
+                    TextField("Funkrufname", text: binding.callsign).frame(minHeight: TouchTarget.minimum)
+                    TextField("Funkkanal (z. B. TMO 312)", text: binding.radioChannel).frame(minHeight: TouchTarget.minimum)
+                }
+                Section {
+                    ForEach(LeadershipRole.allCases) { role in
+                        Toggle(role.displayName, isOn: Binding(
+                            get: { binding.wrappedValue.roles.contains(role) },
+                            set: { on in
+                                binding.wrappedValue.roles.removeAll { $0 == role }
+                                if on { binding.wrappedValue.roles.append(role) }
+                            }
+                        ))
+                        .frame(minHeight: TouchTarget.minimum)
+                    }
+                } header: {
+                    Text("Funktionen")
+                } footer: {
+                    Text("Keine Auswahl = kommt für alle Funktionen in Frage. Abschnittsleitungen können immer alle übernehmen.")
+                }
+            }
+        }
+        .navigationTitle(draft?.name.isEmpty == false ? draft!.name : "Person")
+        .onAppear {
+            if draft == nil { draft = store?.settings.leadershipPeople.first { $0.id == personID } }
+        }
+        .onDisappear(perform: commit)
+        .settingsError($errorMessage)
+    }
+
+    private func commit() {
+        guard let draft else { return }
+        let cleaned = LeadershipPerson(id: draft.id, name: draft.name, callsign: draft.callsign, radioChannel: draft.radioChannel, roles: draft.roles)
+        do {
+            try store?.update { settings in
+                guard let index = settings.leadershipPeople.firstIndex(where: { $0.id == cleaned.id }) else { return }
+                settings.leadershipPeople[index] = cleaned
             }
         } catch {
             errorMessage = ErrorText.message(for: error)

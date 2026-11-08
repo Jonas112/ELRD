@@ -101,6 +101,31 @@ public struct LeadershipPosition: Hashable, Codable, Sendable, Identifiable {
     public var isEmpty: Bool { name.isEmpty && callsign.isEmpty && radioChannel.isEmpty }
 }
 
+/// Führungskraft aus den Einstellungen (Schritt 81) – in „Führung und Kräfte“
+/// auswählbar, Freitext bleibt möglich.
+public struct LeadershipPerson: Hashable, Codable, Sendable, Identifiable {
+    public var id: UUID
+    public var name: String
+    public var callsign: String
+    public var radioChannel: String
+    /// Funktionen, für die die Person in Frage kommt (leer = alle).
+    public var roles: [LeadershipRole]
+
+    public init(id: UUID = UUID(), name: String, callsign: String = "", radioChannel: String = "", roles: [LeadershipRole] = []) {
+        self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.callsign = callsign.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.radioChannel = radioChannel.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.roles = roles
+    }
+
+    /// Passt die Person zu dieser Funktion (`nil` = Abschnittsleitung, alle passen)?
+    public func fits(_ role: LeadershipRole?) -> Bool {
+        guard let role, !roles.isEmpty else { return true }
+        return roles.contains(role)
+    }
+}
+
 public extension Mission {
     /// Besetzung einer Funktion (leer, wenn nicht eingetragen).
     func position(_ role: LeadershipRole) -> LeadershipPosition {

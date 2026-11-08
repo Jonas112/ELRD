@@ -134,12 +134,12 @@ struct LeadershipSheet: View {
         switch target {
         case .role(let role):
             let position = store.state.mission.position(role)
-            PositionEditor(title: role.displayName, name: position.name, callsign: position.callsign, channel: position.radioChannel) { name, callsign, channel in
+            PositionEditor(title: role.displayName, role: role, name: position.name, callsign: position.callsign, channel: position.radioChannel) { name, callsign, channel in
                 try store.perform(SetLeadershipPosition(LeadershipPosition(role: role, name: name, callsign: callsign, radioChannel: channel)))
             }
         case .section(let id):
             if let section = store.state.activeSections.first(where: { $0.id == id }) {
-                PositionEditor(title: "Leitung \(section.name)", name: section.leaderName ?? "", callsign: section.leaderCallsign ?? "", channel: section.radioChannel ?? "") { name, callsign, channel in
+                PositionEditor(title: "Leitung \(section.name)", role: nil, name: section.leaderName ?? "", callsign: section.leaderCallsign ?? "", channel: section.radioChannel ?? "") { name, callsign, channel in
                     try store.perform(SetSectionLeader(sectionID: id, name: name, callsign: callsign, radioChannel: channel))
                 }
             }
@@ -150,16 +150,20 @@ struct LeadershipSheet: View {
 /// Name, Funkrufname und Kanal einer Funktion.
 private struct PositionEditor: View {
     let title: String
+    /// Funktion (`nil` = Abschnittsleitung) – bestimmt, wer aus der Liste passt.
+    let role: LeadershipRole?
     @State var name: String
     @State var callsign: String
     @State var channel: String
     let onSave: (String, String, String) throws -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @State private var errorMessage: String?
 
-    init(title: String, name: String, callsign: String, channel: String, onSave: @escaping (String, String, String) throws -> Void) {
+    init(title: String, role: LeadershipRole?, name: String, callsign: String, channel: String, onSave: @escaping (String, String, String) throws -> Void) {
         self.title = title
+        self.role = role
         _name = State(initialValue: name)
         _callsign = State(initialValue: callsign)
         _channel = State(initialValue: channel)
@@ -169,6 +173,29 @@ private struct PositionEditor: View {
     var body: some View {
         NavigationStack {
             Form {
+                let people = (appSettings?.settings.leadershipPeople ?? []).filter { $0.fits(role) }
+                if !people.isEmpty {
+                    Section("Aus dem Führungspersonal") {
+                        ForEach(people) { person in
+                            Button {
+                                name = person.name
+                                callsign = person.callsign
+                                channel = person.radioChannel
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(person.name).font(.headline).foregroundStyle(.primary)
+                                        let reach = [person.callsign, person.radioChannel].filter { !$0.isEmpty }.joined(separator: " · ")
+                                        if !reach.isEmpty { Text(reach).font(.subheadline).foregroundStyle(.secondary) }
+                                    }
+                                    Spacer()
+                                    if person.name == name { Image(systemName: "checkmark").foregroundStyle(.tint) }
+                                }
+                                .frame(minHeight: TouchTarget.minimum)
+                            }
+                        }
+                    }
+                }
                 Section {
                     TextField("Name", text: $name).frame(minHeight: TouchTarget.minimum)
                     TextField("Funkrufname", text: $callsign).frame(minHeight: TouchTarget.minimum)

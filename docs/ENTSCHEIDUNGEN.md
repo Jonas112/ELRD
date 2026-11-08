@@ -103,4 +103,6 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E97 | 2026-11-08 | `MissionType` als erweiterbarer Typ mit Text-Kürzel statt fester Aufzählung; mitgelieferte Arten behalten ihre Kürzel, eigene Arten nutzen ihren Namen | Einsatzarten einstellbar (Jonas); ältere Einsätze und andere Geräte bleiben kompatibel |
 | E98 | 2026-11-08 | Je Einsatzart höchstens eine Checkliste; Arten ohne Zuordnung und Einsätze ohne Art nutzen die Liste „ohne Einsatzart“ | Vorgabe Jonas |
 | E99 | 2026-11-08 | Am Patienten keine Schnellauswahl für Fahrzeuge und Kliniken mehr – nur Zugeordnetes, Auswahl über die Liste | Vorgabe Jonas: schlanker, übersichtlicher |
-
+| E100 | 2026-11-08 | Zeichnen auf der Karte: Zeichenfläche folgt der Karte per Transformation (an geografischen Ecken verankert), Umschalter Zeichnen/Bewegen statt Gesten-Erkennung; Drehen beim Zeichnen gesperrt | Stift/Finger und Kartengesten lassen sich sonst nicht sicher trennen; ohne Drehung bleibt die Umrechnung exakt |
+| E101 | 2026-11-08 | Hinweise auf neue offene Punkte: in der App als Banner, im Hintergrund als lokale Mitteilung; zeitabhängige Erinnerungen werden vorgeplant; Mitteilungstexte ohne Patientennamen; eigene Änderungen lösen keinen Hinweis aus | Sperrbildschirm ist für Umstehende sichtbar; die App läuft im Hintergrund nicht dauerhaft; kein Server für Push nötig |
+| E102 | 2026-11-08 | Führungspersonal als Liste in den Geräteeinstellungen; Auswahl füllt nur die Freitextfelder (keine Verknüpfung) | Ändert sich die Liste, bleiben dokumentierte Einsätze unverändert |

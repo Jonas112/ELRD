@@ -63,6 +63,18 @@ final class MapCanvasProxy {
         map.setCamera(camera, animated: false)
     }
 
+    /// Bildschirmpunkt eines Orts (Kartenansicht).
+    func point(for coordinate: GeoCoordinate) -> CGPoint? {
+        guard let map else { return nil }
+        return map.convert(coordinate.clLocation, toPointTo: map)
+    }
+
+    /// Drehen und Neigen beim Zeichnen sperren (die Zeichnung folgt nur Verschieben und Zoom).
+    func setRotationEnabled(_ enabled: Bool) {
+        map?.isRotateEnabled = enabled
+        map?.isPitchEnabled = enabled
+    }
+
     func coordinate(at point: CGPoint) -> GeoCoordinate? {
         guard let map else { return nil }
         let location = map.convert(point, toCoordinateFrom: map)

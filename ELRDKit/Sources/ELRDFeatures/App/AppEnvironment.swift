@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import Observation
 import ELRDDomain
 import ELRDPersistence
@@ -17,7 +18,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
         case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, unitPicker, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapCollapsed, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages, report, settings, masterData, onboarding
         /// Schritte 67–76.
-        case situationReport, checklist, leadership, hospitals, transportBoard, handover
+        case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
@@ -29,7 +30,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
         var initialWorkspaceSection: WorkspaceSection {
             if [.patients, .patientTiles, .transportBoard].contains(self) || opensPatient { return .patients }
             if [.map, .mapCollapsed, .mapTopo, .mapObject, .mapDrawing].contains(self) { return .map }
-            if [.journal, .journalEntry, .protocolLog].contains(self) { return .journal }
+            if [.journal, .journalEntry, .journalNew, .protocolLog].contains(self) { return .journal }
             return [.sections, .addUnit, .addPlaceholder, .replacePlaceholder].contains(self) ? .organisation : .overview
         }
 
@@ -76,6 +77,8 @@ public final class AppEnvironment {
     public let cloud: CloudSyncCoordinator?
     /// CloudKit-Zugang (Einladungen annehmen, die das System übergibt).
     let cloudStore: CloudKitZoneStore?
+    /// Hinweise und Mitteilungen bei neuen offenen Punkten (Schritt 83).
+    let notifier: OpenItemNotifier
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
     /// Gewünschter Beispielbildschirm (nur Demo).
@@ -102,6 +105,7 @@ public final class AppEnvironment {
         self.subscriptions = entitlements as? StoreKitEntitlements
         self.isDemo = isDemo
         self.demoScreen = demoScreen
+        notifier = OpenItemNotifier(enabled: !isDemo)
         if isDemo {
             // Beispieldaten: iCloud-Ersatz im Arbeitsspeicher, CloudKit bleibt unberührt.
             cloudStore = nil
@@ -149,9 +153,12 @@ public final class AppEnvironment {
     }
 
     private func reloadOpenStores(_ missions: Set<MissionID>) {
+        // Auch im Hintergrund (Push): neue offene Punkte als Mitteilung melden.
+        let isActive = UIApplication.shared.applicationState == .active
         for entry in openStores {
             guard let store = entry.store, missions.contains(store.missionID) else { continue }
             try? store.reload()
+            notifier.evaluate(store.state, now: Date(), settings: settings.settings, appIsActive: isActive)
         }
         onMissionsChanged?()
     }

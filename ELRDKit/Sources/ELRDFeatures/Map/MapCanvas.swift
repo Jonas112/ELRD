@@ -44,6 +44,8 @@ struct MapCanvas: UIViewRepresentable {
     var attachments: AttachmentFileStore?
     /// Fahne des Einsatzorts verschoben (Schritt 79).
     var onMoveMission: (GeoCoordinate) -> Void = { _ in }
+    /// Ausschnitt ändert sich gerade (laufend, z. B. für die Zeichenfläche).
+    var onRegionChanging: () -> Void = {}
 
     /// Ausschnitt um den Einsatzort (mindestens ca. 800 m) und alles, was schon
     /// auf der Karte liegt (mit Rand); ohne Einsatzort ganz Deutschland.
@@ -99,6 +101,7 @@ struct MapCanvas: UIViewRepresentable {
         context.coordinator.onMoveObject = onMoveObject
         context.coordinator.onResizeObject = onResizeObject
         context.coordinator.onMoveMission = onMoveMission
+        context.coordinator.onRegionChanging = onRegionChanging
         context.coordinator.attachments = attachments
         context.coordinator.updateSections(sections, on: map)
         context.coordinator.updateObjects(objects, on: map)
@@ -117,6 +120,7 @@ struct MapCanvas: UIViewRepresentable {
         coordinator.onMoveObject = onMoveObject
         coordinator.onResizeObject = onResizeObject
         coordinator.onMoveMission = onMoveMission
+        coordinator.onRegionChanging = onRegionChanging
         coordinator.attachments = attachments
         coordinator.updateSections(sections, on: map)
         coordinator.updateObjects(objects, on: map)
@@ -148,6 +152,7 @@ struct MapCanvas: UIViewRepresentable {
         var onMoveObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
         var onResizeObject: (MapObjectID, GeoCoordinate) -> Void = { _, _ in }
         var onMoveMission: (GeoCoordinate) -> Void = { _ in }
+        var onRegionChanging: () -> Void = {}
         var attachments: AttachmentFileStore?
         /// Gezeichnete Objekte: Stand, Fläche, Beschriftung und Größen-Griff je Kennung.
         private var drawn: [MapObjectID: (object: MapObject, overlay: any MKOverlay, label: MapObjectAnnotation, handle: MapResizeHandle?)] = [:]
@@ -260,7 +265,12 @@ struct MapCanvas: UIViewRepresentable {
             }
         }
 
+        func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+            onRegionChanging()
+        }
+
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            onRegionChanging()
             let center = mapView.centerCoordinate
             if let coordinate = GeoCoordinate(latitude: center.latitude, longitude: center.longitude) {
                 onCenterChange(coordinate)

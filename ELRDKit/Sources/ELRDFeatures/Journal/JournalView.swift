@@ -20,22 +20,13 @@ struct JournalView: View {
     @State private var protocolFilter = ProtocolFilter()
 
     @Environment(\.attachmentStore) private var attachments
-    @State private var text = ""
-    @State private var usesCustomTime = false
-    @State private var occurredAt = Date()
-    @State private var showsAllTemplates = false
     @State private var editing: JournalEntry?
     @State private var viewing: FileAttachment?
-    @State private var errorMessage: String?
-    @FocusState private var textFocused: Bool
-    @State private var pickedPhotos: [PhotosPickerItem] = []
-    @State private var showsCamera = false
-    @State private var isImporting = false
-    @StateObject private var recorder = VoiceRecorder()
+    /// Neuer Eintrag im eigenen Dialog (Jonas: erst die Liste, dann „+“).
+    @State private var showsComposer = false
     @StateObject private var player = VoicePlayer()
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
-    private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
         let entries = Array(JournalEntry.chronological(store.state.journal).reversed())
@@ -48,6 +39,19 @@ struct JournalView: View {
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    if mode == .journal, canEdit {
+                        Button { showsComposer = true } label: {
+                            Label("Eintrag", systemImage: "plus")
+                                .font(.headline)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, Spacing.l)
+                                .frame(minHeight: TouchTarget.comfortable)
+                                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .keyboardShortcut("n", modifiers: .command)
+                        .accessibilityLabel("Neuer Tagebucheintrag")
+                    }
                 }
                 SegmentedChoice(options: [(Mode.journal, "Tagebuch"), (.log, "Protokoll")], selection: $mode)
                     .frame(maxWidth: 420)
@@ -73,41 +77,31 @@ struct JournalView: View {
         .sheet(item: $viewing) { file in
             JournalImageViewer(file: file, attachments: attachments)
         }
-        .alert("Nicht gespeichert", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(errorMessage ?? "")
-        }
-        .onChange(of: pickedPhotos) { _, items in
-            guard !items.isEmpty else { return }
-            Task { await importPhotos(items) }
-        }
-        .fullScreenCover(isPresented: $showsCamera) {
-            CameraPicker(onImage: saveCameraPhoto, onFinish: { showsCamera = false })
-                .ignoresSafeArea()
+        .sheet(isPresented: $showsComposer) {
+            JournalComposerSheet(store: store, templates: templates)
+                .largeSheet()
         }
         .task(id: focusComposer.wrappedValue) {
             guard focusComposer.wrappedValue else { return }
             mode = .journal
-            textFocused = true
+            if canEdit { showsComposer = true }
             focusComposer.wrappedValue = false
         }
         .onDisappear {
             player.stop()
-            if recorder.isRecording { recorder.cancel() }
         }
         .onAppear {
             if AppLaunchOptions.current.demoScreen == .journalEntry, editing == nil {
                 editing = entries.first { $0.origin == .manual }
             }
+            if AppLaunchOptions.current.demoScreen == .journalNew, canEdit { showsComposer = true }
         }
     }
 
     @ViewBuilder
     private func journalContent(_ entries: [JournalEntry]) -> some View {
-        if canEdit { composer }
         if entries.isEmpty {
-            Text("Noch keine Einträge.").font(.title3).foregroundStyle(.secondary)
+            Text(canEdit ? "Noch keine Einträge. Mit „+ Eintrag“ den ersten anlegen." : "Noch keine Einträge.").font(.title3).foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .cardStyle()
         }
@@ -122,6 +116,67 @@ struct JournalView: View {
                     onShowImage: { viewing = $0 }
                 )
             }
+        }
+    }
+
+}
+
+/// Neuer Tagebucheintrag im eigenen Dialog: Text (mit Diktat), Zeitpunkt,
+/// Fotos, Kamera, Sprachnotiz und Textbausteine. Nach dem Eintragen schließt er sich.
+struct JournalComposerSheet: View {
+    let store: MissionStore
+    let templates: JournalTemplateEditor?
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.attachmentStore) private var attachments
+    @State private var text = ""
+    @State private var usesCustomTime = false
+    @State private var occurredAt = Date()
+    @State private var showsAllTemplates = false
+    @State private var errorMessage: String?
+    @FocusState private var textFocused: Bool
+    @State private var pickedPhotos: [PhotosPickerItem] = []
+    @State private var showsCamera = false
+    @State private var isImporting = false
+    @StateObject private var recorder = VoiceRecorder()
+
+    private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                composer
+                    .padding(Spacing.l)
+                    .frame(maxWidth: 820)
+                    .frame(maxWidth: .infinity)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Surface.canvas)
+            .navigationTitle("Neuer Eintrag")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    // Getippter Text bleibt als Entwurf erhalten.
+                    Button("Schließen") { dismiss() }
+                }
+            }
+        }
+        .onAppear { textFocused = true }
+        .alert("Nicht gespeichert", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "")
+        }
+        .onChange(of: pickedPhotos) { _, items in
+            guard !items.isEmpty else { return }
+            Task { await importPhotos(items) }
+        }
+        .fullScreenCover(isPresented: $showsCamera) {
+            CameraPicker(onImage: saveCameraPhoto, onFinish: { showsCamera = false })
+                .ignoresSafeArea()
+        }
+        .onDisappear {
+            if recorder.isRecording { recorder.cancel() }
         }
     }
 
@@ -306,6 +361,7 @@ struct JournalView: View {
             _ = try store.perform(AddJournalMedia(attachments: files, text: trimmed, occurredAt: usesCustomTime ? occurredAt : nil))
             text = ""
             usesCustomTime = false
+            dismiss()
         } catch {
             errorMessage = ErrorText.message(for: error)
         }
@@ -355,6 +411,7 @@ struct JournalView: View {
             _ = try store.perform(AddJournalText(trimmed, occurredAt: usesCustomTime ? occurredAt : nil))
             text = ""
             usesCustomTime = false
+            dismiss()
         } catch {
             errorMessage = ErrorText.message(for: error)
         }

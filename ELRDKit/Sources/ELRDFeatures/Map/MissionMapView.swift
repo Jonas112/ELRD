@@ -220,7 +220,8 @@ struct MissionMapView: View {
                 attachments: attachments,
                 onMoveMission: { coordinate in
                     if perform(SetMissionCoordinate(coordinate)) { show("Einsatzort verschoben") }
-                }
+                },
+                onRegionChanging: { if isDrawing { freehand.followMap(proxy) } }
             )
             .dropDestination(for: String.self) { items, point in
                 guard canEdit,
@@ -232,6 +233,9 @@ struct MissionMapView: View {
 
             if isDrawing {
                 FreehandCanvas(controller: freehand, tool: freehandTool)
+                    // „Karte bewegen“: Berührungen gehen an die Karte, die Zeichnung folgt.
+                    .allowsHitTesting(!freehandTool.isMovingMap)
+                    .onAppear { DispatchQueue.main.async { freehand.anchorIfNeeded(proxy) } }
                     .accessibilityLabel("Zeichenfläche über der Karte")
             }
 
@@ -290,7 +294,8 @@ struct MissionMapView: View {
                     .accessibilityAddTraits(.isStaticText)
             }
             if isDrawing {
-                Label("Mit Finger oder Stift auf die Karte zeichnen", systemImage: "scribble")
+                Label(freehandTool.isMovingMap ? "Karte verschieben und zoomen – die Zeichnung wandert mit" : "Mit Finger oder Stift auf die Karte zeichnen",
+                      systemImage: freehandTool.isMovingMap ? "hand.draw" : "scribble")
                     .font(.subheadline.weight(.semibold))
                     .padding(.horizontal, Spacing.m)
                     .padding(.vertical, Spacing.s)
@@ -404,6 +409,8 @@ struct MissionMapView: View {
     private func startDrawing() {
         placing = nil
         proxy.resetHeading()
+        proxy.setRotationEnabled(false)
+        freehand.reset()
         freehandTool = FreehandTool()
         isDrawing = true
     }
@@ -414,14 +421,16 @@ struct MissionMapView: View {
 
     private func endDrawing() {
         freehand.clear()
+        freehand.reset()
+        proxy.setRotationEnabled(true)
         isDrawing = false
     }
 
     /// Bild speichern und als Zeichnung über ihrem Kartenrechteck anlegen.
     private func finishDrawing() {
-        guard let export = freehand.export(),
-              let topLeft = proxy.coordinate(at: CGPoint(x: export.rect.minX, y: export.rect.minY)),
-              let bottomRight = proxy.coordinate(at: CGPoint(x: export.rect.maxX, y: export.rect.maxY)) else { return }
+        guard let export = freehand.export(proxy) else { return }
+        let topLeft = export.topLeft
+        let bottomRight = export.bottomRight
         do {
             let file = try attachments.save(
                 export.png,

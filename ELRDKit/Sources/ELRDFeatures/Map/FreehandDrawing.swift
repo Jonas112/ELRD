@@ -8,15 +8,61 @@ struct FreehandTool: Equatable {
     var color: RGBColor = MapObject.defaultColor
     var width: CGFloat = 6
     var isErasing = false
+    /// Karte verschieben und zoomen statt zeichnen; die Zeichnung wandert mit.
+    var isMovingMap = false
 
     static let widths: [(title: String, width: CGFloat)] = [("Dünn", 3), ("Mittel", 6), ("Dick", 12)]
 }
 
 /// Verbindung zur Zeichenfläche: Rückgängig, Anzahl Striche, Bild erzeugen.
+///
+/// Die Zeichnung hängt an der Karte: Beim Start merkt sich der Controller, welche
+/// Orte die Ecken der Zeichenfläche zeigen. Wird die Karte danach verschoben oder
+/// gezoomt (Norden bleibt oben), folgt die Fläche mit einer Skalierung und
+/// Verschiebung – so passt bereits Gezeichnetes weiter zur Karte und es lässt
+/// sich an anderer Stelle oder in anderem Maßstab weiterzeichnen.
 @MainActor
 final class FreehandController: ObservableObject {
     weak var canvas: PKCanvasView?
     @Published private(set) var strokeCount = 0
+    /// Orte der linken oberen und rechten unteren Ecke beim Start, Größe der Fläche.
+    private var anchor: (topLeft: GeoCoordinate, bottomRight: GeoCoordinate, size: CGSize)?
+
+    /// Ecken der Fläche an der Karte festmachen (einmal, sobald sie ihre Größe hat).
+    func anchorIfNeeded(_ proxy: MapCanvasProxy) {
+        guard anchor == nil, let canvas, canvas.bounds.width > 1, canvas.bounds.height > 1,
+              let topLeft = proxy.coordinate(at: .zero),
+              let bottomRight = proxy.coordinate(at: CGPoint(x: canvas.bounds.width, y: canvas.bounds.height)) else { return }
+        anchor = (topLeft, bottomRight, canvas.bounds.size)
+    }
+
+    /// Fläche der Karte folgen lassen (bei jeder Änderung des Ausschnitts).
+    func followMap(_ proxy: MapCanvasProxy) {
+        anchorIfNeeded(proxy)
+        guard let canvas, let mapping = mapping(proxy) else { return }
+        let center = CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY)
+        // Gewünscht: Punkt p der Fläche → origin + scale · p. UIKit dreht/skaliert um die Mitte.
+        let tx = mapping.origin.x + mapping.scale * center.x - center.x
+        let ty = mapping.origin.y + mapping.scale * center.y - center.y
+        canvas.transform = CGAffineTransform(a: mapping.scale, b: 0, c: 0, d: mapping.scale, tx: tx, ty: ty)
+        canvas.layer.borderWidth = abs(mapping.scale - 1) > 0.02 ? 1.5 : 0
+    }
+
+    /// Wo die linke obere Ecke der Fläche jetzt auf dem Bildschirm liegt und wie stark gezoomt ist.
+    private func mapping(_ proxy: MapCanvasProxy) -> (origin: CGPoint, scale: CGFloat)? {
+        guard let anchor,
+              let origin = proxy.point(for: anchor.topLeft),
+              let corner = proxy.point(for: anchor.bottomRight) else { return nil }
+        let scale = (corner.x - origin.x) / anchor.size.width
+        guard scale.isFinite, scale > 0.001 else { return nil }
+        return (origin, scale)
+    }
+
+    func reset() {
+        anchor = nil
+        canvas?.transform = .identity
+        canvas?.layer.borderWidth = 0
+    }
 
     func drawingChanged() {
         strokeCount = canvas?.drawing.strokes.count ?? 0
@@ -36,14 +82,21 @@ final class FreehandController: ObservableObject {
         drawingChanged()
     }
 
-    /// Zeichnung als transparentes PNG mit ihrem Rechteck in Ansichtskoordinaten.
-    func export() -> (png: Data, rect: CGRect, pixelSize: CGSize)? {
+    /// Zeichnung als transparentes PNG mit den Orten ihrer Ecken.
+    func export(_ proxy: MapCanvasProxy) -> (png: Data, topLeft: GeoCoordinate, bottomRight: GeoCoordinate, pixelSize: CGSize)? {
         guard let canvas, !canvas.drawing.strokes.isEmpty else { return nil }
         let rect = canvas.drawing.bounds.insetBy(dx: -6, dy: -6).intersection(canvas.bounds)
         guard !rect.isNull, rect.width > 1, rect.height > 1 else { return nil }
         let image = canvas.drawing.image(from: rect, scale: 2)
         guard let png = image.pngData() else { return nil }
-        return (png, rect, CGSize(width: rect.width * 2, height: rect.height * 2))
+        // Ecken der Fläche → Bildschirm (mit aktueller Verschiebung/Zoom) → Ort.
+        let mapping = mapping(proxy) ?? (CGPoint.zero, 1)
+        func screen(_ point: CGPoint) -> CGPoint {
+            CGPoint(x: mapping.origin.x + mapping.scale * point.x, y: mapping.origin.y + mapping.scale * point.y)
+        }
+        guard let topLeft = proxy.coordinate(at: screen(CGPoint(x: rect.minX, y: rect.minY))),
+              let bottomRight = proxy.coordinate(at: screen(CGPoint(x: rect.maxX, y: rect.maxY))) else { return nil }
+        return (png, topLeft, bottomRight, CGSize(width: rect.width * 2, height: rect.height * 2))
     }
 }
 
@@ -60,6 +113,7 @@ struct FreehandCanvas: UIViewRepresentable {
         canvas.isOpaque = false
         canvas.drawingPolicy = .anyInput
         canvas.isScrollEnabled = false
+        canvas.layer.borderColor = UIColor.systemBlue.withAlphaComponent(0.6).cgColor
         canvas.delegate = context.coordinator
         controller.canvas = canvas
         apply(tool, to: canvas)
@@ -150,6 +204,11 @@ struct FreehandToolbar: View {
 
     var body: some View {
         VStack(spacing: Spacing.s) {
+            // Zeichnen oder Karte bewegen: beim Bewegen wandert die Zeichnung mit.
+            SegmentedChoice(
+                options: [(false, "✏︎ Zeichnen"), (true, "✋ Karte bewegen / zoomen")],
+                selection: $tool.isMovingMap
+            )
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.s) {
                     ForEach(MapObjectPalette.colors.indices, id: \.self) { index in
@@ -157,6 +216,7 @@ struct FreehandToolbar: View {
                         Button {
                             tool.color = entry.color
                             tool.isErasing = false
+                            tool.isMovingMap = false
                         } label: {
                             Circle()
                                 .fill(Color(entry.color))
@@ -178,10 +238,12 @@ struct FreehandToolbar: View {
                         ChoiceChip(entry.title, isSelected: !tool.isErasing && tool.width == entry.width, minHeight: TouchTarget.minimum + 4) {
                             tool.width = entry.width
                             tool.isErasing = false
+                            tool.isMovingMap = false
                         }
                     }
                     ChoiceChip("Radierer", isSelected: tool.isErasing, minHeight: TouchTarget.minimum + 4) {
                         tool.isErasing.toggle()
+                        tool.isMovingMap = false
                     }
                 }
                 .padding(.horizontal, Spacing.xs)

@@ -29,6 +29,9 @@ public struct MissionWorkspaceView: View {
     /// ⌘J: Tagebuch öffnen und Eingabe fokussieren.
     @State private var focusJournal = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(OpenItemNotifier.self) private var notifier: OpenItemNotifier?
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
 
     public init(
         store: MissionStore,
@@ -100,6 +103,22 @@ public struct MissionWorkspaceView: View {
                 }
             }
             .animation(reduceMotion ? nil : .snappy, value: lastAdded?.id)
+            // Schritt 83: neuer offener Punkt als Hinweis oben.
+            .overlay(alignment: .top) {
+                if let item = notifier?.banner {
+                    OpenItemBanner(
+                        item: item,
+                        onOpen: {
+                            notifier?.dismissBanner()
+                            path = []
+                            handle(item.target)
+                        },
+                        onDismiss: { notifier?.dismissBanner() }
+                    )
+                    .padding(.top, Spacing.s)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
         }
         .background(Surface.canvas)
         .focusedSceneValue(\.workspaceSelection, $selection)
@@ -113,6 +132,21 @@ public struct MissionWorkspaceView: View {
             openReport: { showsReport = true },
             openDetails: { showsDetails = true }
         ))
+        // Offene Punkte im Minutentakt prüfen (Erinnerungen werden mit der Zeit fällig).
+        .task {
+            notifier?.requestAuthorizationIfNeeded()
+            while !Task.isCancelled {
+                evaluateOpenItems()
+                try? await Task.sleep(for: .seconds(60))
+            }
+        }
+        .onChange(of: store.state) {
+            notifier?.acknowledge(store.state, now: Date(), settings: appSettings?.settings ?? AppSettings())
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { evaluateOpenItems() }
+        }
+        .onDisappear { notifier?.forget(store.state.mission.id) }
         .task(id: lastAdded?.id) {
             guard lastAdded != nil else { return }
             try? await Task.sleep(for: .seconds(6))
@@ -193,13 +227,7 @@ public struct MissionWorkspaceView: View {
     private var content: some View {
         NavigationStack(path: $path) {
             WorkspaceDetail(section: selection, store: store, masterData: masterData, journalTemplates: journalTemplates, people: people, patientQuery: $patientQuery, focusJournal: $focusJournal, onQuickAdd: addPatient) { target in
-                switch target {
-                case .section(let section): selection = section
-                case .patient(let id): open(id)
-                case .messages: showsMessages = true
-                // Lagemeldung und Kliniken öffnet die Lage selbst.
-                case .situationReport, .hospitals: selection = .overview
-                }
+                handle(target)
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: PatientID.self) { id in
@@ -222,6 +250,26 @@ public struct MissionWorkspaceView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // Bereichswechsel über die Leiste: zurück zur Übersicht des Bereichs.
         .onChange(of: selection) { path.removeAll() }
+    }
+
+    /// Führt zu einem offenen Punkt (aus der Lage oder dem Hinweis oben).
+    private func handle(_ target: OpenItem.Target) {
+        switch target {
+        case .section(let section): selection = section
+        case .patient(let id): open(id)
+        case .messages: showsMessages = true
+        // Lagemeldung und Kliniken öffnet die Lage selbst.
+        case .situationReport, .hospitals: selection = .overview
+        }
+    }
+
+    private func evaluateOpenItems() {
+        notifier?.evaluate(
+            store.state,
+            now: Date(),
+            settings: appSettings?.settings ?? AppSettings(),
+            appIsActive: scenePhase == .active
+        )
     }
 
     /// Öffnet einen Patienten (z. B. aus „Offene Punkte“ oder der Schnellanlage).

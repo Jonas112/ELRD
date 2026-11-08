@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
+**Nächster Schritt:** Schritt 84 (Liste P). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -150,6 +150,17 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 81 | Checklisten-Zuordnung unter der Einsatzart (linksbündig); Führungspersonal in den Einstellungen, in „Führung und Kräfte“ auswählbar | 🧪 |
 | 82 | Tagebuch: erst die Liste, „+ Eintrag“ öffnet einen eigenen Dialog | 🧪 |
 | 83 | Neue offene Punkte als Hinweis oben; Mitteilungen bei gesperrtem Gerät (vorgeplante Erinnerungen, ohne Namen) | 🧪 |
+
+## P – Nächste Funktionen (von Jonas ausgewählt 2026-11-08)
+| # | Schritt | Status |
+|---|---|---|
+| 84 | Mitteilung antippen → direkt zum Einsatz und Punkt (Patient, Lagemeldung, Organisation …) | ⬜ |
+| 85 | Klinikbericht: Empfänger = E-Mail der Zielklinik aus den Stammdaten (offene Frage 4) | ⬜ |
+| 86 | Einsatz-Zeitstrahl aller Ereignisse und Kennzahlen (bis erste Sichtung, erster Transport, letzter Patient ab; SK-Verlauf), auch im Bericht | ⬜ |
+| 87 | Geführte Sichtung mSTaRT oder PRIOR (in den Einstellungen wählbar): Vorschlag mit Begründung, Übernahme per Tipp, Antworten im Protokoll (E104) | ⬜ |
+| 88 | Übungsmodus: Einsatz als Übung markiert (eigene Farbe, nicht in Statistiken), 3–4 Beispiellagen zum Einspielen (Jonas prüft) | ⬜ |
+| 89 | Abschnitte im geteilten Einsatz: Teilnehmer wählt seinen Abschnitt selbst, Einsatzleitung sieht/ändert das und vergibt je Teilnehmer Rechte (alles / eigener Abschnitt / nur lesen); Ansicht „mein Abschnitt“ (E103) | ⬜ |
+| 90 | Live Activity: Laufzeit, SK-Zähler, nächste Lagemeldung auf Sperrbildschirm/Dynamic Island (iPhone; iPad ab iPadOS 26), ohne Namen; eigenes Widget-Ziel (E105) | ⬜ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

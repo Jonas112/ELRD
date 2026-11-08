@@ -42,6 +42,9 @@ struct LeadershipSheet: View {
                             ) { editing = .role(role) }
                         }
                     }
+                    if let participants = store.state.mission.participants, !participants.isEmpty {
+                        ParticipantsSection(store: store, participants: participants) { errorMessage = $0 }
+                    }
                     Text("Abschnitte").font(.title2.weight(.bold))
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: Spacing.m)], spacing: Spacing.m) {
                         ForEach(forces.sections) { force in
@@ -225,5 +228,105 @@ private struct PositionEditor: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+}
+
+/// Teilnehmer im geteilten Einsatz (Schritt 89): eigener Abschnitt wählbar, die
+/// Einsatzleitung vergibt Rechte (E103).
+private struct ParticipantsSection: View {
+    let store: MissionStore
+    let participants: [MissionParticipant]
+    let onError: (String?) -> Void
+
+    var body: some View {
+        let mission = store.state.mission
+        let me = store.sessionUserID
+        let isCommander = mission.commanderID == me
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            Text("Teilnehmer").font(.title2.weight(.bold))
+            ForEach(participants.sorted { $0.joinedAt < $1.joinedAt }) { participant in
+                let isMe = participant.id == me.rawValue
+                VStack(alignment: .leading, spacing: Spacing.s) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(participant.displayName.isEmpty ? "Unbekannt" : participant.displayName)
+                            .font(.headline)
+                        if isMe { Text("ich").font(.caption.weight(.bold)).foregroundStyle(.secondary) }
+                        if mission.commanderID == participant.userID {
+                            Text("Einsatzleitung").font(.caption.weight(.bold)).foregroundStyle(.tint)
+                        }
+                        Spacer()
+                    }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: Spacing.m) { sectionControl(participant, isMe: isMe); permissionControl(participant, isCommander: isCommander) }
+                        VStack(alignment: .leading, spacing: Spacing.s) { sectionControl(participant, isMe: isMe); permissionControl(participant, isCommander: isCommander) }
+                    }
+                }
+                .padding(Spacing.l)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            Text(isCommander
+                 ? "Jeder wählt seinen Abschnitt selbst. Rechte: „Eigener Abschnitt“ erlaubt Patienten und Einheiten nur dort, „Nur lesen“ nur Nachrichten."
+                 : "Wählen Sie Ihren Abschnitt. Rechte vergibt die Einsatzleitung.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func sectionControl(_ participant: MissionParticipant, isMe: Bool) -> some View {
+        let sections = store.state.activeSections
+        let current = sections.first { $0.id == participant.sectionID }?.name ?? "kein Abschnitt"
+        if isMe && !store.state.mission.isClosed {
+            Menu {
+                Button("Kein Abschnitt") { perform(ChooseOwnSection(nil)) }
+                ForEach(sections) { section in
+                    Button(section.name) { perform(ChooseOwnSection(section.id)) }
+                }
+            } label: {
+                Label("Mein Abschnitt: \(current)", systemImage: "square.grid.2x2")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: TouchTarget.minimum)
+            }
+        } else {
+            Label(current, systemImage: "square.grid.2x2").font(.subheadline).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func permissionControl(_ participant: MissionParticipant, isCommander: Bool) -> some View {
+        let isLead = store.state.mission.commanderID == participant.userID
+        if isCommander && !isLead && !store.state.mission.isClosed {
+            Menu {
+                ForEach(ParticipantPermission.allCases) { permission in
+                    Button {
+                        perform(SetParticipantPermission(participantID: participant.id, permission: permission))
+                    } label: {
+                        if participant.permission == permission {
+                            Label(permission.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(permission.displayName)
+                        }
+                    }
+                }
+            } label: {
+                Label("Rechte: \(participant.permission.displayName)", systemImage: "lock.shield")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minHeight: TouchTarget.minimum)
+            }
+        } else {
+            Label("Rechte: \(isLead ? ParticipantPermission.full.displayName : participant.permission.displayName)", systemImage: "lock.shield")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func perform(_ command: some MissionCommand) {
+        do {
+            _ = try store.perform(command)
+            onError(nil)
+        } catch {
+            onError(ErrorText.message(for: error))
+        }
     }
 }

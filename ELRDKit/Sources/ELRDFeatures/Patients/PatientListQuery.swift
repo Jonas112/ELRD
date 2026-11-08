@@ -80,6 +80,8 @@ public struct PatientListQuery: Equatable, Sendable {
     public var searchText = ""
     public var sort: PatientSort = .triage
     public var layout: PatientListLayout = .list
+    /// Nur Patienten dieses Abschnitts („Mein Abschnitt“, Schritt 89).
+    public var sectionID: SectionID?
 
     public init(
         status: PatientStatusFilter = .all, triage: Sichtungskategorie? = nil, searchText: String = "",
@@ -93,7 +95,7 @@ public struct PatientListQuery: Equatable, Sendable {
     }
 
     public var isFiltered: Bool {
-        status != .all || triage != nil || !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+        status != .all || triage != nil || sectionID != nil || !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     /// Reihenfolge der Kategorien in Listen (wie die Zähler).
@@ -103,6 +105,7 @@ public struct PatientListQuery: Equatable, Sendable {
         let filtered = patients.active.filter { patient in
             status.matches(patient)
                 && (triage == nil || patient.triage == triage)
+                && (sectionID == nil || patient.sectionID == sectionID)
                 && matchesSearch(patient)
         }
         switch sort {
@@ -115,7 +118,9 @@ public struct PatientListQuery: Equatable, Sendable {
 
     /// Anzahl je Stand – innerhalb der gewählten SK und Suche, damit die Zahlen zum Ergebnis passen.
     public func statusCounts(in patients: [Patient]) -> [PatientStatusFilter: Int] {
-        let base = patients.active.filter { (triage == nil || $0.triage == triage) && matchesSearch($0) }
+        let base = patients.active.filter {
+            (triage == nil || $0.triage == triage) && (sectionID == nil || $0.sectionID == sectionID) && matchesSearch($0)
+        }
         return Dictionary(uniqueKeysWithValues: PatientStatusFilter.allCases.map { filter in
             (filter, base.filter(filter.matches).count)
         })

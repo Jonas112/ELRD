@@ -30,7 +30,7 @@ public enum ReportBuilder {
         let mission = input.mission
         let created = "Erstellt \(ReportFormat.dateTime(input.createdAt))" + (input.createdBy.isEmpty ? "" : " von \(input.createdBy)")
         return ReportPageInfo(
-            title: template.name,
+            title: mission.isExerciseMission ? "ÜBUNG – \(template.name)" : template.name,
             subtitle: "Einsatz \(mission.displayNumber()) · \(mission.title)",
             footer: created + " · ELRD",
             author: input.createdBy

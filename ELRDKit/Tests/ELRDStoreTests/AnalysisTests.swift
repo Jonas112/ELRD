@@ -270,4 +270,60 @@ struct AnalysisTests {
         patient.recordTriage(.sk2, at: patient.metadata.createdAt.addingTimeInterval(60))
         #expect(patient.triageHistory?.map(\.triage) == [.sk3, .sk2])
     }
+
+    // MARK: 87 Geführte Sichtung
+
+    @Test func guidedTriageIsAppliedAndLogged() throws {
+        let store = try fixture.newMission()
+        let patient = try store.perform(AddPatient(triage: .ungesichtet))
+        var session = TriageSession(algorithm: .mstart)
+        session.answer(true)
+        session.answer(false)
+        let suggestion = try #require(session.suggestion)
+        try store.perform(ApplyTriageSuggestion(patientID: patient.id, suggestion: suggestion))
+        #expect(store.state.patients.first { $0.id == patient.id }?.triage == .sk1)
+        #expect(store.state.logEntries.contains { $0.message.contains("Sichtung nach mSTaRT: Atmung ja, AF 10–30 nein → SK 1") })
+    }
+
+    // MARK: 88 Übung
+
+    @Test func exerciseScenarioIsPlayedAndEvaluated() throws {
+        let scenario = try #require(ExerciseScenario.scenario(id: "bus"))
+        var request = NewMissionRequest(reason: scenario.reason, type: scenario.type, location: scenario.location)
+        request.scenario = scenario
+        let clock = fixture.clock
+        let store = try MissionStore.create(
+            request,
+            repository: fixture.repository,
+            session: fixture.session(fixture.deviceA),
+            clock: try DeviceClock(deviceID: fixture.deviceA.deviceID, repository: fixture.repository),
+            now: { clock.now }
+        )
+        #expect(store.state.mission.isExerciseMission, "Lage macht den Einsatz zur Übung")
+        let patients = Patient.sortedByNumber(store.state.patients.active)
+        #expect(patients.count == scenario.patients.count)
+        #expect(patients.allSatisfy { $0.triage == .ungesichtet && $0.expectedTriage != nil && !$0.notes.isEmpty })
+        #expect(store.state.journal.contains { $0.text.contains("Übungslage „Reisebus umgestürzt“") })
+
+        var evaluation = try #require(ExerciseEvaluation(patients: store.state.patients))
+        #expect(evaluation.notTriaged == scenario.patients.count)
+        // Erste richtig, zweite falsch sichten.
+        try store.perform(SetTriage(patientID: patients[0].id, triage: try #require(patients[0].expectedTriage)))
+        try store.perform(SetTriage(patientID: patients[1].id, triage: .sk3))
+        evaluation = try #require(ExerciseEvaluation(patients: store.state.patients))
+        #expect(evaluation.matching == 1)
+        #expect(evaluation.deviations.count == 1)
+        #expect(evaluation.summary == "1 von 12 wie erwartet · 1 abweichend · 10 noch ungesichtet")
+        #expect(MissionSummary(mission: store.state.mission, patients: store.state.patients).isExercise)
+    }
+
+    @Test func realMissionsAreNoExercise() throws {
+        let store = try fixture.newMission()
+        #expect(!store.state.mission.isExerciseMission)
+        #expect(ExerciseEvaluation(patients: store.state.patients) == nil)
+        for scenario in ExerciseScenario.all {
+            #expect(!scenario.patients.isEmpty)
+            #expect(Set(ExerciseScenario.all.map(\.id)).count == ExerciseScenario.all.count)
+        }
+    }
 }

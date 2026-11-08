@@ -34,6 +34,10 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var defaultChecklistID: String?
     /// Führungspersonal zur Auswahl in „Führung und Kräfte“ (Schritt 81).
     public var leadershipPeople: [LeadershipPerson] = []
+    /// Algorithmus der geführten Sichtung (Schritt 87).
+    public var triageAlgorithm: TriageAlgorithm = .mstart
+    /// Live Activity auf Sperrbildschirm und Dynamic Island (Schritt 90).
+    public var showsLiveActivity: Bool = true
 
     public init() {}
 
@@ -55,6 +59,9 @@ public struct AppSettings: Codable, Hashable, Sendable {
         checklists = try container.decodeIfPresent([NamedChecklist].self, forKey: .checklists)
         defaultChecklistID = try container.decodeIfPresent(String.self, forKey: .defaultChecklistID)
         leadershipPeople = try container.decodeIfPresent([LeadershipPerson].self, forKey: .leadershipPeople) ?? []
+        // Unbekannter Wert (neuere App-Version) → Standard statt Lesefehler.
+        triageAlgorithm = (try? container.decodeIfPresent(TriageAlgorithm.self, forKey: .triageAlgorithm)) ?? defaults.triageAlgorithm
+        showsLiveActivity = try container.decodeIfPresent(Bool.self, forKey: .showsLiveActivity) ?? defaults.showsLiveActivity
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).

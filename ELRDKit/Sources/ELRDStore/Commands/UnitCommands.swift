@@ -12,6 +12,11 @@ func unitTargetSection(_ requested: SectionID?, in draft: MissionDraft) throws -
         }
         return section
     }
+    // Schritt 89: Abschnittsleiter legen in ihrem Abschnitt an.
+    if let own = draft.mission.ownSection(of: draft.context.session.userID),
+       let section = draft.get(MissionSection.self, id: own), !section.metadata.isDeleted {
+        return section
+    }
     return MissionSection.initialSection(in: draft.all(MissionSection.self))
 }
 

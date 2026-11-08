@@ -71,6 +71,13 @@ struct PatientsView: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel("Filter \(triage.displayName) entfernen")
                     }
+                    // Schritt 89: „Mein Abschnitt“ im geteilten Einsatz.
+                    if let own = store.state.mission.ownSection(of: store.sessionUserID),
+                       let section = store.state.activeSections.first(where: { $0.id == own }) {
+                        FilterPill(title: "Mein Abschnitt: \(section.name)", isSelected: query.sectionID == own) {
+                            query.sectionID = query.sectionID == own ? nil : own
+                        }
+                    }
                     ForEach(PatientStatusFilter.allCases) { filter in
                         FilterPill(title: "\(filter.title) \(counts[filter] ?? 0)", isSelected: query.status == filter) {
                             query.status = filter

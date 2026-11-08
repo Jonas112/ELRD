@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		E1D000000000000000000101 /* ELRDKit in Frameworks */ = {isa = PBXBuildFile; productRef = E1D000000000000000000201 /* ELRDKit */; };
+		E1D000000000000000000511 /* ELRDLiveActivity in Frameworks */ = {isa = PBXBuildFile; productRef = E1D000000000000000000513 /* ELRDLiveActivity */; };
+		E1D000000000000000000514 /* ELRDWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E1D000000000000000000501 /* ELRDWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -18,11 +20,33 @@
 			remoteGlobalIDString = E1D000000000000000000004;
 			remoteInfo = ELRD;
 		};
+		E1D000000000000000000508 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1D000000000000000000009 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E1D000000000000000000506;
+			remoteInfo = ELRDWidgets;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E1D000000000000000000515 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E1D000000000000000000514 /* ELRDWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		E1D000000000000000000003 /* ELRD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ELRD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1D000000000000000000401 /* ELRDUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ELRDUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		E1D000000000000000000501 /* ELRDWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ELRDWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -34,6 +58,11 @@
 		E1D000000000000000000402 /* ELRDUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ELRDUITests;
+			sourceTree = "<group>";
+		};
+		E1D000000000000000000502 /* ELRDWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ELRDWidgets;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -54,6 +83,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E1D000000000000000000503 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E1D000000000000000000511 /* ELRDLiveActivity in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -62,6 +99,7 @@
 			children = (
 				E1D000000000000000000005 /* ELRD */,
 				E1D000000000000000000402 /* ELRDUITests */,
+				E1D000000000000000000502 /* ELRDWidgets */,
 				E1D000000000000000000002 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -71,6 +109,7 @@
 			children = (
 				E1D000000000000000000003 /* ELRD.app */,
 				E1D000000000000000000401 /* ELRDUITests.xctest */,
+				E1D000000000000000000501 /* ELRDWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -85,10 +124,12 @@
 				E1D000000000000000000007 /* Sources */,
 				E1D000000000000000000006 /* Frameworks */,
 				E1D000000000000000000008 /* Resources */,
+				E1D000000000000000000515 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				E1D000000000000000000507 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E1D000000000000000000005 /* ELRD */,
@@ -124,6 +165,29 @@
 			productReference = E1D000000000000000000401 /* ELRDUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		E1D000000000000000000506 /* ELRDWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E1D000000000000000000512 /* Build configuration list for PBXNativeTarget "ELRDWidgets" */;
+			buildPhases = (
+				E1D000000000000000000504 /* Sources */,
+				E1D000000000000000000503 /* Frameworks */,
+				E1D000000000000000000505 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E1D000000000000000000502 /* ELRDWidgets */,
+			);
+			name = ELRDWidgets;
+			packageProductDependencies = (
+				E1D000000000000000000513 /* ELRDLiveActivity */,
+			);
+			productName = ELRDWidgets;
+			productReference = E1D000000000000000000501 /* ELRDWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -140,6 +204,9 @@
 					E1D000000000000000000406 = {
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = E1D000000000000000000004;
+					};
+					E1D000000000000000000506 = {
+						CreatedOnToolsVersion = 26.0;
 					};
 				};
 			};
@@ -162,6 +229,7 @@
 			targets = (
 				E1D000000000000000000004 /* ELRD */,
 				E1D000000000000000000406 /* ELRDUITests */,
+				E1D000000000000000000506 /* ELRDWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -175,6 +243,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E1D000000000000000000405 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E1D000000000000000000505 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -198,6 +273,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E1D000000000000000000504 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -205,6 +287,11 @@
 			isa = PBXTargetDependency;
 			target = E1D000000000000000000004 /* ELRD */;
 			targetProxy = E1D000000000000000000408 /* PBXContainerItemProxy */;
+		};
+		E1D000000000000000000507 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E1D000000000000000000506 /* ELRDWidgets */;
+			targetProxy = E1D000000000000000000508 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -290,6 +377,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fotos für das Einsatztagebuch aufnehmen und Patientenanhängekarten scannen.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sprachnotizen und Diktat für das Einsatztagebuch aufnehmen.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Diktiertes in Text umwandeln – nur auf diesem Gerät, ohne Internet.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -329,6 +417,7 @@
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fotos für das Einsatztagebuch aufnehmen und Patientenanhängekarten scannen.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sprachnotizen und Diktat für das Einsatztagebuch aufnehmen.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Diktiertes in Text umwandeln – nur auf diesem Gerät, ohne Internet.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -388,6 +477,58 @@
 			};
 			name = Release;
 		};
+		E1D000000000000000000509 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 135;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ELRDWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = ELRD;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ELRD.App.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E1D000000000000000000510 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 135;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "ELRDWidgets-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = ELRD;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 2.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ELRD.App.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -418,6 +559,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		E1D000000000000000000512 /* Build configuration list for PBXNativeTarget "ELRDWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E1D000000000000000000509 /* Debug */,
+				E1D000000000000000000510 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -432,6 +582,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E1D000000000000000000301 /* XCLocalSwiftPackageReference "ELRDKit" */;
 			productName = ELRDKit;
+		};
+		E1D000000000000000000513 /* ELRDLiveActivity */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1D000000000000000000301 /* XCLocalSwiftPackageReference "ELRDKit" */;
+			productName = ELRDLiveActivity;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -12,7 +12,17 @@ struct NewMissionView: View {
     static let contentWidth: CGFloat = 760
 
     @Environment(\.dismiss) private var dismiss
-    @State private var form = NewMissionForm()
+    @State private var form: NewMissionForm = {
+        // Bildschirmfoto „Übung“: Lage schon gewählt.
+        guard AppLaunchOptions.current.demoScreen == .newExercise, let bus = ExerciseScenario.scenario(id: "bus") else { return NewMissionForm() }
+        var form = NewMissionForm()
+        form.isExercise = true
+        form.scenarioID = bus.id
+        form.type = bus.type
+        form.reason = bus.reason
+        form.location = bus.location
+        return form
+    }()
     @State private var errorMessage: String?
 
     var body: some View {
@@ -23,6 +33,7 @@ struct NewMissionView: View {
                     typeSection
                     locationSection
                     detailsSection
+                    exerciseSection
                     Text("Beginn ist jetzt. Einsatzleiter: \(commanderName). Alles Weitere lässt sich im Einsatz ergänzen.")
                         .foregroundStyle(.secondary)
                 }
@@ -104,6 +115,45 @@ struct NewMissionView: View {
                 dispatchField
             }
         }
+    }
+
+    /// Übung (Schritt 88): Kennzeichnung und optional eine vorbereitete Lage.
+    private var exerciseSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.m) {
+            Toggle(isOn: $form.isExercise) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Übung").font(.headline)
+                    Text("Deutlich als Übung gekennzeichnet – in der App, im Bericht und in Mitteilungen.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            .tint(.purple)
+            .frame(minHeight: TouchTarget.comfortable)
+            if form.isExercise {
+                sectionLabel("Übungslage", optional: true)
+                FlowLayout(spacing: Spacing.s) {
+                    ChoiceChip("Ohne Lage", isSelected: form.scenarioID == nil) { form.scenarioID = nil }
+                    ForEach(ExerciseScenario.all) { scenario in
+                        ChoiceChip("\(scenario.name) (\(scenario.patients.count))", isSelected: form.scenarioID == scenario.id) {
+                            choose(scenario)
+                        }
+                    }
+                }
+                if let scenario = form.scenarioID.flatMap(ExerciseScenario.scenario(id:)) {
+                    Text("\(scenario.summary). Patienten kommen ungesichtet mit Befunden in der Notiz; die Auswertung steht unter Tagebuch › Verlauf.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(Spacing.l)
+        .background(Color.purple.opacity(form.isExercise ? 0.10 : 0), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func choose(_ scenario: ExerciseScenario) {
+        form.scenarioID = scenario.id
+        form.type = scenario.type
+        if form.reason.isEmpty || ExerciseScenario.all.contains(where: { $0.reason == form.reason }) { form.reason = scenario.reason }
+        if form.location.isEmpty || form.location == "Übungsgelände" { form.location = scenario.location }
     }
 
     private var reasonField: some View {

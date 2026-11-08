@@ -15,6 +15,9 @@ struct NewMissionForm: Equatable {
     var reason = ""
     /// Einsatznummer der Leitstelle als Freitext (E47).
     var dispatchNumber = ""
+    /// Übung (Schritt 88) und ggf. vorbereitete Lage.
+    var isExercise = false
+    var scenarioID: String?
 
     /// Einsatzarten in der Reihenfolge der Auswahl (häufige zuerst).
     static let typeOrder: [MissionType] = MissionType.defaultOrder
@@ -23,7 +26,7 @@ struct NewMissionForm: Equatable {
     func request(automaticSections: [MasterSection]) -> NewMissionRequest {
         let sections = automaticSections.sorted { $0.sortIndex < $1.sortIndex }
         let dispatch = Self.trimmed(dispatchNumber)
-        return NewMissionRequest(
+        var request = NewMissionRequest(
             reason: Self.trimmed(reason),
             type: type,
             location: Self.trimmed(location),
@@ -32,6 +35,9 @@ struct NewMissionForm: Equatable {
             initialSectionName: sections.first(where: \.isInitial)?.name,
             alarmstichwort: alarmstichwort
         )
+        request.isExercise = isExercise
+        request.scenario = isExercise ? scenarioID.flatMap(ExerciseScenario.scenario(id:)) : nil
+        return request
     }
 
     private static func trimmed(_ text: String) -> String {

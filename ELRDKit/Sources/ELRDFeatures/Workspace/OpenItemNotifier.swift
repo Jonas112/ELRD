@@ -33,7 +33,7 @@ enum OpenItemAlerts {
     static func upcoming(for state: MissionState, now: Date, reminders: ReminderSettings) -> [ScheduledReminder] {
         guard !state.mission.isClosed else { return [] }
         let missionKey = state.mission.id.rawValue.uuidString
-        let title = "ELRD – Einsatz \(state.mission.displayNumber())"
+        let title = state.mission.isExerciseMission ? "ELRD – ÜBUNG \(state.mission.displayNumber())" : "ELRD – Einsatz \(state.mission.displayNumber())"
         var result: [ScheduledReminder] = []
 
         if reminders.situationReportMinutes > 0 {
@@ -166,7 +166,7 @@ final class OpenItemNotifier {
         let center = UNUserNotificationCenter.current()
         for item in items.prefix(3) {
             let content = UNMutableNotificationContent()
-            content.title = "ELRD – neuer offener Punkt"
+            content.title = state.mission.isExerciseMission ? "ELRD – ÜBUNG – neuer offener Punkt" : "ELRD – neuer offener Punkt"
             content.body = OpenItemAlerts.body(for: item, state: state)
             content.sound = .default
             content.threadIdentifier = state.mission.id.rawValue.uuidString

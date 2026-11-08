@@ -14,12 +14,38 @@ struct MissionTimelineView: View {
             let state = store.state
             let metrics = MissionMetrics(mission: state.mission, patients: state.patients, journal: state.journal, now: context.date)
             VStack(alignment: .leading, spacing: Spacing.l) {
+                if state.mission.isExerciseMission, let evaluation = ExerciseEvaluation(patients: state.patients) {
+                    exerciseCard(evaluation)
+                }
                 tiles(metrics)
                 if !metrics.waits.isEmpty { waits(metrics) }
                 if metrics.patientCount > 0 { triageChart(metrics) }
                 milestones(metrics)
             }
         }
+    }
+
+    // MARK: Übung (Schritt 88)
+
+    private func exerciseCard(_ evaluation: ExerciseEvaluation) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            Label("Übungsauswertung Sichtung", systemImage: "graduationcap.fill")
+                .font(.headline)
+                .foregroundStyle(.purple)
+            Text(evaluation.summary).font(.title3.weight(.semibold))
+            ForEach(evaluation.deviations, id: \.number) { deviation in
+                HStack(spacing: Spacing.s) {
+                    Text(deviation.number).font(.headline.monospacedDigit()).frame(minWidth: 60, alignment: .leading)
+                    TriageBadgeLabel(category: deviation.actual)
+                    Image(systemName: "arrow.right").foregroundStyle(.secondary)
+                    Text("erwartet").font(.subheadline).foregroundStyle(.secondary)
+                    TriageBadgeLabel(category: deviation.expected)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.l)
+        .background(Color.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     // MARK: Kennzahlen

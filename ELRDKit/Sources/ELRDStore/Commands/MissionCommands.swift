@@ -13,6 +13,9 @@ public struct NewMissionRequest: Sendable {
     public var initialSectionName: String?
     /// Alarmstichwort der Erstalarmierung; legt Platzhalter-Einheiten an.
     public var alarmstichwort: Alarmstichwort?
+    /// Übung (Schritt 88); mit `scenario` werden deren Patienten eingespielt.
+    public var isExercise: Bool = false
+    public var scenario: ExerciseScenario?
 
     public init(
         reason: String = "",
@@ -46,8 +49,10 @@ public struct NewMissionRequest: Sendable {
             startedAt: context.now,
             commanderID: context.session.userID
         )
-        try draft.insert(mission)
-        draft.log(.mission, "Einsatz \(mission.displayNumber()) angelegt", subject: .mission(mission.id))
+        var created = mission
+        if isExercise || scenario != nil { created.isExercise = true }
+        try draft.insert(created)
+        draft.log(.mission, created.isExerciseMission ? "Übung \(mission.displayNumber()) angelegt" : "Einsatz \(mission.displayNumber()) angelegt", subject: .mission(mission.id))
 
         for (index, name) in sectionNames.enumerated() {
             let section = MissionSection(
@@ -64,6 +69,26 @@ public struct NewMissionRequest: Sendable {
         if let alarmstichwort {
             _ = try AddAlarmstichwort(alarmstichwort).execute(&draft)
         }
+        if let scenario {
+            try Self.play(scenario, into: &draft)
+        }
+    }
+
+    /// Übungslage einspielen: Patienten ungesichtet, Befunde in der Notiz.
+    static func play(_ scenario: ExerciseScenario, into draft: inout MissionDraft) throws {
+        for entry in scenario.patients {
+            let patient = try AddPatient(triage: .ungesichtet).execute(&draft)
+            try draft.update(Patient.self, id: patient.id) {
+                $0.notes = entry.findings
+                $0.expectedTriage = entry.expected
+                $0.estimatedAge = entry.estimatedAge
+                $0.isChild = entry.isChild
+            }
+        }
+        _ = try draft.addJournalEntry(
+            text: "Übungslage „\(scenario.name)“ eingespielt: \(scenario.patients.count) Patienten, ungesichtet.",
+            origin: .automatic
+        )
     }
 }
 
@@ -427,12 +452,14 @@ public struct AddPatient: MissionCommand {
             throw CommandError.invalid("Karte \(tagNumber) gehört schon zu Patient \(existing.number).")
         }
         let number = Patient.nextNumber(prefix: draft.context.numberPrefix, existing: draft.all(Patient.self))
+        // Schritt 89: ohne Angabe in den eigenen Abschnitt (geteilter Einsatz).
+        let section = sectionID ?? draft.mission.ownSection(of: draft.context.session.userID)
         var patient = Patient(
             missionID: draft.missionID,
             metadata: draft.context.newMetadata(),
             number: number,
             triage: triage,
-            sectionID: sectionID
+            sectionID: section
         )
         patient.tagNumber = tagNumber
         patient.triageHistory = [TriageChange(at: draft.context.now, triage: triage)]
@@ -465,6 +492,24 @@ public struct SetTriage: MissionCommand {
             "Patient \(before.number): \(before.triage.displayName) → \(triage.displayName)",
             subject: .patient(patientID)
         )
+    }
+}
+
+/// Übernimmt den Vorschlag der geführten Sichtung (Schritt 87): SK setzen und die
+/// Antworten ins Protokoll schreiben (nur Nummer, keine Namen).
+public struct ApplyTriageSuggestion: MissionCommand {
+    public let patientID: PatientID
+    public let suggestion: TriageSuggestion
+
+    public init(patientID: PatientID, suggestion: TriageSuggestion) {
+        self.patientID = patientID
+        self.suggestion = suggestion
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        try SetTriage(patientID: patientID, triage: suggestion.triage).execute(&draft)
+        guard let patient = draft.get(Patient.self, id: patientID) else { return }
+        draft.log(.patient, "Patient \(patient.number): \(suggestion.protocolText)", subject: .patient(patientID))
     }
 }
 

@@ -130,6 +130,8 @@ public final class MissionStore {
     public var numberPrefix: String { session.device.numberPrefix }
     /// Name der angemeldeten Person (z. B. „Erstellt von …“ im Bericht).
     public var sessionDisplayName: String { session.displayName }
+    /// Angemeldete Person (Teilnehmer, Rechte – Schritt 89).
+    public var sessionUserID: UserID { session.userID }
 
     /// Ob eine Funktion gerade verfügbar ist (für die Oberfläche).
     public func isEnabled(_ feature: Feature) -> Bool {
@@ -151,6 +153,8 @@ public final class MissionStore {
         }
         var draft = MissionDraft(state: state, context: CommandContext(session: session, now: now()))
         let output = try command.execute(&draft)
+        // Schritt 89: Rechte im geteilten Einsatz (E103).
+        try AccessPolicy.check(draft, before: state.mission)
 
         var hlc = deviceClock.clock
         let changeSet = try draft.makeChangeSet(clock: &hlc)

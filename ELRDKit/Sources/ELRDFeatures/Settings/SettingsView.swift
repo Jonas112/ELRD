@@ -414,6 +414,26 @@ struct MissionAidsSettingsView: View {
         let lists = settings.effectiveChecklists
         Form {
             Section {
+                Picker(selection: Binding(
+                    get: { settings.triageAlgorithm },
+                    set: { value in save { $0.triageAlgorithm = value } }
+                )) {
+                    ForEach(TriageAlgorithm.allCases) { algorithm in
+                        Text(algorithm.displayName).tag(algorithm)
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sichtungsalgorithmus").font(.headline)
+                        Text(settings.triageAlgorithm.detail).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+            } header: {
+                Text("Geführte Sichtung")
+            } footer: {
+                Text("„Sichtungshilfe“ beim Patienten fragt Schritt für Schritt und schlägt eine Kategorie vor. Übernommen wird sie erst per Tipp; Antworten stehen im Protokoll.")
+            }
+            Section {
                 minutesPicker("Lagemeldung an ILS alle", value: settings.reminders.situationReportMinutes) { value in
                     save { $0.reminders.situationReportMinutes = value }
                 }
@@ -430,6 +450,17 @@ struct MissionAidsSettingsView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Mitteilungen bei gesperrtem Gerät").font(.headline)
                         Text("Neue offene Punkte und fällige Erinnerungen auf dem Sperrbildschirm – ohne Patientennamen.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+                Toggle(isOn: Binding(
+                    get: { settings.showsLiveActivity },
+                    set: { on in save { $0.showsLiveActivity = on } }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Live-Aktivität").font(.headline)
+                        Text("Laufzeit, SK-Zähler und nächste Lagemeldung auf dem Sperrbildschirm (iPhone; iPad ab iPadOS 26).")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }

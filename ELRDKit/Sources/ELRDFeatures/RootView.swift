@@ -27,6 +27,7 @@ public struct RootView: View {
                     .environment(environment.drafts)
                     .environment(environment.cloud)
                     .environment(environment.notifier)
+                    .environment(environment.liveActivity)
             } else if let startupError {
                 ContentUnavailableView {
                     Label("ELRD konnte nicht starten", systemImage: "exclamationmark.triangle")
@@ -120,7 +121,7 @@ struct SignedInView: View {
                     account: account,
                     masterData: masterData,
                     isAdmin: user.role == .admin,
-                    showsNewMissionInitially: environment.demoScreen == .newMission,
+                    showsNewMissionInitially: environment.demoScreen == .newMission || environment.demoScreen == .newExercise,
                     initialSettingsPage: environment.demoScreen == .settings ? .general : environment.demoScreen == .masterData ? .masterData : nil
                 ) { store in
                     openStore = store

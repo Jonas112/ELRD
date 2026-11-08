@@ -1,6 +1,7 @@
 import SwiftUI
 import ELRDDomain
 import ELRDStore
+import ELRDCloud
 
 /// Arbeitsbereich eines Einsatzes.
 ///
@@ -31,7 +32,9 @@ public struct MissionWorkspaceView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
     @Environment(OpenItemNotifier.self) private var notifier: OpenItemNotifier?
+    @Environment(LiveActivityController.self) private var liveActivity: LiveActivityController?
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
+    @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
 
     public init(
         store: MissionStore,
@@ -77,6 +80,7 @@ public struct MissionWorkspaceView: View {
                         )
                         VStack(spacing: 0) {
                             situationBar(layout: layout, badges: badges)
+                            exerciseBanner
                             closedBanner
                             content
                         }
@@ -84,6 +88,7 @@ public struct MissionWorkspaceView: View {
                 case .bottomBar:
                     VStack(spacing: 0) {
                         situationBar(layout: layout, badges: badges)
+                        exerciseBanner
                         closedBanner
                         content
                         WorkspaceTabBar(selection: $selection, badges: badges)
@@ -134,6 +139,10 @@ public struct MissionWorkspaceView: View {
         ))
         // Offene Punkte im Minutentakt prüfen (Erinnerungen werden mit der Zeit fällig).
         .task {
+            // Schritt 89: im geteilten Einsatz als Teilnehmer eintragen.
+            if cloud?.link(for: store.missionID) != nil, !store.state.mission.isClosed {
+                _ = try? store.perform(JoinAsParticipant())
+            }
             notifier?.requestAuthorizationIfNeeded()
             while !Task.isCancelled {
                 evaluateOpenItems()
@@ -141,12 +150,17 @@ public struct MissionWorkspaceView: View {
             }
         }
         .onChange(of: store.state) {
-            notifier?.acknowledge(store.state, now: Date(), settings: appSettings?.settings ?? AppSettings())
+            let settings = appSettings?.settings ?? AppSettings()
+            notifier?.acknowledge(store.state, now: Date(), settings: settings)
+            liveActivity?.update(store.state, settings: settings, now: Date())
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { evaluateOpenItems() }
         }
-        .onDisappear { notifier?.forget(store.state.mission.id) }
+        .onDisappear {
+            notifier?.forget(store.state.mission.id)
+            liveActivity?.end()
+        }
         // Schritt 84: angetippte Mitteilung dieses Einsatzes → zum Punkt.
         .onChange(of: NotificationInbox.shared.pending, initial: true) {
             guard let route = NotificationInbox.shared.take(for: store.missionID) else { return }
@@ -196,6 +210,19 @@ public struct MissionWorkspaceView: View {
             },
             onQuickAdd: addPatient
         )
+    }
+
+    /// Übung (Schritt 88): schmales violettes Band, damit niemand sie mit einem
+    /// echten Einsatz verwechselt.
+    @ViewBuilder private var exerciseBanner: some View {
+        if store.state.mission.isExerciseMission {
+            Label("ÜBUNG", systemImage: "graduationcap.fill")
+                .font(.subheadline.weight(.heavy))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 28)
+                .background(Color.purple)
+                .accessibilityLabel("Übungseinsatz")
+        }
     }
 
     /// Hinweis bei beendetem Einsatz: nur Ansicht, mit „Wieder öffnen“.
@@ -273,6 +300,7 @@ public struct MissionWorkspaceView: View {
     }
 
     private func evaluateOpenItems() {
+        liveActivity?.update(store.state, settings: appSettings?.settings ?? AppSettings(), now: Date())
         notifier?.evaluate(
             store.state,
             now: Date(),
@@ -454,9 +482,10 @@ struct SituationBar: View {
             ? "beendet"
             : "läuft \(ElapsedTimeFormat.string(from: mission.startedAt, to: now))"
         // Laufzeit zuerst: wird es eng, kürzt sich der Ort, nicht die Zeit.
+        let exercise = mission.isExerciseMission ? "ÜBUNG" : ""
         let parts = layout == .rail
-            ? [state, mission.displayNumber(), mission.location]
-            : [state, mission.displayNumber()]
+            ? [exercise, state, mission.displayNumber(), mission.location]
+            : [exercise, state, mission.displayNumber()]
         return parts.filter { !$0.isEmpty }.joined(separator: " · ")
     }
 

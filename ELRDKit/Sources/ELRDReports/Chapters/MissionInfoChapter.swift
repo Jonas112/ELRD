@@ -91,6 +91,20 @@ enum MissionInfoChapter {
         if !waits.isEmpty {
             blocks.append(.paragraph("Wartezeit bis Transportbeginn – " + waits.joined(separator: " · "), style: .muted))
         }
+        if input.mission.isExerciseMission, let evaluation = ExerciseEvaluation(patients: input.patients) {
+            blocks.append(.heading("Übungsauswertung Sichtung", level: 2))
+            blocks.append(.paragraph(evaluation.summary))
+            if !evaluation.deviations.isEmpty {
+                blocks.append(.table(ReportTable(
+                    columns: [
+                        ReportTable.Column("Patient", width: .flexible(1)),
+                        ReportTable.Column("erwartet", width: .flexible(1)),
+                        ReportTable.Column("gesichtet", width: .flexible(1)),
+                    ],
+                    rows: evaluation.deviations.map { [ReportTable.Cell($0.number), ReportTable.Cell($0.expected.shortName), ReportTable.Cell($0.actual.shortName)] }
+                )))
+            }
+        }
         return blocks
     }
 

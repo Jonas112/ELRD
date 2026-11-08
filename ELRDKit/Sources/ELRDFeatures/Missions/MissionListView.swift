@@ -573,7 +573,7 @@ struct RunningMissionCard: View {
 
     private var elapsed: some View {
         TimelineView(.periodic(from: .now, by: 60)) { _ in
-            Text("\(summary.displayNumber) · seit \(ElapsedTimeFormat.string(from: summary.startedAt, to: now()))")
+            Text("\(summary.isExercise ? "ÜBUNG · " : "")\(summary.displayNumber) · seit \(ElapsedTimeFormat.string(from: summary.startedAt, to: now()))")
                 .font(.body.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -678,7 +678,7 @@ struct FinishedMissionRow: View {
     }
 
     private var subtitle: String {
-        [summary.displayNumber, summary.location].filter { !$0.isEmpty }.joined(separator: " · ")
+        [summary.isExercise ? "ÜBUNG" : "", summary.displayNumber, summary.location].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
     private var patientText: String {

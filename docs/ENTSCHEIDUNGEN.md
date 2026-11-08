@@ -110,3 +110,5 @@ Jede Entscheidung mit Datum. Neue Einträge unten anfügen, alte nicht löschen,
 | E104 | 2026-11-08 | Geführte Sichtung (mSTaRT oder PRIOR, Einstellung) liefert nur einen Vorschlag mit Begründung; die SK setzt der Anwender per Tipp | Vorgabe Jonas; Verantwortung bleibt beim Sichtenden |
 | E105 | 2026-11-08 | Live Activity nur lokal aktualisiert (ohne Push-Server), Inhalte ohne Patientennamen | Kein eigener Server (E88); Sperrbildschirm ist für Umstehende sichtbar |
 | E106 | 2026-11-08 | Übungslagen schreibt Claude als Vorschlag, Jonas prüft sie fachlich | Vorgabe Jonas |
+| E107 | 2026-11-08 | Sichtungsalgorithmen als Daten (Fragen, Ja/Nein-Folgen, Maßnahmen) statt Code-Verzweigungen; mSTaRT nach BF München V 4.1 (2018), PRIOR nach DRK/ÖRK-Schema, beide von Jonas zu prüfen | Fachliche Korrekturen ohne Umbau; Quelle je Algorithmus nachvollziehbar |
+| E108 | 2026-11-08 | Übung als Kennzeichen am Einsatz (`isExercise`), gleiche Nummernfolge wie echte Einsätze; Übungslagen spielen ungesichtete Patienten mit Befunden und erwarteter SK ein | Einfach, abgleichsicher; Auswertung ohne eigene Übungsdatenbank |

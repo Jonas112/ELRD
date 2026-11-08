@@ -29,6 +29,8 @@ struct PatientDetailView: View {
     @State private var showsPersonDetails = false
     /// IVENA eingeklappt; Zusammenfassung mit PZC bleibt sichtbar.
     @State private var showsIVENA = false
+    /// Geführte Sichtung (Schritt 87).
+    @State private var showsTriageGuide = AppLaunchOptions.current.demoScreen == .triageGuide
     @State private var tagText = ""
     @State private var confirmsRelease = false
     /// Kreislauf und „intubiert“ untereinander, wenn die Spalte schmal ist.
@@ -200,13 +202,28 @@ struct PatientDetailView: View {
     }
 
     private func triageRow(_ patient: Patient) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: Spacing.s)], spacing: Spacing.s) {
-            ForEach(Self.triageOrder, id: \.self) { category in
-                TriageChoiceButton(category: category, isSelected: patient.triage == category) {
-                    setTriage(category)
+        let algorithm = appSettings?.settings.triageAlgorithm ?? .mstart
+        return VStack(alignment: .leading, spacing: Spacing.s) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: Spacing.s)], spacing: Spacing.s) {
+                ForEach(Self.triageOrder, id: \.self) { category in
+                    TriageChoiceButton(category: category, isSelected: patient.triage == category) {
+                        setTriage(category)
+                    }
+                    .disabled(!canEdit)
                 }
-                .disabled(!canEdit)
             }
+            if canEdit {
+                Button { showsTriageGuide = true } label: {
+                    Label("Sichtungshilfe \(algorithm.displayName)", systemImage: "list.bullet.clipboard")
+                        .font(.headline)
+                        .frame(minHeight: TouchTarget.minimum)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .sheet(isPresented: $showsTriageGuide) {
+            TriageGuideSheet(store: store, patientID: patientID, algorithm: algorithm)
+                .largeSheet()
         }
     }
 

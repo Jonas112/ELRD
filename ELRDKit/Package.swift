@@ -27,9 +27,12 @@ let package = Package(
                 "ELRDReports",
                 "ELRDStammdaten",
                 "ELRDCloud",
+                "ELRDLiveActivity",
                 "ELRDFeatures",
             ]
         ),
+        // Für das Widget-Ziel der App (Live Activity, Schritt 90).
+        .library(name: "ELRDLiveActivity", targets: ["ELRDLiveActivity"]),
     ],
     targets: [
         // Reine Werttypen und Fachregeln. Keine Abhängigkeiten.
@@ -64,6 +67,9 @@ let package = Package(
         // Abgleich über iCloud (CloudKit, geteilte Zonen je Einsatz).
         .target(name: "ELRDCloud", dependencies: ["ELRDDomain", "ELRDSync", "ELRDPersistence", "ELRDStore"], swiftSettings: commonSettings),
 
+        // Live Activity (Sperrbildschirm, Dynamic Island) – von App und Widget-Ziel genutzt.
+        .target(name: "ELRDLiveActivity", swiftSettings: commonSettings),
+
         // SwiftUI-Oberflächen und Designsystem.
         .target(
             name: "ELRDFeatures",
@@ -77,6 +83,7 @@ let package = Package(
                 "ELRDReports",
                 "ELRDStammdaten",
                 "ELRDCloud",
+                "ELRDLiveActivity",
             ],
             resources: [.copy("Rechtliches")],
             swiftSettings: commonSettings

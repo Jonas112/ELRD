@@ -38,6 +38,10 @@ public struct Mission: VersionedEntity, MissionScoped {
     public var hospitalQuotas: [HospitalQuota]?
     /// Führungsstruktur (Schritt 73).
     public var leadership: [LeadershipPosition]?
+    /// Übungseinsatz (Schritt 88); `nil` = echter Einsatz (E95).
+    public var isExercise: Bool?
+    /// Teilnehmer im geteilten Einsatz mit Abschnitt und Rechten (Schritt 89).
+    public var participants: [MissionParticipant]?
 
     public init(
         id: MissionID = MissionID(),
@@ -75,6 +79,9 @@ public struct Mission: VersionedEntity, MissionScoped {
 // MARK: - Fachlogik
 
 public extension Mission {
+    /// Übung statt echter Einsatz (Schritt 88).
+    var isExerciseMission: Bool { isExercise == true }
+
     /// Ein Einsatz gehört zu sich selbst (für einheitliche Behandlung in der Synchronisation).
     var missionID: MissionID { id }
 

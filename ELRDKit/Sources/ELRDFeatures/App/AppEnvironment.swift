@@ -18,13 +18,13 @@ public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
         case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, unitPicker, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapCollapsed, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages, report, settings, masterData, onboarding
         /// Schritte 67–76.
-        case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline
+        case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
 
         /// Bildschirme, die direkt im laufenden Beispieleinsatz starten.
-        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .settings, .masterData, .onboarding].contains(self) }
+        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .newExercise, .settings, .masterData, .onboarding].contains(self) }
 
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {
@@ -35,7 +35,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
         }
 
         /// Bildschirme, die direkt einen Patienten öffnen.
-        var opensPatient: Bool { [.patientDetail, .injuries, .unitPicker].contains(self) }
+        var opensPatient: Bool { [.patientDetail, .injuries, .unitPicker, .triageGuide].contains(self) }
     }
 
     public let demoScreen: DemoScreen?
@@ -79,6 +79,8 @@ public final class AppEnvironment {
     let cloudStore: CloudKitZoneStore?
     /// Hinweise und Mitteilungen bei neuen offenen Punkten (Schritt 83).
     let notifier: OpenItemNotifier
+    /// Live Activity des geöffneten Einsatzes (Schritt 90).
+    let liveActivity: LiveActivityController
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
     /// Gewünschter Beispielbildschirm (nur Demo).
@@ -106,6 +108,7 @@ public final class AppEnvironment {
         self.isDemo = isDemo
         self.demoScreen = demoScreen
         notifier = OpenItemNotifier(enabled: !isDemo)
+        liveActivity = LiveActivityController(enabled: !isDemo)
         if isDemo {
             // Beispieldaten: iCloud-Ersatz im Arbeitsspeicher, CloudKit bleibt unberührt.
             cloudStore = nil

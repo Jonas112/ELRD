@@ -107,4 +107,20 @@ struct OpenItemAlertTests {
         #expect(inbox.take(for: mission)?.target == .messages)
         #expect(inbox.pending == nil)
     }
+
+    // MARK: 90 Live Activity
+
+    @Test func liveActivityContentHasCountsWithoutNames() throws {
+        let store = try PreviewData.makeStore(now: now)
+        let content = LiveActivityController.content(for: store.state, settings: AppSettings(), now: now)
+        #expect(content.sk1 == 1)
+        #expect(content.sk2 == 2)
+        #expect(content.sk3 == 3)
+        #expect(content.untriaged == 1)
+        #expect(content.waiting == 7)
+        #expect(content.nextReportAt == store.state.mission.startedAt.addingTimeInterval(30 * 60))
+        var off = AppSettings()
+        off.reminders.situationReportMinutes = 0
+        #expect(LiveActivityController.content(for: store.state, settings: off, now: now).nextReportAt == nil)
+    }
 }

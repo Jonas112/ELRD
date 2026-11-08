@@ -16,6 +16,8 @@ public struct MissionSummary: Identifiable, Equatable, Sendable {
     public let startedAt: Date
     public let endedAt: Date?
     public let isClosed: Bool
+    /// Übung (Schritt 88).
+    public let isExercise: Bool
     /// Anzahl der (nicht gelöschten) Patienten.
     public let patientCount: Int
     public let triageCounts: [Sichtungskategorie: Int]
@@ -33,6 +35,7 @@ public struct MissionSummary: Identifiable, Equatable, Sendable {
         startedAt = mission.startedAt
         endedAt = mission.endedAt
         isClosed = mission.isClosed
+        isExercise = mission.isExerciseMission
         let active = patients.active
         patientCount = active.count
         triageCounts = Patient.countsByTriage(active)

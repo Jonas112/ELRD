@@ -583,3 +583,37 @@ public struct AddJournalText: MissionCommand {
         return entry
     }
 }
+
+// MARK: - Datenschutz (Schritt 102)
+
+/// Entfernt personenbezogene Patientendaten eines beendeten Einsatzes: Namen,
+/// Geburtsdatum (Alter bleibt als Schätzung), Erkennungsmerkmale, Freitext.
+/// Sichtung, Verletzungen, Verbleib und Zeiten bleiben für Bericht und Statistik.
+public struct AnonymizeMission: MissionCommand {
+    public static var allowedOnClosedMission: Bool { true }
+    /// Hinweis fürs Protokoll, z. B. „automatisch nach 90 Tagen“.
+    public let reason: String
+
+    public init(reason: String) {
+        self.reason = reason
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard draft.mission.isClosed else { throw CommandError.invalid("Nur beendete Einsätze lassen sich anonymisieren.") }
+        guard draft.mission.anonymizedAt == nil else { return }
+        let startedAt = draft.mission.startedAt
+        for patient in draft.active(Patient.self) {
+            try draft.update(Patient.self, id: patient.id) { patient in
+                if patient.estimatedAge == nil { patient.estimatedAge = patient.age(at: startedAt) }
+                patient.firstName = ""
+                patient.lastName = ""
+                patient.birthDate = nil
+                patient.identifyingFeatures = nil
+                patient.notes = ""
+            }
+        }
+        let now = draft.context.now
+        try draft.updateMission { $0.anonymizedAt = now }
+        draft.log(.mission, "Personenbezogene Patientendaten entfernt (\(reason))", subject: .mission(draft.missionID))
+    }
+}

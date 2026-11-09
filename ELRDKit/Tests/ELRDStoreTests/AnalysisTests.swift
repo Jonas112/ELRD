@@ -398,4 +398,123 @@ struct AnalysisTests {
         try store.perform(ApplyTriageSuggestion(patientID: patient.id, suggestion: try #require(session.suggestion)))
         #expect(store.state.patients.first { $0.id == patient.id }?.lastTriagedAt == fixture.clock.now)
     }
+
+    // MARK: 97 ATMIST, 98 Voranmeldung, 99 Telefonbuch
+
+    @Test func atmistAndPreannouncement() throws {
+        let store = try fixture.newMission()
+        let patient = try store.perform(AddPatient(triage: .sk1))
+        try store.perform(EditPatient(patientID: patient.id) {
+            $0.lastName = "Muster"
+            $0.firstName = "Max"
+            $0.estimatedAge = 45
+            $0.gender = .maennlich
+            $0.notes = "Beckenschlinge angelegt"
+            $0.isIntubated = true
+        })
+        let rtw = try unit(store, "RK 1", .rtw)
+        try store.perform(AssignUnit(patientID: patient.id, unitID: rtw.id))
+        try store.perform(SetDestination(patientID: patient.id, hospital: HospitalSnapshot(name: "Klinikum Nord")))
+        let second = try store.perform(AddPatient(triage: .sk2))
+        try store.perform(SetDestination(patientID: second.id, hospital: HospitalSnapshot(name: "klinikum nord")))
+
+        let current = try #require(store.state.patients.first { $0.id == patient.id })
+        let text = ATMISTHandover.text(patient: current, mission: store.state.mission, units: store.state.units, now: fixture.clock.now)
+        #expect(text.contains("Name: Muster, Max") || text.contains("Name: Max Muster"))
+        #expect(text.contains("A – Alter: ca. 45 J., Männlich"))
+        #expect(text.contains("T – Therapie: intubiert; Beckenschlinge angelegt; versorgt von RK 1"))
+        #expect(text.contains("Ziel: Klinikum Nord"))
+
+        let announcements = HospitalPreannouncement.all(mission: store.state.mission, patients: store.state.patients, units: store.state.units)
+        #expect(announcements.count == 1, "Name ohne Groß/klein zusammengeführt")
+        let first = try #require(announcements.first)
+        #expect(first.patientCount == 2)
+        #expect(first.text.contains("Patienten: 2 (1 × SK 1, 1 × SK 2)"))
+        #expect(!first.text.contains("Muster"), "Voranmeldung ohne Namen")
+
+        #expect(PhoneEntry.telURL("0971 / 123-45")?.absoluteString == "tel:097112345")
+        #expect(PhoneEntry.telURL("–") == nil)
+    }
+
+    // MARK: 100 Statistik, 101 Personensuche
+
+    @Test func statisticsSeparateExercisesAndSearchFindsPersons() throws {
+        let real = try fixture.newMission()
+        let patient = try real.perform(AddPatient(triage: .sk1))
+        try real.perform(EditPatient(patientID: patient.id) { $0.lastName = "Huber"; $0.firstName = "Anna" })
+        try real.perform(AddPatient(triage: .sk3))
+        var request = NewMissionRequest(reason: "Übung", type: .brand, location: "Gelände")
+        request.isExercise = true
+        let clock = fixture.clock
+        let exercise = try MissionStore.create(
+            request,
+            repository: fixture.repository,
+            session: fixture.session(fixture.deviceA),
+            clock: try DeviceClock(deviceID: fixture.deviceA.deviceID, repository: fixture.repository),
+            now: { clock.now }
+        )
+        try exercise.perform(AddPatient(triage: .sk2))
+
+        let summaries = try MissionOverview.load(from: fixture.repository)
+        let stats = MissionStatistics(summaries: summaries, year: nil)
+        #expect(stats.missions == 1)
+        #expect(stats.exercises == 1)
+        #expect(stats.patients == 2, "Übungspatienten zählen nicht")
+        #expect(stats.triageCounts[.sk1] == 1)
+        #expect(stats.byType.count == 1)
+
+        let hits = try PersonSearch.search("hub", in: fixture.repository, now: fixture.clock.now)
+        #expect(hits.count == 1)
+        #expect(hits.first?.whereabouts.name.contains("Huber") == true)
+        #expect(hits.first?.missionID == real.missionID)
+        #expect(try PersonSearch.search("h", in: fixture.repository, now: fixture.clock.now).isEmpty, "mindestens 2 Zeichen")
+    }
+
+    // MARK: 102 Datenschutz, 104 Einsatzende-Prüfung
+
+    @Test func closingCheckWarnsButAllowsClosing() throws {
+        let store = try fixture.newMission()
+        #expect(MissionClosingCheck.warnings(for: store.state, checklist: ChecklistTemplate(items: [])).isEmpty)
+        try store.perform(AddPatient(triage: .ungesichtet))
+        try store.perform(AddPlaceholder(type: .rtw))
+        let warnings = MissionClosingCheck.warnings(for: store.state, checklist: .standard)
+        #expect(warnings.contains("1 Patient ist noch nicht abtransportiert oder entlassen."))
+        #expect(warnings.contains("1 Patient ist ungesichtet."))
+        #expect(warnings.contains { $0.hasPrefix("1 angeforderte Einheit ohne Fahrzeug") })
+        #expect(warnings.contains { $0.hasPrefix("Checkliste:") })
+        try store.perform(CloseMission())
+        #expect(store.state.mission.isClosed, "Beenden trotz Hinweisen")
+    }
+
+    @Test func anonymizationRemovesPersonalDataOnlyWhenClosed() throws {
+        let store = try fixture.newMission()
+        let patient = try store.perform(AddPatient(triage: .sk2, tagNumber: "PAK1"))
+        let birth = Calendar.current.date(byAdding: .year, value: -40, to: fixture.clock.now)
+        try store.perform(EditPatient(patientID: patient.id) {
+            $0.firstName = "Eva"
+            $0.lastName = "Berg"
+            $0.birthDate = birth
+            $0.identifyingFeatures = "rote Jacke"
+            $0.notes = "wohnt Hauptstraße 1"
+        })
+        #expect(throws: CommandError.self) { try store.perform(AnonymizeMission(reason: "Test")) }
+        try store.perform(CloseMission())
+        let summaries = try MissionOverview.load(from: fixture.repository)
+        #expect(AnonymizationPolicy.due(summaries, days: 30, now: fixture.clock.now).isEmpty, "gerade erst beendet")
+        #expect(AnonymizationPolicy.due(summaries, days: 30, now: fixture.clock.now.addingTimeInterval(31 * 86_400)) == [store.missionID])
+        #expect(AnonymizationPolicy.due(summaries, days: 0, now: fixture.clock.now.addingTimeInterval(400 * 86_400)).isEmpty, "aus")
+
+        try store.perform(AnonymizeMission(reason: "Test"))
+        let anonymized = try #require(store.state.patients.first { $0.id == patient.id })
+        #expect(anonymized.fullName.isEmpty)
+        #expect(anonymized.birthDate == nil)
+        #expect(anonymized.estimatedAge == 40)
+        #expect(anonymized.identifyingFeatures == nil)
+        #expect(anonymized.notes.isEmpty)
+        #expect(anonymized.tagNumber == "PAK1", "Karte bleibt für den Verbleib")
+        #expect(anonymized.triage == .sk2)
+        #expect(store.state.mission.anonymizedAt != nil)
+        let after = try MissionOverview.load(from: fixture.repository)
+        #expect(AnonymizationPolicy.due(after, days: 30, now: fixture.clock.now.addingTimeInterval(31 * 86_400)).isEmpty, "nur einmal")
+    }
 }

@@ -29,6 +29,8 @@ struct PatientDetailView: View {
     @State private var showsPersonDetails = false
     /// IVENA eingeklappt; Zusammenfassung mit PZC bleibt sichtbar.
     @State private var showsIVENA = false
+    /// ATMIST-Übergabe (Schritt 97).
+    @State private var showsHandover = false
     /// Geführte Sichtung (Schritt 87).
     @State private var showsTriageGuide = AppLaunchOptions.current.demoScreen == .triageGuide
     @State private var tagText = ""
@@ -143,6 +145,7 @@ struct PatientDetailView: View {
                 .disabled(index.map { $0 >= order.count - 1 } ?? true)
                 .accessibilityLabel("Nächster Patient")
             Menu {
+                Button("Übergabe (ATMIST) …", systemImage: "text.bubble") { showsHandover = true }
                 Button("Anhängekarte zuordnen …", systemImage: "barcode") {
                     tagText = store.state.patients.first { $0.id == patientID }?.tagNumber ?? ""
                     editsTag = true
@@ -154,6 +157,15 @@ struct PatientDetailView: View {
                 Image(systemName: "ellipsis.circle")
             }
             .accessibilityLabel("Weitere Aktionen")
+            .sheet(isPresented: $showsHandover) {
+                ShareTextSheet(
+                    title: "Übergabe \(patient.number)",
+                    text: ATMISTHandover.text(patient: patient, mission: store.state.mission, units: store.state.units, now: Date()),
+                    subject: "Übergabe Patient \(patient.number)",
+                    footnote: "ATMIST: Alter, Zeit, Mechanismus, Verletzungen, Zeichen, Therapie. Enthält den Namen, falls bekannt – nur an Klinik oder Transportbesatzung weitergeben."
+                )
+                .largeSheet()
+            }
         }
     }
 

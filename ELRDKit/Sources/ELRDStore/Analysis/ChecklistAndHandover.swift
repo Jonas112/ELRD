@@ -154,3 +154,43 @@ public struct HandOverMission: MissionCommand {
         return updated
     }
 }
+
+// MARK: - Einsatzende-Prüfung (Schritt 104)
+
+/// Was vor „Einsatz beenden“ noch offen ist. Nur Hinweise – beenden geht trotzdem
+/// (Vorgabe Jonas).
+public enum MissionClosingCheck {
+    public static func warnings(for state: MissionState, checklist: ChecklistTemplate) -> [String] {
+        var warnings: [String] = []
+        let patients = state.patients.active
+        let onScene = patients.filter { $0.outcome == nil && $0.triage != .verstorben }
+        if !onScene.isEmpty {
+            warnings.append(onScene.count == 1
+                ? "1 Patient ist noch nicht abtransportiert oder entlassen."
+                : "\(onScene.count) Patienten sind noch nicht abtransportiert oder entlassen.")
+        }
+        let untriaged = patients.filter { $0.triage == .ungesichtet }.count
+        if untriaged > 0 {
+            warnings.append(untriaged == 1 ? "1 Patient ist ungesichtet." : "\(untriaged) Patienten sind ungesichtet.")
+        }
+        let placeholders = state.activeUnits.filter(\.isPlaceholder).count
+        if placeholders > 0 {
+            warnings.append(placeholders == 1
+                ? "1 angeforderte Einheit ohne Fahrzeug – bei der ILS abbestellen?"
+                : "\(placeholders) angeforderte Einheiten ohne Fahrzeug – bei der ILS abbestellen?")
+        }
+        let awaited = state.activeUnits.filter { !$0.isPlaceholder && $0.isAwaitingArrival }.count
+        if awaited > 0 {
+            warnings.append(awaited == 1 ? "1 Einheit wird noch erwartet." : "\(awaited) Einheiten werden noch erwartet.")
+        }
+        let open = checklist.items.filter { state.checkedItems[$0.id] == nil }.count
+        if open > 0 {
+            warnings.append(open == 1 ? "Checkliste: 1 Punkt offen." : "Checkliste: \(open) Punkte offen.")
+        }
+        let unread = state.unreadMessageCount
+        if unread > 0 {
+            warnings.append(unread == 1 ? "1 Nachricht ist nicht gelesen." : "\(unread) Nachrichten sind nicht gelesen.")
+        }
+        return warnings
+    }
+}

@@ -123,6 +123,16 @@ final class MissionListModel {
         loadError = nil
     }
 
+    /// Statistik eines Jahres (`nil` = alle), Schritt 100.
+    func statistics(year: Int?) -> MissionStatistics {
+        MissionStatistics(summaries: missions, year: year)
+    }
+
+    /// Personensuche über alle Einsätze (Schritt 101).
+    func searchPersons(_ query: String) -> [PersonSearchHit] {
+        (try? PersonSearch.search(query, in: repository, now: now())) ?? []
+    }
+
     func reload() {
         do {
             missions = try MissionOverview.load(from: repository)
@@ -159,6 +169,21 @@ final class MissionListModel {
 
     func delete(_ missionID: MissionID) throws {
         try open(missionID).perform(DeleteMission())
+        reload()
+    }
+
+    /// Schritt 102: fällige Einsätze anonymisieren (beim Öffnen der Liste).
+    func anonymizeDue(afterDays days: Int) {
+        let due = AnonymizationPolicy.due(missions, days: days, now: now())
+        guard !due.isEmpty else { return }
+        for id in due {
+            _ = try? open(id).perform(AnonymizeMission(reason: "automatisch nach \(days) Tagen"))
+        }
+        reload()
+    }
+
+    func anonymize(_ missionID: MissionID) throws {
+        try open(missionID).perform(AnonymizeMission(reason: "von Hand"))
         reload()
     }
 

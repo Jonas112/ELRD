@@ -42,6 +42,8 @@ public struct Mission: VersionedEntity, MissionScoped {
     public var isExercise: Bool?
     /// Teilnehmer im geteilten Einsatz mit Abschnitt und Rechten (Schritt 89).
     public var participants: [MissionParticipant]?
+    /// Personenbezogene Patientendaten entfernt (Schritt 102); `nil` = noch nicht.
+    public var anonymizedAt: Date?
     /// Abgehakte offene Punkte („zur Kenntnis genommen“, Schritt 96).
     public var acknowledgedItems: [AcknowledgedOpenItem]?
 

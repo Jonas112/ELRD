@@ -110,9 +110,13 @@ public struct LeadershipPerson: Hashable, Codable, Sendable, Identifiable {
     public var radioChannel: String
     /// Funktionen, für die die Person in Frage kommt (leer = alle).
     public var roles: [LeadershipRole]
+    /// Telefon fürs Telefonbuch (Schritt 99); optional für ältere Einstellungen.
+    public var phone: String?
 
-    public init(id: UUID = UUID(), name: String, callsign: String = "", radioChannel: String = "", roles: [LeadershipRole] = []) {
+    public init(id: UUID = UUID(), name: String, callsign: String = "", radioChannel: String = "", roles: [LeadershipRole] = [], phone: String? = nil) {
         self.id = id
+        let trimmedPhone = phone?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.phone = (trimmedPhone?.isEmpty ?? true) ? nil : trimmedPhone
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.callsign = callsign.trimmingCharacters(in: .whitespacesAndNewlines)
         self.radioChannel = radioChannel.trimmingCharacters(in: .whitespacesAndNewlines)

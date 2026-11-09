@@ -93,7 +93,7 @@ struct MissionDetailsView: View {
                 }
             }
             .confirmationDialog("Einsatz beenden?", isPresented: $confirmsClose, titleVisibility: .visible) {
-                Button("Einsatz beenden", role: .destructive, action: closeMission)
+                Button(closingWarnings.isEmpty ? "Einsatz beenden" : "Trotzdem beenden", role: .destructive, action: closeMission)
             } message: {
                 Text(closeMessage)
             }
@@ -260,14 +260,17 @@ struct MissionDetailsView: View {
         }
     }
 
+    /// Schritt 104: Hinweise vor dem Beenden (beenden bleibt möglich).
+    private var closingWarnings: [String] {
+        let settings = appSettings?.settings ?? AppSettings()
+        return MissionClosingCheck.warnings(for: store.state, checklist: settings.checklist(for: store.state.mission.type))
+    }
+
     private var closeMessage: String {
-        let open = store.state.patients.active.filter { $0.status == .waiting || $0.status == .assigned }.count
         let hint = "Danach ist der Einsatz schreibgeschützt und kann wieder geöffnet werden."
-        switch open {
-        case 0: return hint
-        case 1: return "1 Patient ist noch nicht abtransportiert oder entlassen. \(hint)"
-        default: return "\(open) Patienten sind noch nicht abtransportiert oder entlassen. \(hint)"
-        }
+        let warnings = closingWarnings
+        guard !warnings.isEmpty else { return hint }
+        return "Noch offen:\n" + warnings.map { "• \($0)" }.joined(separator: "\n") + "\n\n" + hint
     }
 
     // MARK: Aktionen

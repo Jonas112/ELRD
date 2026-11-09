@@ -31,7 +31,7 @@ struct SituationOverview: View {
 
     /// Werkzeuge der Lage (Schritte 67, 71, 73, 75, 76).
     enum Tool: String, Identifiable {
-        case report, checklist, handover, hospitals, leadership
+        case report, checklist, handover, hospitals, leadership, phoneBook
         var id: String { rawValue }
     }
 
@@ -85,6 +85,7 @@ struct SituationOverview: View {
                 case .handover: HandoverSheet(store: store, people: people, template: settings.checklist(for: store.state.mission.type))
                 case .hospitals: HospitalQuotaSheet(store: store, hospitals: masterData?.hospitals ?? [])
                 case .leadership: LeadershipSheet(store: store)
+                case .phoneBook: PhoneBookSheet(store: store, settings: settings, hospitals: masterData?.hospitals ?? [])
                 }
             }
             .largeSheet()
@@ -104,6 +105,7 @@ struct SituationOverview: View {
                 toolButton("Führung", detail: leadershipDetail, symbol: "person.3.sequence", tool: .leadership)
                 toolButton("Kliniken", detail: hospitalDetail, symbol: "cross.case", tool: .hospitals)
                 toolButton("Übergabe", detail: "an die Ablösung", symbol: "arrow.left.arrow.right", tool: .handover)
+                toolButton("Telefonbuch", detail: "ILS, Kliniken, Führung", symbol: "phone", tool: .phoneBook)
             }
         }
     }

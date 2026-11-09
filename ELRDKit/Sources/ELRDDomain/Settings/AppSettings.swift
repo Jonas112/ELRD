@@ -38,6 +38,11 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var triageAlgorithm: TriageAlgorithm = .mstart
     /// Live Activity auf Sperrbildschirm und Dynamic Island (Schritt 90).
     public var showsLiveActivity: Bool = true
+    /// Eigene Telefonbuch-Einträge, z. B. ILS, Polizei (Schritt 99).
+    public var phoneBook: [PhoneEntry] = []
+    /// Beendete Einsätze nach … Tagen anonymisieren (Schritt 102); 0 = aus.
+    public var anonymizeAfterDays: Int = 0
+    public static let anonymizeChoices = [0, 30, 90, 180, 365]
 
     public init() {}
 
@@ -62,6 +67,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         // Unbekannter Wert (neuere App-Version) → Standard statt Lesefehler.
         triageAlgorithm = (try? container.decodeIfPresent(TriageAlgorithm.self, forKey: .triageAlgorithm)) ?? defaults.triageAlgorithm
         showsLiveActivity = try container.decodeIfPresent(Bool.self, forKey: .showsLiveActivity) ?? defaults.showsLiveActivity
+        phoneBook = try container.decodeIfPresent([PhoneEntry].self, forKey: .phoneBook) ?? []
+        anonymizeAfterDays = try container.decodeIfPresent(Int.self, forKey: .anonymizeAfterDays) ?? 0
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).
@@ -161,3 +168,22 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
     public static let choices = [0, 10, 15, 20, 30, 45, 60]
 }
 
+/// Eintrag im Telefonbuch (Schritt 99).
+public struct PhoneEntry: Codable, Hashable, Sendable, Identifiable {
+    public var id: UUID
+    public var name: String
+    public var number: String
+
+    public init(id: UUID = UUID(), name: String, number: String) {
+        self.id = id
+        self.name = name
+        self.number = number
+    }
+
+    /// `tel:`-Adresse (nur Ziffern und +), `nil` ohne Nummer.
+    public static func telURL(_ number: String) -> URL? {
+        let digits = number.filter { $0.isNumber || $0 == "+" }
+        guard digits.count >= 3 else { return nil }
+        return URL(string: "tel:\(digits)")
+    }
+}

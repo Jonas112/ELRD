@@ -29,6 +29,11 @@ struct MissionListView: View {
     @State private var importNotice: String?
     @State private var showsNearby = false
     @State private var showsJoin = false
+    /// Schritte 100, 101.
+    @State private var showsStatistics = AppLaunchOptions.current.demoScreen == .statistics
+    @State private var showsPersonSearch = false
+    /// Schritt 102.
+    @State private var pendingAnonymize: MissionSummary?
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @AppStorage("missionList.showsAllYears") private var showsAllYears = false
@@ -86,6 +91,17 @@ struct MissionListView: View {
                     .accessibilityLabel("Einsatz übernehmen")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("Statistik", systemImage: "chart.bar") { showsStatistics = true }
+                        Button("Personensuche (alle Einsätze)", systemImage: "person.text.rectangle") { showsPersonSearch = true }
+                    } label: {
+                        Image(systemName: "chart.bar.doc.horizontal")
+                            .font(.title3.weight(.semibold))
+                            .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
+                    }
+                    .accessibilityLabel("Statistik und Personensuche")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     Button { showsSettings = true } label: {
                         Image(systemName: "gearshape")
                             .font(.title3.weight(.semibold))
@@ -129,6 +145,30 @@ struct MissionListView: View {
         // Schritt 63: Einsatz als Datei teilen, öffnen, endgültig löschen.
         .sheet(item: $exportURL) { file in
             ActivityView(items: [file.url])
+        }
+        .confirmationDialog(
+            "Personendaten entfernen?",
+            isPresented: Binding(get: { pendingAnonymize != nil }, set: { if !$0 { pendingAnonymize = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingAnonymize
+        ) { summary in
+            Button("Namen und Personendaten entfernen", role: .destructive) {
+                do { try model.anonymize(summary.id) } catch { actionError = ErrorText.message(for: error) }
+            }
+        } message: { _ in
+            Text("Namen, Geburtsdaten, Merkmale und Freitext der Patienten werden gelöscht – auch bei allen, die den Einsatz teilen. Sichtung, Verletzungen, Verbleib und Zeiten bleiben. Lässt sich nicht rückgängig machen.")
+        }
+        .task(id: appSettings?.settings.anonymizeAfterDays ?? 0) {
+            model.anonymizeDue(afterDays: appSettings?.settings.anonymizeAfterDays ?? 0)
+        }
+        .sheet(isPresented: $showsStatistics) {
+            StatisticsSheet(model: model).largeSheet()
+        }
+        .sheet(isPresented: $showsPersonSearch) {
+            PersonSearchSheet(model: model) { mission in
+                do { onOpen(try model.open(mission)) } catch { actionError = ErrorText.message(for: error) }
+            }
+            .largeSheet()
         }
         .sheet(isPresented: $showsNearby) {
             NearbySyncView(session: makeNearbySession())
@@ -330,6 +370,9 @@ struct MissionListView: View {
                         FinishedMissionRow(summary: summary, now: model.now) { open(summary.id) }
                             .contextMenu {
                                 Button("Als Datei teilen …", systemImage: "square.and.arrow.up") { exportArchive(summary) }
+                                if model.canCreate, !summary.isAnonymized {
+                                    Button("Personendaten entfernen …", systemImage: "person.crop.circle.badge.xmark") { pendingAnonymize = summary }
+                                }
                                 if model.canCreate {
                                     Button("Löschen …", systemImage: "trash", role: .destructive) { pendingDelete = summary }
                                 }

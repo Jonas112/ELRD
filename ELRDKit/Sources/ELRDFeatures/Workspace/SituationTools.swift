@@ -364,9 +364,12 @@ struct HospitalQuotaSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var newName = ""
     @State private var errorMessage: String?
+    /// Klinik-Voranmeldung (Schritt 98).
+    @State private var preannouncement: HospitalPreannouncement?
 
     var body: some View {
         let loads = HospitalDistribution.loads(store.state)
+        let announcements = HospitalPreannouncement.all(mission: store.state.mission, patients: store.state.patients, units: store.state.units)
         NavigationStack {
             List {
                 if loads.isEmpty {
@@ -377,6 +380,14 @@ struct HospitalQuotaSheet: View {
                     Section {
                         ForEach([Sichtungskategorie.sk1, .sk2, .sk3], id: \.self) { triage in
                             quotaRow(load, triage: triage)
+                        }
+                        if let announcement = announcements.first(where: { $0.id == HospitalQuota.key(load.name) }) {
+                            Button {
+                                preannouncement = announcement
+                            } label: {
+                                Label("Voranmeldung (\(announcement.patientCount) Patienten)", systemImage: "paperplane")
+                                    .frame(minHeight: TouchTarget.minimum)
+                            }
                         }
                         if let quota = load.quota, load.total == 0 {
                             Button("Aus der Liste entfernen", role: .destructive) {
@@ -426,6 +437,16 @@ struct HospitalQuotaSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.fontWeight(.bold) }
             }
+        .sheet(item: $preannouncement) { announcement in
+            ShareTextSheet(
+                title: "Voranmeldung",
+                text: announcement.text,
+                email: announcement.email ?? hospitals.first { HospitalQuota.key($0.name) == announcement.id }?.email,
+                subject: "Voranmeldung \(announcement.hospitalName)",
+                footnote: "Ohne Patientennamen. Per Mail nur, wenn für die Klinik eine Adresse hinterlegt ist."
+            )
+            .largeSheet()
+        }
         }
     }
 

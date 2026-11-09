@@ -414,6 +414,26 @@ struct MissionAidsSettingsView: View {
         let lists = settings.effectiveChecklists
         Form {
             Section {
+                Picker(selection: Binding(
+                    get: { settings.anonymizeAfterDays },
+                    set: { value in save { $0.anonymizeAfterDays = value } }
+                )) {
+                    ForEach(AppSettings.anonymizeChoices, id: \.self) { days in
+                        Text(days == 0 ? "Aus" : "nach \(days) Tagen").tag(days)
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Personendaten automatisch entfernen").font(.headline)
+                        Text("Bei beendeten Einsätzen: Namen, Geburtsdatum, Merkmale, Freitext.").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+            } header: {
+                Text("Datenschutz")
+            } footer: {
+                Text("Sichtung, Verletzungen, Verbleib und Zeiten bleiben für Bericht und Statistik. Gilt auch für geteilte Einsätze. Einzelne Einsätze: in der Einsatzliste lange drücken › „Personendaten entfernen“.")
+            }
+            Section {
                 ForEach(OpenItem.Kind.allCases, id: \.key) { kind in
                     Toggle(kind.settingsTitle, isOn: Binding(
                         get: { !settings.reminders.hiddenOpenItemKinds.contains(kind.key) },
@@ -745,10 +765,32 @@ struct LeadershipPeopleSettingsView: View {
             } footer: {
                 Text("In „Führung und Kräfte“ lassen sich diese Personen per Tipp übernehmen; Freitext bleibt möglich.")
             }
+            // Schritt 99: weitere Nummern fürs Telefonbuch.
+            Section {
+                ForEach(store?.settings.phoneBook ?? []) { entry in
+                    PhoneEntryRow(entry: entry) { updated in
+                        save { settings in
+                            guard let index = settings.phoneBook.firstIndex(where: { $0.id == updated.id }) else { return }
+                            settings.phoneBook[index] = updated
+                        }
+                    }
+                }
+                .onDelete { offsets in save { $0.phoneBook.remove(atOffsets: offsets) } }
+                Button {
+                    save { $0.phoneBook.append(PhoneEntry(name: "", number: "")) }
+                } label: {
+                    Label("Nummer hinzufügen", systemImage: "plus")
+                }
+            } header: {
+                Text("Telefonbuch")
+            } footer: {
+                Text("Z. B. ILS, Polizei, Feuerwehr-Einsatzleitung. Im Einsatz unter „Lage › Telefonbuch“ zusammen mit Führungspersonal und Kliniken aus den Stammdaten.")
+            }
         }
         .navigationTitle("Führungspersonal")
         .settingsError($errorMessage)
     }
+
 
     private func detail(_ person: LeadershipPerson) -> String {
         let roles = person.roles.isEmpty ? "alle Funktionen" : person.roles.map(\.shortName).joined(separator: ", ")
@@ -774,6 +816,9 @@ struct LeadershipPersonEditor: View {
                     TextField("Name", text: binding.name).frame(minHeight: TouchTarget.minimum)
                     TextField("Funkrufname", text: binding.callsign).frame(minHeight: TouchTarget.minimum)
                     TextField("Funkkanal (z. B. TMO 312)", text: binding.radioChannel).frame(minHeight: TouchTarget.minimum)
+                    TextField("Telefon", text: Binding(get: { binding.wrappedValue.phone ?? "" }, set: { binding.wrappedValue.phone = $0 }))
+                        .keyboardType(.phonePad)
+                        .frame(minHeight: TouchTarget.minimum)
                 }
                 Section {
                     ForEach(LeadershipRole.allCases) { role in
@@ -803,7 +848,7 @@ struct LeadershipPersonEditor: View {
 
     private func commit() {
         guard let draft else { return }
-        let cleaned = LeadershipPerson(id: draft.id, name: draft.name, callsign: draft.callsign, radioChannel: draft.radioChannel, roles: draft.roles)
+        let cleaned = LeadershipPerson(id: draft.id, name: draft.name, callsign: draft.callsign, radioChannel: draft.radioChannel, roles: draft.roles, phone: draft.phone)
         do {
             try store?.update { settings in
                 guard let index = settings.leadershipPeople.firstIndex(where: { $0.id == cleaned.id }) else { return }
@@ -815,3 +860,41 @@ struct LeadershipPersonEditor: View {
     }
 }
 
+
+/// Name und Nummer eines Telefonbuch-Eintrags, gespeichert beim Verlassen des Felds.
+private struct PhoneEntryRow: View {
+    let entry: PhoneEntry
+    let onChange: (PhoneEntry) -> Void
+    @State private var name: String
+    @State private var number: String
+
+    init(entry: PhoneEntry, onChange: @escaping (PhoneEntry) -> Void) {
+        self.entry = entry
+        self.onChange = onChange
+        _name = State(initialValue: entry.name)
+        _number = State(initialValue: entry.number)
+    }
+
+    var body: some View {
+        HStack {
+            TextField("Name (z. B. ILS)", text: $name)
+                .onSubmit(commit)
+            TextField("Nummer", text: $number)
+                .keyboardType(.phonePad)
+                .multilineTextAlignment(.trailing)
+                .onSubmit(commit)
+        }
+        .frame(minHeight: TouchTarget.minimum)
+        .onDisappear(perform: commit)
+        .onChange(of: name) { commit() }
+        .onChange(of: number) { commit() }
+    }
+
+    private func commit() {
+        guard name != entry.name || number != entry.number else { return }
+        var updated = entry
+        updated.name = name
+        updated.number = number
+        onChange(updated)
+    }
+}

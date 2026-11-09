@@ -183,7 +183,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 102 | Datenschutz: automatische Anonymisierung abgeschlossener Einsätze nach Frist (Standard aus) | ✅ |
 | 103 | ~~Behandlungsplätze~~ – entfällt (Jonas) | ➖ |
 | 104 | Einsatzende-Prüfung: warnt (offene Patienten, gebundene Fahrzeuge, kein Bericht), Beenden bleibt möglich | ✅ |
-| 105 | Neue offene Punkte: lokale Mitteilung mit Ton (auch bei offener App), Liste unter „Benachrichtigungen“ (Glocke) | 🧪 |
+| 105 | Neue offene Punkte: lokale Mitteilung mit Ton (auch bei offener App), Liste unter „Benachrichtigungen“ (Glocke) | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

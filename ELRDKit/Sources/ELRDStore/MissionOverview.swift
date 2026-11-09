@@ -190,6 +190,7 @@ public struct PersonSearchHit: Identifiable, Equatable, Sendable {
     public let whereabouts: PatientWhereabouts
 }
 
+@MainActor
 public enum PersonSearch {
     /// Sucht in allen (nicht gelöschten) Einsätzen nach Name, Nummer, Karte, Merkmalen;
     /// neueste Einsätze zuerst. Leere Suche → keine Treffer.

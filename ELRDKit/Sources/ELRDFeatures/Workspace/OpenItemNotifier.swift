@@ -33,10 +33,13 @@ enum OpenItemAlerts {
     static func upcoming(for state: MissionState, now: Date, reminders: ReminderSettings) -> [ScheduledReminder] {
         guard !state.mission.isClosed else { return [] }
         let missionKey = state.mission.id.rawValue.uuidString
+        // Ausgeblendete Arten (Schritt 96) auch nicht vorplanen.
+        let hidden = Set(reminders.hiddenOpenItemKinds)
+        func shows(_ kind: OpenItem.Kind) -> Bool { !hidden.contains(kind.key) }
         let title = state.mission.isExerciseMission ? "ELRD – ÜBUNG \(state.mission.displayNumber())" : "ELRD – Einsatz \(state.mission.displayNumber())"
         var result: [ScheduledReminder] = []
 
-        if reminders.situationReportMinutes > 0 {
+        if reminders.situationReportMinutes > 0, shows(.situationReportDue) {
             let last = state.lastSituationReportAt ?? state.mission.startedAt
             let due = last.addingTimeInterval(Double(reminders.situationReportMinutes) * 60)
             if due > now {
@@ -47,7 +50,8 @@ enum OpenItemAlerts {
         if reminders.transportWaitMinutes > 0 {
             for patient in state.patients.active where patient.outcome == nil
                 && [.sk1, .sk2, .sk3].contains(patient.triage)
-                && !patient.hasTransportUnit(in: state.units) {
+                && !patient.hasTransportUnit(in: state.units)
+                && shows(patient.triage == .sk1 ? .criticalWithoutTransport : patient.triage == .sk2 ? .urgentWithoutTransport : .longWait) {
                 let due = patient.metadata.createdAt.addingTimeInterval(Double(reminders.transportWaitMinutes) * 60)
                 guard due > now else { continue }
                 result.append(ScheduledReminder(
@@ -58,7 +62,7 @@ enum OpenItemAlerts {
             }
         }
         // Schritt 95: Nachsichtung.
-        for patient in state.patients.active where patient.outcome == nil {
+        for patient in state.patients.active where patient.outcome == nil && shows(.retriageDue) {
             let limit = reminders.retriageMinutes(for: patient.triage)
             guard limit > 0, let last = patient.lastTriagedAt else { continue }
             let due = last.addingTimeInterval(Double(limit) * 60)
@@ -70,7 +74,7 @@ enum OpenItemAlerts {
             ))
         }
         // Schritt 92: zur erwarteten Zeit nachfragen.
-        for unit in state.activeUnits where unit.isAwaitingArrival {
+        for unit in state.activeUnits where unit.isAwaitingArrival && shows(.arrivalOverdue) {
             guard let due = unit.expectedArrival, due > now else { continue }
             result.append(ScheduledReminder(
                 id: "\(missionKey).arrival.\(unit.id.rawValue.uuidString)", date: due, title: title,
@@ -78,7 +82,7 @@ enum OpenItemAlerts {
                 target: .section(.organisation)
             ))
         }
-        if reminders.placeholderMinutes > 0 {
+        if reminders.placeholderMinutes > 0, shows(.placeholderOverdue) {
             for unit in state.activeUnits where unit.isPlaceholder && !unit.isAwaitingArrival {
                 let due = unit.metadata.createdAt.addingTimeInterval(Double(reminders.placeholderMinutes) * 60)
                 guard due > now else { continue }

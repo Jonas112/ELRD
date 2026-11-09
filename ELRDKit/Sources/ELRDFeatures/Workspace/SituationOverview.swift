@@ -47,7 +47,7 @@ struct SituationOverview: View {
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .top, spacing: Spacing.xl) {
                             VStack(spacing: Spacing.xl) {
-                                openItemsCard(items)
+                                openItemsCard(items, now: context.date)
                                 DemandCard(store: store)
                                 hospitalCard(dashboard)
                             }
@@ -61,7 +61,7 @@ struct SituationOverview: View {
                             .frame(minWidth: 340, maxWidth: 460)
                         }
                         VStack(spacing: Spacing.l) {
-                            openItemsCard(items)
+                            openItemsCard(items, now: context.date)
                             triageCard(dashboard)
                             DemandCard(store: store)
                             statusCard
@@ -150,7 +150,7 @@ struct SituationOverview: View {
 
     // MARK: Offene Punkte
 
-    private func openItemsCard(_ items: [OpenItem]) -> some View {
+    private func openItemsCard(_ items: [OpenItem], now: Date) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Offene Punkte").font(.title2.weight(.bold))
@@ -172,12 +172,36 @@ struct SituationOverview: View {
             } else {
                 ForEach(items) { item in
                     Divider()
-                    OpenItemRow(item: item) { handle(item.target) }
+                    OpenItemRow(item: item, onAcknowledge: store.state.mission.isClosed ? nil : { acknowledge(item) }) { handle(item.target) }
                 }
+            }
+            // Schritt 96: abgehakte Punkte wieder anzeigen.
+            let acknowledged = OpenItem.acknowledgedItems(for: store.state, now: now, reminders: settings.reminders)
+            if !acknowledged.isEmpty {
+                Divider()
+                Button {
+                    do { try store.perform(RestoreOpenItems()) } catch { journalError = ErrorText.message(for: error) }
+                } label: {
+                    Label(acknowledged.count == 1 ? "1 abgehakter Punkt – wieder anzeigen" : "\(acknowledged.count) abgehakte Punkte – wieder anzeigen",
+                          systemImage: "arrow.uturn.backward.circle")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum, alignment: .leading)
+                        .padding(.horizontal, Spacing.xl)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+
+    private func acknowledge(_ item: OpenItem) {
+        do {
+            try store.perform(AcknowledgeOpenItem(itemID: item.id, description: item.protocolDescription(in: store.state)))
+        } catch {
+            journalError = ErrorText.message(for: error)
+        }
     }
 
     // MARK: Sichtung
@@ -220,22 +244,6 @@ struct SituationOverview: View {
                     GridRow {
                         countTile(dashboard.placeholders, dashboard.placeholders == 1 ? "Platzhalter ohne Fahrzeug" : "Platzhalter ohne Fahrzeug", target: .organisation)
                             .gridCellColumns(2)
-                    }
-                }
-            }
-            // Schritt 96: Fahrzeuge nach Status.
-            let byStatus = UnitStatusSummary(units: store.state.activeUnits)
-            if !byStatus.entries.isEmpty {
-                HStack(spacing: Spacing.s) {
-                    ForEach(byStatus.entries, id: \.status) { entry in
-                        VStack(spacing: 0) {
-                            Text("\(entry.count)").font(.title3.weight(.heavy).monospacedDigit())
-                            Text(entry.status.shortName).font(.caption.weight(.bold))
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 52)
-                        .background(Surface.canvas, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("\(entry.count) \(entry.status.displayName)")
                     }
                 }
             }
@@ -440,6 +448,8 @@ struct SituationOverview: View {
 /// Zeile „Offene Punkte“: Kennzeichen, Text, Knopf.
 struct OpenItemRow: View {
     let item: OpenItem
+    /// „Zur Kenntnis genommen“ (Schritt 96); `nil` = kein Abhaken.
+    var onAcknowledge: (() -> Void)? = nil
     let action: () -> Void
 
     var body: some View {
@@ -458,6 +468,7 @@ struct OpenItemRow: View {
                 // Idealbreite fest, damit die Wahl nicht von der Textlänge abhängt.
                 .frame(minWidth: 160, idealWidth: 220, maxWidth: .infinity, alignment: .leading)
             actionButton
+            acknowledgeButton
         }
         .padding(.horizontal, Spacing.xl)
         .padding(.vertical, Spacing.s)
@@ -469,7 +480,10 @@ struct OpenItemRow: View {
                 .frame(width: 52, height: 40)
             VStack(alignment: .leading, spacing: Spacing.s) {
                 texts(titleLines: 3)
-                actionButton
+                HStack(spacing: Spacing.s) {
+                    actionButton
+                    acknowledgeButton
+                }
             }
             Spacer(minLength: 0)
         }
@@ -486,6 +500,19 @@ struct OpenItemRow: View {
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
+        }
+    }
+
+    @ViewBuilder private var acknowledgeButton: some View {
+        if let onAcknowledge {
+            Button(action: onAcknowledge) {
+                Image(systemName: "checkmark.circle")
+                    .font(.title2)
+                    .frame(width: TouchTarget.minimum, height: TouchTarget.minimum)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("Zur Kenntnis genommen")
         }
     }
 

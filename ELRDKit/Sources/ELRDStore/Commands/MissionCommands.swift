@@ -278,10 +278,6 @@ public struct StartTransport: MissionCommand {
         }
         let now = draft.context.now
         try draft.update(Patient.self, id: patientID) { $0.startTransport(at: now) }
-        // Schritt 96: Transportmittel automatisch auf Status 7 „Patient aufgenommen“.
-        for unit in assigned where unit.type.transportsPatients && unit.status != .patientOnBoard && unit.status != .atDestination {
-            try SetUnitStatus(unitID: unit.id, status: .patientOnBoard).execute(&draft)
-        }
         let units = patient.unitIDs.compactMap { draft.get(MissionUnit.self, id: $0)?.displayName }.joined(separator: ", ")
         let target = patient.destination.map { " nach \($0.name)" } ?? ""
         draft.log(.patient, "Patient \(patient.number): Transport mit \(units)\(target)", subject: .patient(patientID))

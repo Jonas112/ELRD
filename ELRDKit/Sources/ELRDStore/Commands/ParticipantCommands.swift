@@ -119,6 +119,9 @@ enum AccessPolicy {
             var newRest = change.new
             oldRest.participants = old.participants?.filter { $0.id != userID.rawValue }
             newRest.participants = change.new.participants?.filter { $0.id != userID.rawValue }
+            // Offene Punkte abhaken darf jeder (Schritt 96).
+            oldRest.acknowledgedItems = nil
+            newRest.acknowledgedItems = nil
             newRest.metadata = oldRest.metadata
             if (oldRest.participants ?? []).isEmpty { oldRest.participants = nil }
             if (newRest.participants ?? []).isEmpty { newRest.participants = nil }
@@ -133,5 +136,39 @@ enum AccessPolicy {
         case .readOnly: .invalid("Sie haben in diesem Einsatz nur Leserechte. Die Einsatzleitung kann das ändern.")
         default: .invalid("Sie dürfen nur Ihren eigenen Abschnitt bearbeiten. Die Einsatzleitung kann das ändern.")
         }
+    }
+}
+
+// MARK: - Offene Punkte abhaken (Schritt 96)
+
+/// Offenen Punkt als „zur Kenntnis genommen“ abhaken. `description` steht im
+/// Protokoll (ohne Patientennamen, z. B. „Nachsichtung fällig – Patient A-3“).
+public struct AcknowledgeOpenItem: MissionCommand {
+    public let itemID: String
+    public let description: String
+
+    public init(itemID: String, description: String) {
+        self.itemID = itemID
+        self.description = description
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard !(draft.mission.acknowledgedItems ?? []).contains(where: { $0.id == itemID }) else { return }
+        let entry = AcknowledgedOpenItem(id: itemID, at: draft.context.now, by: draft.context.session.displayName)
+        try draft.updateMission { mission in
+            mission.acknowledgedItems = (mission.acknowledgedItems ?? []) + [entry]
+        }
+        draft.log(.mission, "Offener Punkt zur Kenntnis genommen: \(description)", subject: .mission(draft.missionID))
+    }
+}
+
+/// Abgehakte Punkte wieder anzeigen.
+public struct RestoreOpenItems: MissionCommand {
+    public init() {}
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard !(draft.mission.acknowledgedItems ?? []).isEmpty else { return }
+        try draft.updateMission { $0.acknowledgedItems = nil }
+        draft.log(.mission, "Abgehakte offene Punkte wieder angezeigt", subject: .mission(draft.missionID))
     }
 }

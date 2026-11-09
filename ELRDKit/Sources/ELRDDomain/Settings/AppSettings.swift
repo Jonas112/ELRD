@@ -127,6 +127,8 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
     /// Nachsichtung fällig nach … (Schritt 95), 0 = aus.
     public var retriageMinutesSK2: Int = 30
     public var retriageMinutesSK3: Int = 60
+    /// Arten offener Punkte, die nicht angezeigt werden (Schlüssel, Schritt 96).
+    public var hiddenOpenItemKinds: [String] = []
 
     /// Nachsichtungsfrist einer Kategorie (nur SK 2 und SK 3).
     public func retriageMinutes(for triage: Sichtungskategorie) -> Int {
@@ -152,6 +154,7 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
         notifiesWhenLocked = try container.decodeIfPresent(Bool.self, forKey: .notifiesWhenLocked) ?? defaults.notifiesWhenLocked
         retriageMinutesSK2 = try container.decodeIfPresent(Int.self, forKey: .retriageMinutesSK2) ?? defaults.retriageMinutesSK2
         retriageMinutesSK3 = try container.decodeIfPresent(Int.self, forKey: .retriageMinutesSK3) ?? defaults.retriageMinutesSK3
+        hiddenOpenItemKinds = try container.decodeIfPresent([String].self, forKey: .hiddenOpenItemKinds) ?? []
     }
 
     /// Auswahl in den Einstellungen.

@@ -414,6 +414,25 @@ struct MissionAidsSettingsView: View {
         let lists = settings.effectiveChecklists
         Form {
             Section {
+                ForEach(OpenItem.Kind.allCases, id: \.key) { kind in
+                    Toggle(kind.settingsTitle, isOn: Binding(
+                        get: { !settings.reminders.hiddenOpenItemKinds.contains(kind.key) },
+                        set: { shown in
+                            save { settings in
+                                var hidden = Set(settings.reminders.hiddenOpenItemKinds)
+                                if shown { hidden.remove(kind.key) } else { hidden.insert(kind.key) }
+                                settings.reminders.hiddenOpenItemKinds = hidden.sorted()
+                            }
+                        }
+                    ))
+                    .frame(minHeight: TouchTarget.minimum)
+                }
+            } header: {
+                Text("Offene Punkte")
+            } footer: {
+                Text("Ausgeschaltete Arten erscheinen weder in der Lage noch als Hinweis oder Mitteilung. Einzelne Punkte lassen sich in der Lage mit ✓ als „zur Kenntnis genommen“ abhaken.")
+            }
+            Section {
                 Picker(selection: Binding(
                     get: { settings.triageAlgorithm },
                     set: { value in save { $0.triageAlgorithm = value } }

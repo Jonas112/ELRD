@@ -147,13 +147,49 @@ struct OpenItemAlertTests {
     @Test func retriageBecomesDueAndConfirmResets() throws {
         let store = try PreviewData.makeStore(now: now)
         let sk2 = try #require(store.state.activePatients.first { $0.triage == .sk2 })
-        #expect(!OpenItem.items(for: store.state, now: now.addingTimeInterval(29 * 60)).contains { $0.id == "retriage-\(sk2.id.rawValue.uuidString)" })
+        #expect(!OpenItem.items(for: store.state, now: now.addingTimeInterval(29 * 60)).contains { $0.id.hasPrefix("retriage-\(sk2.id.rawValue.uuidString)") })
         let due = OpenItem.items(for: store.state, now: now.addingTimeInterval(31 * 60))
-        let item = try #require(due.first { $0.id == "retriage-\(sk2.id.rawValue.uuidString)" })
+        let item = try #require(due.first { $0.id.hasPrefix("retriage-\(sk2.id.rawValue.uuidString)") })
         #expect(item.kind == .retriageDue)
         #expect(item.detail.contains("SK 2"))
         var off = ReminderSettings()
         off.retriageMinutesSK2 = 0
         #expect(!OpenItem.items(for: store.state, now: now.addingTimeInterval(31 * 60), reminders: off).contains { $0.kind == .retriageDue && $0.triage == .sk2 })
+    }
+
+    // MARK: 96 Offene Punkte einstellbar und abhakbar
+
+    @Test func openItemsCanBeHiddenAndAcknowledged() throws {
+        let store = try PreviewData.makeStore(now: now)
+        let items = OpenItem.items(for: store.state, now: now)
+        let first = try #require(items.first)
+
+        var reminders = ReminderSettings()
+        reminders.hiddenOpenItemKinds = [first.kind.key]
+        #expect(!OpenItem.items(for: store.state, now: now, reminders: reminders).contains { $0.kind == first.kind })
+
+        try store.perform(AcknowledgeOpenItem(itemID: first.id, description: first.protocolDescription(in: store.state)))
+        #expect(!OpenItem.items(for: store.state, now: now).contains { $0.id == first.id })
+        #expect(OpenItem.acknowledgedItems(for: store.state, now: now).map(\.id) == [first.id])
+        #expect(store.state.visibleLog.last?.message.hasPrefix("Offener Punkt zur Kenntnis genommen") == true)
+        #expect(store.state.visibleLog.last?.message.contains("Mustermann") == false, "keine Namen im Protokoll")
+
+        try store.perform(RestoreOpenItems())
+        #expect(OpenItem.items(for: store.state, now: now).contains { $0.id == first.id })
+    }
+
+    @Test func acknowledgedSituationReportReturnsNextCycle() throws {
+        let store = try PreviewData.makeStore(now: now)
+        let due = try #require(OpenItem.items(for: store.state, now: now.addingTimeInterval(31 * 60)).first { $0.kind == .situationReportDue })
+        try store.perform(AcknowledgeOpenItem(itemID: due.id, description: "Lagemeldung"))
+        #expect(!OpenItem.items(for: store.state, now: now.addingTimeInterval(31 * 60)).contains { $0.kind == .situationReportDue })
+        // Neue Lagemeldung → neuer Takt → neuer Punkt.
+        try store.perform(AddSituationReport(text: "Lage", situationNote: nil, hazards: nil))
+        let later = store.state.lastSituationReportAt ?? now
+        #expect(OpenItem.items(for: store.state, now: later.addingTimeInterval(31 * 60)).contains { $0.kind == .situationReportDue })
+    }
+
+    @Test func kindKeysAreUnique() {
+        #expect(Set(OpenItem.Kind.allCases.map(\.key)).count == OpenItem.Kind.allCases.count)
     }
 }

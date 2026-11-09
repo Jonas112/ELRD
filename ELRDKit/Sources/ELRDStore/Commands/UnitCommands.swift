@@ -201,34 +201,23 @@ public struct ReplacePlaceholder: MissionCommand {
     }
 }
 
-// MARK: - Status und Eintreffen (Schritte 91, 92)
+// MARK: - Eintreffen (Schritt 92)
 
-/// Setzt den FMS-Status einer Einheit (`nil` = unbekannt). Status 4 erledigt ein
-/// erwartetes Eintreffen.
-public struct SetUnitStatus: MissionCommand {
+/// Einheit ist eingetroffen: erwartetes Eintreffen erledigt (Schritt 92).
+public struct MarkUnitArrived: MissionCommand {
     public let unitID: UnitID
-    public let status: UnitStatus?
 
-    public init(unitID: UnitID, status: UnitStatus?) {
+    public init(unitID: UnitID) {
         self.unitID = unitID
-        self.status = status
     }
 
     public func execute(_ draft: inout MissionDraft) throws {
         guard let unit = draft.get(MissionUnit.self, id: unitID), !unit.metadata.isDeleted else {
             throw CommandError.notFound(.unit)
         }
-        guard unit.statusCode != status?.rawValue else { return }
-        let code = status?.rawValue
-        let now = draft.context.now
-        let arrived = status?.hasArrived == true
-        try draft.update(MissionUnit.self, id: unitID) {
-            $0.statusCode = code
-            $0.statusChangedAt = code == nil ? nil : now
-            if arrived { $0.expectedArrival = nil }
-        }
-        let text = status.map { "\($0.shortName) – \($0.displayName)" } ?? "Status gelöscht"
-        draft.log(.unit, "\(unit.displayName): \(text)", subject: .unit(unitID))
+        guard unit.expectedArrival != nil else { return }
+        try draft.update(MissionUnit.self, id: unitID) { $0.expectedArrival = nil }
+        draft.log(.unit, "\(unit.displayName) eingetroffen", subject: .unit(unitID))
     }
 }
 

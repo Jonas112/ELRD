@@ -29,6 +29,48 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         case unreadMessages
 
         public static func < (lhs: Kind, rhs: Kind) -> Bool { lhs.rawValue < rhs.rawValue }
+
+        /// Stabiler Schlüssel für Einstellungen und Kennungen (unabhängig von der Reihenfolge).
+        public var key: String {
+            switch self {
+            case .criticalWithoutTransport: "criticalWithoutTransport"
+            case .criticalNotRegistered: "criticalNotRegistered"
+            case .situationReportDue: "situationReportDue"
+            case .notTriaged: "notTriaged"
+            case .urgentWithoutTransport: "urgentWithoutTransport"
+            case .longWait: "longWait"
+            case .hospitalOverloaded: "hospitalOverloaded"
+            case .retriageDue: "retriageDue"
+            case .arrivalOverdue: "arrivalOverdue"
+            case .placeholderOverdue: "placeholderOverdue"
+            case .placeholderUnits: "placeholderUnits"
+            case .unreadMessages: "unreadMessages"
+            }
+        }
+
+        /// Bezeichnung in den Einstellungen (Schritt 96).
+        public var settingsTitle: String {
+            switch self {
+            case .criticalWithoutTransport: "SK 1 ohne Transportmittel"
+            case .criticalNotRegistered: "SK 1 nicht in der Klinik angemeldet"
+            case .situationReportDue: "Lagemeldung fällig"
+            case .notTriaged: "Patient noch ungesichtet"
+            case .urgentWithoutTransport: "SK 2 ohne Transportmittel"
+            case .longWait: "SK 3 wartet zu lange"
+            case .hospitalOverloaded: "Klinik über Kontingent"
+            case .retriageDue: "Nachsichtung fällig"
+            case .arrivalOverdue: "Eintreffen überfällig"
+            case .placeholderOverdue: "Platzhalter lange ohne Fahrzeug"
+            case .placeholderUnits: "Platzhalter ohne Fahrzeug"
+            case .unreadMessages: "Ungelesene Nachrichten"
+            }
+        }
+
+        public static let allCases: [Kind] = [
+            .criticalWithoutTransport, .criticalNotRegistered, .situationReportDue, .notTriaged,
+            .urgentWithoutTransport, .longWait, .hospitalOverloaded, .retriageDue, .arrivalOverdue,
+            .placeholderOverdue, .placeholderUnits, .unreadMessages,
+        ]
     }
 
     public enum Target: Equatable, Sendable {
@@ -49,7 +91,23 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
     public let actionTitle: String
     public let target: Target
 
+    /// Offene Punkte ohne ausgeblendete Arten (Einstellungen) und ohne abgehakte (Schritt 96).
     public static func items(for state: MissionState, now: Date, reminders: ReminderSettings = ReminderSettings()) -> [OpenItem] {
+        let hidden = Set(reminders.hiddenOpenItemKinds)
+        let acknowledged = Set((state.mission.acknowledgedItems ?? []).map(\.id))
+        return allItems(for: state, now: now, reminders: reminders)
+            .filter { !hidden.contains($0.kind.key) && !acknowledged.contains($0.id) }
+    }
+
+    /// Abgehakte Punkte, die sonst noch angezeigt würden.
+    public static func acknowledgedItems(for state: MissionState, now: Date, reminders: ReminderSettings = ReminderSettings()) -> [OpenItem] {
+        let hidden = Set(reminders.hiddenOpenItemKinds)
+        let acknowledged = Set((state.mission.acknowledgedItems ?? []).map(\.id))
+        return allItems(for: state, now: now, reminders: reminders)
+            .filter { !hidden.contains($0.kind.key) && acknowledged.contains($0.id) }
+    }
+
+    private static func allItems(for state: MissionState, now: Date, reminders: ReminderSettings) -> [OpenItem] {
         var items: [OpenItem] = []
         let patients = Patient.sortedByNumber(state.patients)
 
@@ -59,7 +117,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
             let since = minutes(since: last, now)
             if since >= reminders.situationReportMinutes {
                 items.append(OpenItem(
-                    id: "situationReport",
+                    id: state.lastSituationReportAt.map { "situationReport-\(Int($0.timeIntervalSince1970))" } ?? "situationReport-start",
                     kind: .situationReportDue,
                     triage: nil,
                     title: "Lagemeldung an ILS fällig",
@@ -104,7 +162,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
                 "\(triage.shortName) \(load.counts[triage] ?? 0) von \(load.quota?.limit(for: triage) ?? 0)"
             }
             items.append(OpenItem(
-                id: "hospital-\(load.id)",
+                id: "hospital-\(load.id)-\(detail.joined(separator: ","))",
                 kind: .hospitalOverloaded,
                 triage: nil,
                 title: "\(load.name) über Kontingent",
@@ -122,7 +180,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
                 let since = minutes(since: last, now)
                 guard since >= limit else { continue }
                 items.append(OpenItem(
-                    id: "retriage-\(patient.id.rawValue.uuidString)",
+                    id: "retriage-\(patient.id.rawValue.uuidString)-\(Int(last.timeIntervalSince1970))",
                     kind: .retriageDue,
                     triage: patient.triage,
                     title: "\(patient.displayName) Nachsichtung fällig",
@@ -137,7 +195,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         for unit in state.activeUnits where unit.isArrivalOverdue(now: now) {
             guard let expected = unit.expectedArrival else { continue }
             items.append(OpenItem(
-                id: "arrival-\(unit.id.rawValue.uuidString)",
+                id: "arrival-\(unit.id.rawValue.uuidString)-\(Int(expected.timeIntervalSince1970))",
                 kind: .arrivalOverdue,
                 triage: nil,
                 title: "\(unit.displayName) noch nicht eingetroffen",
@@ -154,7 +212,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
             : []
         if let oldest = overdue.min(by: { $0.metadata.createdAt < $1.metadata.createdAt }) {
             items.append(OpenItem(
-                id: "placeholdersOverdue",
+                id: "placeholdersOverdue-\(overdue.count)",
                 kind: .placeholderOverdue,
                 triage: nil,
                 title: overdue.count == 1 ? "1 Platzhalter seit \(minutes(since: oldest.metadata.createdAt, now)) min ohne Fahrzeug" : "\(overdue.count) Platzhalter lange ohne Fahrzeug",
@@ -171,7 +229,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
                 .map { "\($0.value.count) \($0.key.shortName)" }
                 .joined(separator: ", ")
             items.append(OpenItem(
-                id: "placeholders",
+                id: "placeholders-\(recent.count)",
                 kind: .placeholderUnits,
                 triage: nil,
                 title: placeholders.count == 1 ? "1 Platzhalter ohne Fahrzeug" : "\(placeholders.count) Platzhalter ohne Fahrzeug",
@@ -184,7 +242,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         let unread = state.unreadMessageCount
         if unread > 0 {
             items.append(OpenItem(
-                id: "messages",
+                id: "messages-\(unread)",
                 kind: .unreadMessages,
                 triage: nil,
                 title: unread == 1 ? "1 Nachricht nicht gelesen" : "\(unread) Nachrichten nicht gelesen",
@@ -208,7 +266,7 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         _ action: String
     ) -> OpenItem {
         OpenItem(
-            id: "\(kind.rawValue)-\(patient.id.rawValue.uuidString)",
+            id: "\(kind.key)-\(patient.id.rawValue.uuidString)",
             kind: kind,
             triage: patient.triage,
             title: "\(patient.displayName) \(problem)",
@@ -227,3 +285,12 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
     }
 }
 
+public extension OpenItem {
+    /// Für das Protokoll: Art und ggf. Patientennummer, ohne Namen (Schritt 96).
+    func protocolDescription(in state: MissionState) -> String {
+        if case .patient(let id) = target, let patient = state.patients.first(where: { $0.id == id }) {
+            return "\(kind.settingsTitle) – Patient \(patient.number)"
+        }
+        return kind.settingsTitle
+    }
+}

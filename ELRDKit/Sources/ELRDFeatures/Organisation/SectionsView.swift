@@ -61,7 +61,7 @@ struct SectionsView: View {
                                     onDelete: { deleting = $0 },
                                     onRemoveUnit: { removing = $0 },
                                     onReplace: { replacing = $0 },
-                                    onStatus: { unit, status in perform(SetUnitStatus(unitID: unit, status: status)) },
+                                    onArrived: { unit in perform(MarkUnitArrived(unitID: unit)) },
                                     onArrival: { unit, minutes in perform(SetExpectedArrival(unitID: unit, minutes: minutes)) },
                                     onDrop: handleDrop
                                 )
@@ -270,8 +270,8 @@ struct SectionCard: View {
     let onDelete: (MissionSection) -> Void
     let onRemoveUnit: (MissionUnit) -> Void
     let onReplace: (MissionUnit) -> Void
-    /// Schritte 91, 92: Status und erwartetes Eintreffen.
-    var onStatus: (UnitID, UnitStatus?) -> Void = { _, _ in }
+    /// Schritt 92: erwartetes Eintreffen.
+    var onArrived: (UnitID) -> Void = { _ in }
     var onArrival: (UnitID, Int?) -> Void = { _, _ in }
     let onDrop: (DragPayload, DropTarget) -> Bool
 
@@ -417,22 +417,11 @@ struct SectionCard: View {
         Button("Abbrechen", role: .cancel) {}
     }
 
-    /// Status 1–8 und erwartetes Eintreffen (Schritte 91, 92).
+    /// Erwartetes Eintreffen (Schritt 92).
     private func statusMenu(_ unit: MissionUnit) -> some View {
         Menu {
-            Section("Status") {
-                ForEach(UnitStatus.allCases) { status in
-                    Button { onStatus(unit.id, status) } label: {
-                        if unit.status == status {
-                            Label("\(status.shortName) \(status.displayName)", systemImage: "checkmark")
-                        } else {
-                            Text("\(status.shortName) \(status.displayName)")
-                        }
-                    }
-                }
-                if unit.statusCode != nil {
-                    Button("Status löschen") { onStatus(unit.id, nil) }
-                }
+            if unit.expectedArrival != nil {
+                Button("Eingetroffen", systemImage: "checkmark.circle") { onArrived(unit.id) }
             }
             Section("Eintreffen erwartet") {
                 ForEach([5, 10, 15, 20, 30, 45, 60], id: \.self) { minutes in
@@ -443,9 +432,9 @@ struct SectionCard: View {
                 }
             }
         } label: {
-            UnitStatusBadge(unit: unit)
+            ArrivalBadge(unit: unit)
         }
-        .accessibilityLabel("Status und Eintreffen von \(unit.displayName)")
+        .accessibilityLabel("Eintreffen von \(unit.displayName)")
     }
 
     @ViewBuilder
@@ -512,7 +501,7 @@ struct UnitRowLabel: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.orange)
                 }
-                UnitStatusLine(unit: entry.unit)
+                ArrivalLine(unit: entry.unit)
                 if !entry.patients.isEmpty {
                     HStack(spacing: Spacing.xs) {
                         ForEach(entry.patients.prefix(4)) { badge in PatientBadgeView(badge: badge) }
@@ -606,47 +595,32 @@ struct UnitSearchField: View {
     }
 }
 
-/// Kleines Statusfeld (S 1–8) bzw. Uhr für erwartetes Eintreffen (Schritte 91, 92).
-struct UnitStatusBadge: View {
-    let unit: MissionUnit
-
-    var body: some View {
-        Text(text)
-            .font(.subheadline.weight(.heavy).monospacedDigit())
-            .foregroundStyle(foreground)
-            .frame(width: 52, height: 40)
-            .background(background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Surface.separator, lineWidth: unit.status == nil ? 1 : 0))
-    }
-
-    private var text: String {
-        if let status = unit.status { return status.shortName }
-        return unit.isPlaceholder ? "ETA" : "S –"
-    }
-
-    private var background: Color {
-        switch unit.status {
-        case .onScene?: .green
-        case .patientOnBoard?, .atDestination?: .blue
-        case .enRoute?: .orange
-        case .unavailable?: .gray
-        case .speakRequest?: .red
-        default: Surface.card
-        }
-    }
-
-    private var foreground: Color {
-        unit.status == nil ? .secondary : .white
-    }
-}
-
-/// Zeile unter dem Fahrzeugnamen: Status seit … bzw. erwartetes Eintreffen.
-struct UnitStatusLine: View {
+/// Kleines Feld mit erwarteter Ankunftszeit bzw. „ETA“ (Schritt 92).
+struct ArrivalBadge: View {
     let unit: MissionUnit
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
-            if let expected = unit.expectedArrival, unit.isAwaitingArrival {
+            let overdue = unit.isArrivalOverdue(now: context.date)
+            Text(unit.expectedArrival.map { $0.formatted(date: .omitted, time: .shortened) } ?? "ETA")
+                .font(.subheadline.weight(.heavy).monospacedDigit())
+                .foregroundStyle(unit.expectedArrival == nil ? Color.secondary : .white)
+                .frame(width: 56, height: 40)
+                .background(unit.expectedArrival == nil ? Surface.card : (overdue ? Color.red : Color.orange),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Surface.separator, lineWidth: unit.expectedArrival == nil ? 1 : 0))
+        }
+    }
+}
+
+/// Zeile unter dem Fahrzeugnamen: erwartetes Eintreffen.
+struct ArrivalLine: View {
+    let unit: MissionUnit
+
+    var body: some View {
+        if let expected = unit.expectedArrival {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
                 let overdue = unit.isArrivalOverdue(now: context.date)
                 let minutes = Int(abs(expected.timeIntervalSince(context.date)) / 60)
                 Label(
@@ -657,16 +631,7 @@ struct UnitStatusLine: View {
                 )
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(overdue ? Color.red : Color.orange)
-            } else if let status = unit.status {
-                Text(statusText(status))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             }
         }
-    }
-
-    private func statusText(_ status: UnitStatus) -> String {
-        guard let since = unit.statusChangedAt else { return status.displayName }
-        return "\(status.displayName) · seit \(since.formatted(date: .omitted, time: .shortened))"
     }
 }

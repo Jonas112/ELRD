@@ -327,40 +327,22 @@ struct AnalysisTests {
         }
     }
 
-    // MARK: 91 Fahrzeugstatus, 92 Eintreffen
+    // MARK: 92 Eintreffen
 
-    @Test func unitStatusIsLoggedAndClearsArrival() throws {
+    @Test func expectedArrivalAndArrived() throws {
         let store = try fixture.newMission()
         try store.perform(AddPlaceholder(type: .rtw))
         let placeholder = try #require(store.state.activeUnits.first { $0.isPlaceholder })
         try store.perform(SetExpectedArrival(unitID: placeholder.id, minutes: 10))
-        var unit = try #require(store.state.activeUnits.first { $0.id == placeholder.id })
+        let unit = try #require(store.state.activeUnits.first { $0.id == placeholder.id })
         #expect(unit.expectedArrival == fixture.clock.now.addingTimeInterval(600))
         #expect(unit.isAwaitingArrival)
         #expect(!unit.isArrivalOverdue(now: fixture.clock.now))
         #expect(unit.isArrivalOverdue(now: fixture.clock.now.addingTimeInterval(601)))
 
-        try store.perform(SetUnitStatus(unitID: placeholder.id, status: .onScene))
-        unit = try #require(store.state.activeUnits.first { $0.id == placeholder.id })
-        #expect(unit.status == .onScene)
-        #expect(unit.statusChangedAt == fixture.clock.now)
-        #expect(unit.expectedArrival == nil, "Status 4 erledigt das Eintreffen")
-        #expect(store.state.visibleLog.last?.message.contains("S 4 – Am Einsatzort") == true)
-
-        try store.perform(SetUnitStatus(unitID: placeholder.id, status: nil))
-        #expect(store.state.activeUnits.first { $0.id == placeholder.id }?.statusCode == nil)
-    }
-
-    @Test func realUnitAwaitsArrivalOnlyWhenEnRoute() throws {
-        let store = try fixture.newMission()
-        let rtw = try unit(store, "RK 1", .rtw)
-        try store.perform(SetExpectedArrival(unitID: rtw.id, minutes: 5))
-        var current = try #require(store.state.activeUnits.first { $0.id == rtw.id })
-        #expect(!current.isAwaitingArrival, "eingetragene Einheit ohne Status gilt als da")
-        try store.perform(SetUnitStatus(unitID: rtw.id, status: .enRoute))
-        current = try #require(store.state.activeUnits.first { $0.id == rtw.id })
-        #expect(current.isAwaitingArrival)
-        #expect(UnitStatus(rawValue: 9) == nil)
+        try store.perform(MarkUnitArrived(unitID: placeholder.id))
+        #expect(store.state.activeUnits.first { $0.id == placeholder.id }?.expectedArrival == nil)
+        #expect(store.state.visibleLog.last?.message.hasSuffix("eingetroffen") == true)
     }
 
     // MARK: 93 Verbleibsliste
@@ -415,23 +397,5 @@ struct AnalysisTests {
         for answer in [true, true, true, true, false, false, false] { session.answer(answer) }
         try store.perform(ApplyTriageSuggestion(patientID: patient.id, suggestion: try #require(session.suggestion)))
         #expect(store.state.patients.first { $0.id == patient.id }?.lastTriagedAt == fixture.clock.now)
-    }
-
-    // MARK: 96 Status automatisch
-
-    @Test func transportSetsStatusSevenAndSummaryCounts() throws {
-        let store = try fixture.newMission()
-        let patient = try store.perform(AddPatient(triage: .sk2))
-        let rtw = try unit(store, "RK 1", .rtw)
-        let nef = try unit(store, "NEF 1", .nef)
-        try store.perform(AssignUnit(patientID: patient.id, unitID: rtw.id))
-        try store.perform(AssignUnit(patientID: patient.id, unitID: nef.id))
-        try store.perform(StartTransport(patientID: patient.id))
-        #expect(store.state.activeUnits.first { $0.id == rtw.id }?.status == .patientOnBoard)
-        #expect(store.state.activeUnits.first { $0.id == nef.id }?.status == nil, "NEF transportiert nicht")
-        #expect(store.state.visibleLog.last?.message.contains("Transport mit") == true, "Transport bleibt letzter Eintrag")
-        let summary = UnitStatusSummary(units: store.state.activeUnits)
-        #expect(summary.entries == [UnitStatusSummary.Entry(status: .patientOnBoard, count: 1)])
-        #expect(summary.unknown == 1)
     }
 }

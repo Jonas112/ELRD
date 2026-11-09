@@ -83,3 +83,19 @@ public extension Mission {
         participants = list
     }
 }
+
+/// Ein offener Punkt, den jemand als „zur Kenntnis genommen“ abgehakt hat
+/// (Schritt 96). Gilt für alle Teilnehmer des Einsatzes; Liste mit Kennung,
+/// damit der Abgleich elementweise zusammenführt.
+public struct AcknowledgedOpenItem: Codable, Hashable, Sendable, Identifiable {
+    /// Kennung des offenen Punkts.
+    public let id: String
+    public let at: Date
+    public let by: String
+
+    public init(id: String, at: Date, by: String) {
+        self.id = id
+        self.at = at
+        self.by = by
+    }
+}

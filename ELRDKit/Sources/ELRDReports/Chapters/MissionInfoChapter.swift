@@ -35,6 +35,18 @@ enum MissionInfoChapter {
         if options.showsTimeline {
             blocks.append(contentsOf: timelineBlocks(input))
         }
+        if options.showsDebrief, let debrief = input.mission.debrief, !debrief.isEmpty {
+            blocks.append(.heading("Nachbesprechung", level: 2))
+            if let date = debrief.conductedAt {
+                blocks.append(.paragraph("Durchgeführt \(ReportFormat.dateTime(date))", style: .muted))
+            }
+            for (title, value) in [("Teilnehmende", debrief.participants), ("Was lief gut", debrief.wentWell),
+                                   ("Was verbessern", debrief.toImprove), ("Maßnahmen / zuständig", debrief.actions)] {
+                let text = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+                blocks.append(.paragraph("\(title): \(text)"))
+            }
+        }
         if options.showsMapImage, let map = mapImage(input) {
             blocks.append(.heading("Lagekarte", level: 2))
             blocks.append(.image(map.image, caption: map.caption, maxHeight: 340))

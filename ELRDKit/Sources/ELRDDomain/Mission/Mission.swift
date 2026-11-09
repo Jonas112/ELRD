@@ -44,6 +44,8 @@ public struct Mission: VersionedEntity, MissionScoped {
     public var participants: [MissionParticipant]?
     /// Personenbezogene Patientendaten entfernt (Schritt 102); `nil` = noch nicht.
     public var anonymizedAt: Date?
+    /// Nachbesprechung (Schritt 107).
+    public var debrief: MissionDebrief?
     /// Abgehakte offene Punkte („zur Kenntnis genommen“, Schritt 96).
     public var acknowledgedItems: [AcknowledgedOpenItem]?
 

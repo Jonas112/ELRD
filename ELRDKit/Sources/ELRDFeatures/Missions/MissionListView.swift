@@ -122,7 +122,7 @@ struct MissionListView: View {
         // Bildschirmfüllend: große Ziele, nichts muss gescrollt werden.
         .fullScreenCover(isPresented: $showsNewMission) {
             NewMissionView(commanderName: model.session.displayName) { form in
-                let store = try model.create(form)
+                let store = try model.create(form, template: appSettings?.settings.template(for: form.type))
                 showsNewMission = false
                 onOpen(store)
             }

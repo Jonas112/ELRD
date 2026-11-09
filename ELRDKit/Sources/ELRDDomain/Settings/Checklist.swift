@@ -78,13 +78,55 @@ public struct MissionTypeSetting: Hashable, Codable, Sendable, Identifiable {
     public var type: MissionType
     /// `nil` = Checkliste für Einsätze ohne eigene Zuordnung.
     public var checklistID: String?
+    /// Vorlage (Schritt 106): Abschnitte, die zusätzlich zu den Stammdaten-Abschnitten
+    /// angelegt werden, in dieser Reihenfolge.
+    public var sectionNames: [String]?
+    /// Initialabschnitt der Vorlage (Name aus `sectionNames` oder den Stammdaten).
+    public var initialSectionName: String?
+    /// Vorgeschlagenes Alarmstichwort (Rohwert, z. B. „RD 3“) – als Text gespeichert,
+    /// damit ein unbekannter Wert die Einstellungen nicht unlesbar macht.
+    public var alarmstichwortRaw: String?
 
-    public init(type: MissionType, checklistID: String? = nil) {
+    public init(type: MissionType, checklistID: String? = nil, sectionNames: [String]? = nil,
+                initialSectionName: String? = nil, alarmstichwort: Alarmstichwort? = nil) {
         self.type = type
         self.checklistID = checklistID
+        self.sectionNames = sectionNames
+        self.initialSectionName = initialSectionName
+        alarmstichwortRaw = alarmstichwort?.rawValue
     }
 
     public var id: String { type.rawValue }
+
+    public var alarmstichwort: Alarmstichwort? {
+        get { alarmstichwortRaw.flatMap(Alarmstichwort.init(rawValue:)) }
+        set { alarmstichwortRaw = newValue?.rawValue }
+    }
+
+    /// Abschnitte der Vorlage ohne leere und doppelte Namen.
+    public var templateSections: [String] {
+        var seen = Set<String>()
+        return (sectionNames ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+    }
+
+    /// Hat die Vorlage überhaupt Inhalt (außer der Checkliste)?
+    public var hasTemplate: Bool { !templateSections.isEmpty || alarmstichwort != nil }
+}
+
+/// Abschnitte für einen neuen Einsatz: Stammdaten-Abschnitte plus die der Vorlage
+/// (ohne Doppelte, Groß/klein egal). Initialabschnitt: Vorlage vor Stammdaten.
+public enum MissionTemplateSections {
+    public static func merge(master: [String], masterInitial: String?, template: MissionTypeSetting?) -> (names: [String], initial: String?) {
+        var names = master
+        var seen = Set(master.map { $0.lowercased() })
+        for name in template?.templateSections ?? [] where seen.insert(name.lowercased()).inserted {
+            names.append(name)
+        }
+        let wanted = template?.initialSectionName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let initial = wanted.flatMap { wanted in names.first { $0.caseInsensitiveCompare(wanted) == .orderedSame } } ?? masterInitial
+        return (names, initial)
+    }
 }
 
 public extension MissionType {

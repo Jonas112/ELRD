@@ -22,17 +22,23 @@ struct NewMissionForm: Equatable {
     /// Einsatzarten in der Reihenfolge der Auswahl (häufige zuerst).
     static let typeOrder: [MissionType] = MissionType.defaultOrder
 
-    /// Baut die Anfrage; Standardabschnitte kommen aus den Stammdaten.
-    func request(automaticSections: [MasterSection]) -> NewMissionRequest {
+    /// Baut die Anfrage; Standardabschnitte kommen aus den Stammdaten, dazu die der
+    /// Vorlage der Einsatzart (Schritt 106).
+    func request(automaticSections: [MasterSection], template: MissionTypeSetting? = nil) -> NewMissionRequest {
         let sections = automaticSections.sorted { $0.sortIndex < $1.sortIndex }
+        let merged = MissionTemplateSections.merge(
+            master: sections.map(\.name),
+            masterInitial: sections.first(where: \.isInitial)?.name,
+            template: template?.type == type ? template : nil
+        )
         let dispatch = Self.trimmed(dispatchNumber)
         var request = NewMissionRequest(
             reason: Self.trimmed(reason),
             type: type,
             location: Self.trimmed(location),
             dispatchNumber: dispatch.isEmpty ? nil : dispatch,
-            sectionNames: sections.map(\.name),
-            initialSectionName: sections.first(where: \.isInitial)?.name,
+            sectionNames: merged.names,
+            initialSectionName: merged.initial,
             alarmstichwort: alarmstichwort
         )
         request.isExercise = isExercise
@@ -143,9 +149,9 @@ final class MissionListModel {
         }
     }
 
-    func create(_ form: NewMissionForm) throws -> MissionStore {
+    func create(_ form: NewMissionForm, template: MissionTypeSetting? = nil) throws -> MissionStore {
         let store = try MissionStore.create(
-            form.request(automaticSections: automaticSections()),
+            form.request(automaticSections: automaticSections(), template: template),
             repository: repository,
             session: session,
             clock: clock,

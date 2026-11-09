@@ -374,6 +374,7 @@ struct ReportChapterOptionsView: View {
             case .missionInfo:
                 Toggle("Lage in Zahlen", isOn: $options.showsSummary)
                 Toggle("Verlauf und Wartezeiten", isOn: $options.showsTimeline)
+                Toggle("Nachbesprechung", isOn: $options.showsDebrief)
                 Toggle("Lagekarte aus dem Tagebuch", isOn: $options.showsMapImage)
             case .organisation:
                 Toggle("Platzhalter aufführen", isOn: $options.includesPlaceholders)

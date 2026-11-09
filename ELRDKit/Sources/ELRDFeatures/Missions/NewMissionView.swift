@@ -89,11 +89,36 @@ struct NewMissionView: View {
             FlowLayout(spacing: Spacing.s) {
                 ForEach((appSettings?.settings ?? AppSettings()).missionTypeChoices(including: form.type), id: \.self) { type in
                     ChoiceChip(type.chipLabel, isSelected: form.type == type) {
-                        form.type = form.type == type ? nil : type
+                        choose(type)
                     }
                 }
             }
+            // Schritt 106: Vorlage der Einsatzart.
+            if let template = appSettings?.settings.template(for: form.type), template.hasTemplate {
+                Label(templateHint(template), systemImage: "square.stack.3d.up")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
         }
+    }
+
+    /// Einsatzart wählen; ein Alarmstichwort der Vorlage wird übernommen, solange
+    /// keines gewählt ist.
+    private func choose(_ type: MissionType) {
+        let previous = appSettings?.settings.template(for: form.type)?.alarmstichwort
+        form.type = form.type == type ? nil : type
+        let template = appSettings?.settings.template(for: form.type)
+        if form.alarmstichwort == nil || form.alarmstichwort == previous {
+            form.alarmstichwort = template?.alarmstichwort
+        }
+    }
+
+    private func templateHint(_ template: MissionTypeSetting) -> String {
+        var parts: [String] = []
+        if let stichwort = template.alarmstichwort { parts.append("Stichwort \(stichwort.rawValue)") }
+        let sections = template.templateSections
+        if !sections.isEmpty { parts.append("Abschnitte " + sections.joined(separator: ", ")) }
+        return "Vorlage: " + parts.joined(separator: " · ")
     }
 
     private var locationSection: some View {

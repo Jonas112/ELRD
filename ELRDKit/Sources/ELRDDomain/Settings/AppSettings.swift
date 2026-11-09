@@ -105,6 +105,12 @@ public struct AppSettings: Codable, Hashable, Sendable {
         return lists[0]
     }
 
+    /// Einstellung/Vorlage einer Einsatzart (Schritt 106).
+    public func template(for type: MissionType?) -> MissionTypeSetting? {
+        guard let type else { return nil }
+        return effectiveMissionTypes.first { $0.type == type }
+    }
+
     public func checklist(for type: MissionType?) -> ChecklistTemplate {
         namedChecklist(for: type).template
     }

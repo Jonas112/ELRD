@@ -7,6 +7,8 @@ import ELRDStore
 /// Sichtungskategorien und Meilensteine – Grundlage für Bericht und Nachbesprechung.
 struct MissionTimelineView: View {
     let store: MissionStore
+    /// Schritt 107.
+    @State private var showsDebrief = AppLaunchOptions.current.demoScreen == .debrief
 
     var body: some View {
         // Im Minutentakt neu rechnen (Laufzeit, „seit“).
@@ -14,6 +16,7 @@ struct MissionTimelineView: View {
             let state = store.state
             let metrics = MissionMetrics(mission: state.mission, patients: state.patients, journal: state.journal, now: context.date)
             VStack(alignment: .leading, spacing: Spacing.l) {
+                debriefButton(state.mission)
                 if state.mission.isExerciseMission, let evaluation = ExerciseEvaluation(patients: state.patients) {
                     exerciseCard(evaluation)
                 }
@@ -23,6 +26,31 @@ struct MissionTimelineView: View {
                 milestones(metrics)
             }
         }
+        .sheet(isPresented: $showsDebrief) { DebriefSheet(store: store).largeSheet() }
+    }
+
+    // MARK: Nachbesprechung (Schritt 107)
+
+    private func debriefButton(_ mission: Mission) -> some View {
+        Button { showsDebrief = true } label: {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: "bubble.left.and.text.bubble.right")
+                    .font(.title2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Nachbesprechung").font(.headline)
+                    Text(mission.debrief?.conductedAt.map { "gespeichert \($0.formatted(date: .numeric, time: .shortened))" }
+                         ?? "Kennzahlen, Zeitstrahl, Lessons Learned")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            }
+            .padding(Spacing.l)
+            .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Übung (Schritt 88)

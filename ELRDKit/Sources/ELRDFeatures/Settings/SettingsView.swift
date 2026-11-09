@@ -409,6 +409,9 @@ struct MissionAidsSettingsView: View {
     @State private var newType = ""
     @State private var errorMessage: String?
 
+    /// Schritt 106: Vorlage einer Einsatzart bearbeiten.
+    @State private var editingTemplate: String?
+
     var body: some View {
         let settings = store?.settings ?? AppSettings()
         let lists = settings.effectiveChecklists
@@ -540,6 +543,16 @@ struct MissionAidsSettingsView: View {
                             }
                             .font(.subheadline.weight(.semibold))
                         }
+                        // Schritt 106: Vorlage (Abschnitte, Alarmstichwort).
+                        Button { editingTemplate = entry.id } label: {
+                            HStack(spacing: Spacing.xs) {
+                                Image(systemName: "square.stack.3d.up")
+                                Text(templateSummary(entry)).lineLimit(1)
+                                Image(systemName: "chevron.right").font(.caption)
+                            }
+                            .font(.subheadline.weight(.semibold))
+                        }
+                        .buttonStyle(.borderless)
                     }
                     .padding(.vertical, Spacing.xxs)
                     .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum, alignment: .leading)
@@ -631,6 +644,25 @@ struct MissionAidsSettingsView: View {
         }
         .navigationTitle("Erinnerungen und Checklisten")
         .settingsError($errorMessage)
+        .sheet(item: Binding(
+            get: { editingTemplate.flatMap { id in store?.settings.effectiveMissionTypes.first { $0.id == id } } },
+            set: { if $0 == nil { editingTemplate = nil } }
+        )) { entry in
+            MissionTypeTemplateEditor(entry: entry) { updated in
+                updateTypes { types in
+                    if let index = types.firstIndex(where: { $0.id == updated.id }) { types[index] = updated }
+                }
+            }
+        }
+    }
+
+    private func templateSummary(_ entry: MissionTypeSetting) -> String {
+        guard entry.hasTemplate else { return "Vorlage: keine" }
+        var parts: [String] = []
+        if let stichwort = entry.alarmstichwort { parts.append(stichwort.rawValue) }
+        let sections = entry.templateSections
+        if !sections.isEmpty { parts.append(sections.count == 1 ? "1 Abschnitt" : "\(sections.count) Abschnitte") }
+        return "Vorlage: " + parts.joined(separator: " · ")
     }
 
     private func minutesPicker(_ title: String, value: Int, onChange: @escaping (Int) -> Void) -> some View {
@@ -666,6 +698,83 @@ struct MissionAidsSettingsView: View {
             try store?.update(change)
         } catch {
             errorMessage = ErrorText.message(for: error)
+        }
+    }
+}
+
+/// Vorlage einer Einsatzart (Schritt 106): Alarmstichwort und zusätzliche Abschnitte,
+/// die „Neuer Einsatz“ automatisch übernimmt.
+struct MissionTypeTemplateEditor: View {
+    let entry: MissionTypeSetting
+    let onSave: (MissionTypeSetting) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var stichwort: Alarmstichwort?
+    @State private var sectionsText: String
+    @State private var initial: String
+
+    init(entry: MissionTypeSetting, onSave: @escaping (MissionTypeSetting) -> Void) {
+        self.entry = entry
+        self.onSave = onSave
+        _stichwort = State(initialValue: entry.alarmstichwort)
+        _sectionsText = State(initialValue: entry.templateSections.joined(separator: "\n"))
+        _initial = State(initialValue: entry.initialSectionName ?? "")
+    }
+
+    private var sections: [String] {
+        var seen = Set<String>()
+        return sectionsText.split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Alarmstichwort", selection: $stichwort) {
+                        Text("Ohne").tag(Alarmstichwort?.none)
+                        ForEach(Alarmstichwort.allCases) { value in
+                            Text("\(value.rawValue) – \(value.summary)").tag(Optional(value))
+                        }
+                    }
+                    .frame(minHeight: TouchTarget.minimum)
+                } footer: {
+                    Text("Wird bei „Neuer Einsatz“ vorgewählt, wenn diese Einsatzart gewählt wird; lässt sich dort ändern.")
+                }
+                Section {
+                    TextEditor(text: $sectionsText)
+                        .frame(minHeight: 140)
+                        .font(.body)
+                } header: {
+                    Text("Zusätzliche Abschnitte – einer je Zeile")
+                } footer: {
+                    Text("Kommen zu den Abschnitten aus den Stammdaten dazu, z. B. „Atemschutz-Sammelplatz“, „Dekon“, „Verletztenablage“.")
+                }
+                Section("Initialabschnitt") {
+                    Picker("Initialabschnitt", selection: $initial) {
+                        Text("Wie in den Stammdaten").tag("")
+                        ForEach(sections, id: \.self) { name in Text(name).tag(name) }
+                    }
+                    .frame(minHeight: TouchTarget.minimum)
+                }
+            }
+            .navigationTitle("Vorlage \(entry.type.displayName)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Sichern") {
+                        var updated = entry
+                        updated.alarmstichwort = stichwort
+                        updated.sectionNames = sections.isEmpty ? nil : sections
+                        updated.initialSectionName = sections.contains(initial) ? initial : nil
+                        onSave(updated)
+                        dismiss()
+                    }
+                    .fontWeight(.bold)
+                }
+            }
         }
     }
 }

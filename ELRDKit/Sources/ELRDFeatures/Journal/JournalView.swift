@@ -19,7 +19,7 @@ struct JournalView: View {
     @State private var mode: Mode = {
         switch AppLaunchOptions.current.demoScreen {
         case .protocolLog: .log
-        case .missionTimeline: .timeline
+        case .missionTimeline, .debrief: .timeline
         default: .journal
         }
     }()

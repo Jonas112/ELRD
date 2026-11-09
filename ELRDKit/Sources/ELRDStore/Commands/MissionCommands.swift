@@ -617,3 +617,24 @@ public struct AnonymizeMission: MissionCommand {
         draft.log(.mission, "Personenbezogene Patientendaten entfernt (\(reason))", subject: .mission(draft.missionID))
     }
 }
+
+// MARK: - Nachbesprechung (Schritt 107)
+
+/// Speichert die Nachbesprechung – auch bei beendetem Einsatz (sie findet meist danach statt).
+public struct SetDebrief: MissionCommand {
+    public static var allowedOnClosedMission: Bool { true }
+    public let debrief: MissionDebrief
+
+    public init(_ debrief: MissionDebrief) {
+        self.debrief = debrief
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        var value = debrief
+        if value.conductedAt == nil, !value.isEmpty { value.conductedAt = draft.context.now }
+        let stored: MissionDebrief? = value.isEmpty && value.conductedAt == nil ? nil : value
+        guard draft.mission.debrief != stored else { return }
+        try draft.updateMission { $0.debrief = stored }
+        draft.log(.mission, stored == nil ? "Nachbesprechung geleert" : "Nachbesprechung gespeichert", subject: .mission(draft.missionID))
+    }
+}

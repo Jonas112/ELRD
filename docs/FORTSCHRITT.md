@@ -184,8 +184,8 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 103 | ~~Behandlungsplätze~~ – entfällt (Jonas) | ➖ |
 | 104 | Einsatzende-Prüfung: warnt (offene Patienten, gebundene Fahrzeuge, kein Bericht), Beenden bleibt möglich | ✅ |
 | 105 | Neue offene Punkte: lokale Mitteilung mit Ton (auch bei offener App), Liste unter „Benachrichtigungen“ (Glocke) | ✅ |
-| 106 | Vorlagen je Einsatzart: Alarmstichwort und zusätzliche Abschnitte (mit Initialabschnitt) werden bei „Neuer Einsatz“ übernommen (B19) | 🧪 |
-| 107 | Nachbesprechung: Kennzahlen, Meilensteine, Teilnehmende, was lief gut / verbessern, Maßnahmen; teilbar und im Bericht (B14) | 🧪 |
+| 106 | Vorlagen je Einsatzart: Alarmstichwort und zusätzliche Abschnitte (mit Initialabschnitt) werden bei „Neuer Einsatz“ übernommen (B19) | ✅ |
+| 107 | Nachbesprechung: Kennzahlen, Meilensteine, Teilnehmende, was lief gut / verbessern, Maßnahmen; teilbar und im Bericht (B14) | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -262,6 +262,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **95–104 grün (2026-11-09):** CI 42557953507 (Tests, 4 UI-Tests, Fotos geprüft).
 - **Schritt 105 (2026-11-09, Jonas):** Neue offene Punkte → Mitteilung mit Ton auch im Vordergrund (`willPresent` → Banner, Mitteilungszentrale, Ton). Ohne Erlaubnis: oranger Hinweis oben + Systemton 1007 + Vibration. Glocke heißt jetzt „Benachrichtigungen“: oben „Neue offene Punkte“ (`OpenItemNotifier.records`, je Gerät, neueste zuerst, ungelesene orange umrandet, Tipp springt hin, „Alle gelesen“; beim Schließen gelesen), darunter Nachrichten. Zähler an der Glocke = ungelesene Nachrichten + ungelesene Punkte. Eigene Änderungen auf diesem Gerät (z. B. selbst angelegter SK-1-Patient) erscheinen in der Liste, aber ohne Ton und als gelesen – Mitteilung mit Ton nur bei Punkten durch Abgleich oder Zeitablauf (E112). Einstellung heißt jetzt „Mitteilungen mit Ton“.
 - **Schritte 106–107 (2026-11-09):** 106: `MissionTypeSetting` + `sectionNames`, `initialSectionName`, `alarmstichwortRaw` (Text, unbekannte Werte lesbar). Einstellungen › Einsatzhilfen › je Einsatzart „Vorlage: …“ → `MissionTypeTemplateEditor` (Stichwort, Abschnitte je Zeile, Initialabschnitt). „Neuer Einsatz“: Art wählen setzt das Stichwort der Vorlage (nur wenn keines bzw. das der vorherigen Vorlage gewählt war), Hinweis „Vorlage: …“; Abschnitte = Stammdaten + Vorlage ohne Doppelte (`MissionTemplateSections.merge`), Initialabschnitt der Vorlage vor Stammdaten. Checkliste je Art wie bisher. 107: `Mission.debrief` (`MissionDebrief`), `SetDebrief` (auch bei beendetem Einsatz, Zeitpunkt beim ersten Sichern, leer = entfernen). Tagebuch › Verlauf › „Nachbesprechung“ → `DebriefSheet` (Kennzahlen, Meilensteine, vier Textfelder, Teilen als Text ohne Patientennamen via `MissionDebriefText`). Bericht: Einsatzdaten › Option „Nachbesprechung“ (im Klinikbericht aus). Demo-Bildschirm `debrief`. Tests: 3 Features.
+- **106–107 grün (2026-11-09):** CI 42568718951 (Build, Tests, 4 UI-Tests, Fotos geprüft).
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

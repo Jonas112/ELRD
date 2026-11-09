@@ -55,7 +55,7 @@ struct StatisticsSheet: View {
                                 HStack {
                                     Text(row.name)
                                     Spacer()
-                                    Text("\(row.missions) Einsätze · \(row.patients) Patienten")
+                                    Text("\(row.missions == 1 ? "1 Einsatz" : "\(row.missions) Einsätze") · \(row.patients == 1 ? "1 Patient" : "\(row.patients) Patienten")")
                                         .font(.body.monospacedDigit())
                                         .foregroundStyle(.secondary)
                                 }

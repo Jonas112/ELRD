@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** Liste R fertig (CI) – danach Gerätetest; Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
+**Nächster Schritt:** Gerätetest; Jonas: Datenschutz-Felder (102) bestätigen, Sichtungsfragen und Übungslagen prüfen; Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -173,16 +173,16 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 ## R – Nächste 10 Schritte (2026-11-09)
 | # | Schritt | Status |
 |---|---|---|
-| 95 | Nachsichtung: „zuletzt gesichtet vor …“, Frist je SK (Einstellung) → offener Punkt | 🧪 |
-| 96 | Offene Punkte einstellbar (Arten an/aus) und einzeln „zur Kenntnis genommen“ abhakbar; Fahrzeugstatus entfernt (Jonas) | 🧪 |
-| 97 | ATMIST-Übergabe je Patient (Text zum Vorlesen/Teilen) | 🧪 |
-| 98 | Klinik-Voranmeldung je Zielklinik (Kurzmeldung teilen/mailen) | 🧪 |
-| 99 | Telefonbuch: ILS, Kliniken, Führungspersonal mit Anruf-Knopf | 🧪 |
-| 100 | Statistik über alle Einsätze (Jahr, SK, Dauer; Übungen getrennt) | 🧪 |
-| 101 | Einsatzübergreifende Personensuche | 🧪 |
-| 102 | Datenschutz: automatische Anonymisierung abgeschlossener Einsätze nach Frist (Standard aus) | 🧪 |
+| 95 | Nachsichtung: „zuletzt gesichtet vor …“, Frist je SK (Einstellung) → offener Punkt | ✅ |
+| 96 | Offene Punkte einstellbar (Arten an/aus) und einzeln „zur Kenntnis genommen“ abhakbar; Fahrzeugstatus entfernt (Jonas) | ✅ |
+| 97 | ATMIST-Übergabe je Patient (Text zum Vorlesen/Teilen) | ✅ |
+| 98 | Klinik-Voranmeldung je Zielklinik (Kurzmeldung teilen/mailen) | ✅ |
+| 99 | Telefonbuch: ILS, Kliniken, Führungspersonal mit Anruf-Knopf | ✅ |
+| 100 | Statistik über alle Einsätze (Jahr, SK, Dauer; Übungen getrennt) | ✅ |
+| 101 | Einsatzübergreifende Personensuche | ✅ |
+| 102 | Datenschutz: automatische Anonymisierung abgeschlossener Einsätze nach Frist (Standard aus) | ✅ |
 | 103 | ~~Behandlungsplätze~~ – entfällt (Jonas) | ➖ |
-| 104 | Einsatzende-Prüfung: warnt (offene Patienten, gebundene Fahrzeuge, kein Bericht), Beenden bleibt möglich | 🧪 |
+| 104 | Einsatzende-Prüfung: warnt (offene Patienten, gebundene Fahrzeuge, kein Bericht), Beenden bleibt möglich | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -256,6 +256,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritte 95–96 (2026-11-09):** 95: Erinnerungen um „Nachsichtung SK 2/SK 3 alle …“ ergänzt (Standard 30/60 min, „Aus“ möglich). `ConfirmTriage` hängt eine Bestätigung an den Sichtungsverlauf (Protokoll „Nachsichtung, bleibt …“); die Sichtungshilfe mit gleicher SK zählt ebenso. Patient: „Zuletzt gesichtet … (vor x min)“ (orange bei Überschreitung) und Knopf „Nachsichtung: bleibt SK 2“. Offener Punkt `retriageDue`, Mitteilung vorgeplant. 96: `StartTransport` setzt zugeordnete Transportmittel auf S 7 (vor dem Transport-Protokolleintrag). Transport-Board, Spalte „abgefahren“: Knopf „S 8“ (am Transportziel). Lage › Transportmittel: Kacheln je Status (`UnitStatusSummary`).
 - **Rückmeldung Jonas (2026-11-09) zu Liste R:** offene Punkte einstellbar + abhakbar; keine Behandlungsplätze; Einsatzende nur warnen; kein Fahrzeugstatus. Umgesetzt (Schritt 96): FMS-Status komplett entfernt (`statusCode`, `SetUnitStatus`, automatisches S 7, S-8-Knopf, Status-Kacheln). Erwartetes Eintreffen bleibt: Feld rechts in der Einheitenzeile zeigt „ETA“ bzw. die Uhrzeit (orange, rot wenn überfällig), Menü „Eingetroffen“ (`MarkUnitArrived`) / „in 5–60 min“ / „Keine Angabe“; jede Einheit mit Zeit gilt als erwartet. Offene Punkte: `OpenItem.Kind.key` (stabil) + `settingsTitle`; Einstellungen › Einsatzhilfen › „Offene Punkte“ schaltet Arten ab (`ReminderSettings.hiddenOpenItemKinds`, gilt auch für Hinweise/Mitteilungen). In der Lage je Punkt ✓ → `AcknowledgeOpenItem` (Liste `Mission.acknowledgedItems`, elementweise abgeglichen, Protokoll ohne Namen, darf jeder Teilnehmer), unten „n abgehakte Punkte – wieder anzeigen“ (`RestoreOpenItems`). Kennungen zeitabhängiger Punkte enthalten den Takt (Lagemeldung, Nachsichtung, Eintreffen) bzw. die Anzahl (Platzhalter, Nachrichten) – Abhaken gilt nur für diesen Stand.
 - **Schritte 97–102, 104 (2026-11-09):** 97: `ATMISTHandover.text` (Name falls bekannt, Alter/Geschlecht, Zeiten, Einsatzart+Meldebild, Verletzungen, SK/Kreislauf/ABCD/Schockraum, intubiert+Notiz+Einheiten, Ziel); Patient › ⋯ › „Übergabe (ATMIST) …“ → `ShareTextSheet` (groß, Teilen, Kopieren, Mail). 98: `HospitalPreannouncement` je Zielklinik (ohne Namen: Anzahl je SK, je Patient Nummer/SK/Alter/Geschlecht/2 Verletzungen/Schockraum/unterwegs seit …); Lage › Kliniken › je Klinik „Voranmeldung“ (Mail an Klinik-Adresse aus Zuweisung oder Stammdaten). 99: `PhoneEntry` (Einstellungen › Führungspersonal › Telefonbuch), Telefon am Führungspersonal; Lage › „Telefonbuch“ (eigene Nummern, Führungspersonal, Kliniken aus Stammdaten – Zielkliniken zuerst), Tipp ruft an. 100: `MissionStatistics` (je Jahr/alle: Einsätze, laufend, Patienten, SK, Ø/längste Dauer, größter Einsatz, nach Einsatzart; Übungen getrennt), Einsatzliste › Diagramm-Menü › „Statistik“. 101: `PersonSearch` über alle Einsätze (≥ 2 Zeichen, neueste zuerst), Einsatzliste › „Personensuche“, Tipp öffnet den Einsatz. 102: Einstellungen › Einsatzhilfen › „Datenschutz“: Personendaten beendeter Einsätze nach 30/90/180/365 Tagen entfernen (Standard aus); `AnonymizeMission` (Namen, Geburtsdatum → geschätztes Alter, Merkmale, Notiz; Karte, SK, Verletzungen, Verbleib bleiben), läuft beim Öffnen der Einsatzliste; von Hand per langem Druck auf einen beendeten Einsatz. 104: `MissionClosingCheck` (Patienten vor Ort, ungesichtet, Platzhalter, erwartete Einheiten, Checkliste offen, ungelesene Nachrichten) im Bestätigungsdialog, Knopf „Trotzdem beenden“. Demo-Bildschirm `statistics`.
+- **95–104 grün (2026-11-09):** CI 42557953507 (Tests, 4 UI-Tests, Fotos geprüft).
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).
@@ -265,3 +266,4 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 4. ~~Bericht an Klinik~~ erledigt (Schritte 62, 85).
 5. **Auf dem Gerät prüfen:** Kamera, Mikrofon, Kartenkacheln, Drucken, Kauf mit `ELRD.storekit`, Tastaturkürzel mit Magic Keyboard, VoiceOver bei der Schnellanlage.
 6. **Sichtung (87) und Übungslagen (88):** Fragen, Reihenfolge und erwartete Kategorien fachlich prüfen; PRIOR-Namensnutzung (Marke) klären.
+7. **Datenschutz (102):** Anonymisierung wirkt bei allen Teilnehmern eines geteilten Einsatzes und ist endgültig – so gewollt? Reichen Namen, Geburtsdatum, Merkmale, Freitext?

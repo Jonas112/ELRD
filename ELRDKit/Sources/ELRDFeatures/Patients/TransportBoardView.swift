@@ -141,7 +141,26 @@ struct TransportBoardView: View {
             }
             .accessibilityLabel("Abgefahren")
         case .departed:
-            EmptyView()
+            // Schritt 96: am Transportziel → Status 8.
+            let transport = store.state.units.filter { patient.unitIDs.contains($0.id) && $0.type.transportsPatients }
+            if transport.contains(where: { $0.status != .atDestination }) {
+                Button {
+                    do {
+                        for unit in transport where unit.status != .atDestination {
+                            try store.perform(SetUnitStatus(unitID: unit.id, status: .atDestination))
+                        }
+                        errorMessage = nil
+                    } catch {
+                        errorMessage = ErrorText.message(for: error)
+                    }
+                } label: {
+                    Text("S 8")
+                        .font(.headline.weight(.heavy))
+                        .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum)
+                        .background(Color.blue.opacity(0.15), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .accessibilityLabel("Am Transportziel (Status 8)")
+            }
         }
     }
 

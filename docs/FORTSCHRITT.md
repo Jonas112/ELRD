@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** Liste Q fertig – Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
+**Nächster Schritt:** Schritt 97 (Liste R); Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -156,19 +156,33 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 |---|---|---|
 | 84 | Mitteilung antippen → direkt zum Einsatz und Punkt (Patient, Lagemeldung, Organisation …) | ✅ |
 | 85 | Klinikbericht: Empfänger = E-Mail der Zielklinik; gab es schon (Schritt 62) – ergänzt: Ersatzadresse aus den Stammdaten, wenn die Zuweisung keine trägt | ✅ |
-| 86 | Einsatz-Zeitstrahl aller Ereignisse und Kennzahlen (bis erste Sichtung, erster Transport, letzter Patient ab; SK-Verlauf), auch im Bericht | 🧪 |
-| 87 | Geführte Sichtung mSTaRT oder PRIOR (in den Einstellungen wählbar): Vorschlag mit Begründung, Übernahme per Tipp, Antworten im Protokoll (E104) | 🧪 |
-| 88 | Übungsmodus: Einsatz als Übung markiert (eigene Farbe, nicht in Statistiken), 3–4 Beispiellagen zum Einspielen (Jonas prüft) | 🧪 |
-| 89 | Abschnitte im geteilten Einsatz: Teilnehmer wählt seinen Abschnitt selbst, Einsatzleitung sieht/ändert das und vergibt je Teilnehmer Rechte (alles / eigener Abschnitt / nur lesen); Ansicht „mein Abschnitt“ (E103) | 🧪 |
-| 90 | Live Activity: Laufzeit, SK-Zähler, nächste Lagemeldung auf Sperrbildschirm/Dynamic Island (iPhone; iPad ab iPadOS 26), ohne Namen; eigenes Widget-Ziel (E105) | 🧪 |
+| 86 | Einsatz-Zeitstrahl aller Ereignisse und Kennzahlen (bis erste Sichtung, erster Transport, letzter Patient ab; SK-Verlauf), auch im Bericht | ✅ |
+| 87 | Geführte Sichtung mSTaRT oder PRIOR (in den Einstellungen wählbar): Vorschlag mit Begründung, Übernahme per Tipp, Antworten im Protokoll (E104) | ✅ |
+| 88 | Übungsmodus: Einsatz als Übung markiert (eigene Farbe, nicht in Statistiken), 3–4 Beispiellagen zum Einspielen (Jonas prüft) | ✅ |
+| 89 | Abschnitte im geteilten Einsatz: Teilnehmer wählt seinen Abschnitt selbst, Einsatzleitung sieht/ändert das und vergibt je Teilnehmer Rechte (alles / eigener Abschnitt / nur lesen); Ansicht „mein Abschnitt“ (E103) | ✅ |
+| 90 | Live Activity: Laufzeit, SK-Zähler, nächste Lagemeldung auf Sperrbildschirm/Dynamic Island (iPhone; iPad ab iPadOS 26), ohne Namen; eigenes Widget-Ziel (E105) | ✅ |
 
 ## Q – Weitere Funktionen (2026-11-08, „weiter mit den nächsten Schritten“)
 | # | Schritt | Status |
 |---|---|---|
-| 91 | Fahrzeugstatus 1–8 (FMS) je Einheit mit Zeit, im Protokoll; Statusfeld in der Einheitenübersicht | 🧪 |
-| 92 | Erwartetes Eintreffen angeforderter Kräfte (Platzhalter, Status 3): Anzeige, überfällig = offener Punkt, Erinnerung | 🧪 |
-| 93 | Verbleibsliste / Personenauskunft: Suche nach Name oder Karte → Verbleib, als PDF | 🧪 |
-| 94 | Zeichnen ohne Umschalter: ein Finger zeichnet, zwei Finger bewegen/zoomen, Gezeichnetes folgt der Karte (Jonas) | 🧪 |
+| 91 | Fahrzeugstatus 1–8 (FMS) je Einheit mit Zeit, im Protokoll; Statusfeld in der Einheitenübersicht | ✅ |
+| 92 | Erwartetes Eintreffen angeforderter Kräfte (Platzhalter, Status 3): Anzeige, überfällig = offener Punkt, Erinnerung | ✅ |
+| 93 | Verbleibsliste / Personenauskunft: Suche nach Name oder Karte → Verbleib, als PDF | ✅ |
+| 94 | Zeichnen ohne Umschalter: ein Finger zeichnet, zwei Finger bewegen/zoomen, Gezeichnetes folgt der Karte (Jonas) | ✅ |
+
+## R – Nächste 10 Schritte (2026-11-09)
+| # | Schritt | Status |
+|---|---|---|
+| 95 | Nachsichtung: „zuletzt gesichtet vor …“, Frist je SK (Einstellung) → offener Punkt | 🧪 |
+| 96 | Fahrzeugstatus automatisch (Transportbeginn → S 7, „am Ziel“ → S 8), Lage: Fahrzeuge nach Status | 🧪 |
+| 97 | ATMIST-Übergabe je Patient (Text zum Vorlesen/Teilen) | ⬜ |
+| 98 | Klinik-Voranmeldung je Zielklinik (Kurzmeldung teilen/mailen) | ⬜ |
+| 99 | Telefonbuch: ILS, Kliniken, Führungspersonal mit Anruf-Knopf | ⬜ |
+| 100 | Statistik über alle Einsätze (Jahr, SK, Dauer; Übungen getrennt) | ⬜ |
+| 101 | Einsatzübergreifende Personensuche | ⬜ |
+| 102 | Datenschutz: automatische Anonymisierung abgeschlossener Einsätze nach Frist (Standard aus) | ⬜ |
+| 103 | Behandlungsplätze: Kapazität je Abschnitt, Belegung, Warnung | ⬜ |
+| 104 | Einsatzende-Prüfung vor „Einsatz beenden“ | ⬜ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -238,6 +252,8 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritt 90 (2026-11-08):** Neues Package-Modul/Produkt `ELRDLiveActivity` (`MissionActivityAttributes`, `MissionLiveActivityWidget`: Sperrbildschirm mit Nummer, Meldebild, Laufzeit, SK-Zählern, Wartenden, offenen Punkten, „Lagemeldung in …“; Dynamic Island kompakt SK 1 + Laufzeit). Neues Xcode-Ziel `ELRDWidgets` (Widget-Erweiterung, `ELRD.App.Widgets`, Info aus `ELRDWidgets-Info.plist`, eingebettet über „Embed Foundation Extensions“); App: `NSSupportsLiveActivities`. `LiveActivityController` (Features, per Umgebung) startet beim Öffnen des Einsatzes, aktualisiert bei Änderungen und im Minutentakt (nur bei geändertem Inhalt), beendet beim Verlassen/Beenden; Reste früherer Starts werden beendet. Einstellungen › Einsatzhilfen › „Live-Aktivität“. iPad zeigt Live Activities erst ab iPadOS 26 (laut Drittquelle, auf dem Gerät prüfen). **Jonas:** Beim ersten Öffnen in Xcode für das neue Ziel ggf. Team wählen; Bundle-ID folgt der App (`ELRD.App.Widgets`). Tests: 1 Features.
 - **Schritte 91, 92, 94 (2026-11-08):** Jonas hat parallel „Bugfixes“ gepusht (Projekt: Team 2V6336KP7H, Warnungen, Schema) – übernommen. 91: `MissionUnit.statusCode` (Ziffer, damit unbekannte Werte lesbar bleiben) + `statusChangedAt`, `UnitStatus` 1–8 (bayerische Bedeutung: 7 Patient aufgenommen, 8 am Transportziel), `SetUnitStatus` (Protokoll „RK 1: S 4 – Am Einsatzort“). Einheitenübersicht: rechts in jeder Zeile ein Statusfeld (Menü: Status 1–8, Eintreffen in 5–60 min); darunter „Am Einsatzort · seit 12:03“. 92: `expectedArrival`, `SetExpectedArrival`; wartet = Platzhalter oder Status 3 (eingetragene Einheit ohne Status gilt als da); Status 4/7/8 löscht die Erwartung. Überfällig → offener Punkt „… noch nicht eingetroffen“ (ersetzt für diese Platzhalter die Wartezeit-Erinnerung), Mitteilung zur erwarteten Zeit vorgeplant. 94: Umschalter entfernt (Jonas: Gezeichnetes soll sich wie gespeichert mitbewegen). Striche liegen im Ausgangsmaßstab (`base`), bei jedem Ausschnittswechsel `base.transformed(using:)` → Zeichnung skaliert mit, Fläche bleibt bildschirmfüllend; neue Striche werden zurückgerechnet. Zwei-Finger-Pan/Pinch auf der Fläche steuern die Karte (`MapCanvasProxy.pan/zoom`), ein angefangener Strich wird dabei verworfen. Export aus `base` (auch Teile außerhalb des Ausschnitts, Auflösung wie am Bildschirm, max. 4096 px). Ersetzt E100 (E109). Tests: 2 Store, 1 Features.
 - **Schritt 93 (2026-11-08):** `PatientWhereabouts` (Domäne): je Patient Nummer, Karte, Name, Geburtsdatum bzw. „ca. 54 J.“, Geschlecht, SK, Verbleib (Zielklinik + „mit RK 1 ab 12:30“ / „Vor Ort entlassen“ / „Verstorben“ / „Noch vor Ort“ mit Abschnitt, Einheit, geplantem Ziel); Suche über Name, Nummer, Karte, ILS-Nummer, Merkmale (Groß/klein, Akzente egal). Patienten → Knopf „Verbleibsliste“ (Personensymbol neben dem Scanner) → `WhereaboutsSheet` mit Filter (vor Ort/transportiert/entlassen/verstorben), Tipp öffnet den Patienten, „Als PDF teilen“ (`WhereaboutsReport`, mit Datenschutzhinweis, Kopf mit Organisation/Logo, „ÜBUNG“ bei Übungen). Demo-Bildschirm `whereabouts`. Tests: 1 Store, 1 Berichte.
+- **86–94 grün (2026-11-09):** CI 42460496649 (Build inkl. Widget-Ziel, alle Tests, 4 UI-Tests, Fotos geprüft).
+- **Schritte 95–96 (2026-11-09):** 95: Erinnerungen um „Nachsichtung SK 2/SK 3 alle …“ ergänzt (Standard 30/60 min, „Aus“ möglich). `ConfirmTriage` hängt eine Bestätigung an den Sichtungsverlauf (Protokoll „Nachsichtung, bleibt …“); die Sichtungshilfe mit gleicher SK zählt ebenso. Patient: „Zuletzt gesichtet … (vor x min)“ (orange bei Überschreitung) und Knopf „Nachsichtung: bleibt SK 2“. Offener Punkt `retriageDue`, Mitteilung vorgeplant. 96: `StartTransport` setzt zugeordnete Transportmittel auf S 7 (vor dem Transport-Protokolleintrag). Transport-Board, Spalte „abgefahren“: Knopf „S 8“ (am Transportziel). Lage › Transportmittel: Kacheln je Status (`UnitStatusSummary`).
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

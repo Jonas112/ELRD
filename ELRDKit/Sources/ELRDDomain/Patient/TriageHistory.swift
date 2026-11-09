@@ -35,6 +35,18 @@ public extension Patient {
         return effectiveTriageHistory.last { $0.at <= date }?.triage ?? effectiveTriageHistory.first?.triage
     }
 
+    /// Letzte Sichtung oder Bestätigung (Schritt 95).
+    var lastTriagedAt: Date? {
+        effectiveTriageHistory.last { $0.triage.isTriaged }?.at
+    }
+
+    /// Nachsichtung: gleiche Kategorie erneut bestätigen (nur über Commands).
+    mutating func confirmTriage(at date: Date) {
+        var history = effectiveTriageHistory
+        history.append(TriageChange(at: date, triage: triage))
+        triageHistory = history
+    }
+
     /// Kategorie ändern und im Verlauf festhalten (nur über Commands aufrufen).
     mutating func recordTriage(_ new: Sichtungskategorie, at date: Date) {
         var history = effectiveTriageHistory

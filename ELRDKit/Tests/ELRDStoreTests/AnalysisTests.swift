@@ -393,5 +393,45 @@ struct AnalysisTests {
         #expect(first.matches("pak0042"))
         #expect(list[1].whereabouts == "Vor Ort entlassen")
     }
-}
 
+    // MARK: 95 Nachsichtung
+
+    @Test func confirmTriageRecordsRetriage() throws {
+        let store = try fixture.newMission()
+        let patient = try store.perform(AddPatient(triage: .sk2))
+        fixture.clock.advance(1200)
+        try store.perform(ConfirmTriage(patientID: patient.id))
+        let current = try #require(store.state.patients.first { $0.id == patient.id })
+        #expect(current.lastTriagedAt == fixture.clock.now)
+        #expect(current.triage == .sk2)
+        #expect(current.triageHistory?.count == 2)
+        #expect(store.state.visibleLog.last?.message.contains("Nachsichtung, bleibt") == true)
+        let untriaged = try store.perform(AddPatient(triage: .ungesichtet))
+        #expect(throws: CommandError.self) { try store.perform(ConfirmTriage(patientID: untriaged.id)) }
+
+        // Sichtungshilfe mit gleicher Kategorie zählt als Nachsichtung.
+        fixture.clock.advance(600)
+        var session = TriageSession(algorithm: .mstart)
+        for answer in [true, true, true, true, false, false, false] { session.answer(answer) }
+        try store.perform(ApplyTriageSuggestion(patientID: patient.id, suggestion: try #require(session.suggestion)))
+        #expect(store.state.patients.first { $0.id == patient.id }?.lastTriagedAt == fixture.clock.now)
+    }
+
+    // MARK: 96 Status automatisch
+
+    @Test func transportSetsStatusSevenAndSummaryCounts() throws {
+        let store = try fixture.newMission()
+        let patient = try store.perform(AddPatient(triage: .sk2))
+        let rtw = try unit(store, "RK 1", .rtw)
+        let nef = try unit(store, "NEF 1", .nef)
+        try store.perform(AssignUnit(patientID: patient.id, unitID: rtw.id))
+        try store.perform(AssignUnit(patientID: patient.id, unitID: nef.id))
+        try store.perform(StartTransport(patientID: patient.id))
+        #expect(store.state.activeUnits.first { $0.id == rtw.id }?.status == .patientOnBoard)
+        #expect(store.state.activeUnits.first { $0.id == nef.id }?.status == nil, "NEF transportiert nicht")
+        #expect(store.state.visibleLog.last?.message.contains("Transport mit") == true, "Transport bleibt letzter Eintrag")
+        let summary = UnitStatusSummary(units: store.state.activeUnits)
+        #expect(summary.entries == [UnitStatusSummary.Entry(status: .patientOnBoard, count: 1)])
+        #expect(summary.unknown == 1)
+    }
+}

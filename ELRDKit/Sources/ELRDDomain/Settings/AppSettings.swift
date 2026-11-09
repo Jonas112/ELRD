@@ -124,6 +124,18 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
     public var placeholderMinutes: Int = 15
     /// Mitteilungen, auch bei gesperrtem Gerät (Schritt 83).
     public var notifiesWhenLocked: Bool = true
+    /// Nachsichtung fällig nach … (Schritt 95), 0 = aus.
+    public var retriageMinutesSK2: Int = 30
+    public var retriageMinutesSK3: Int = 60
+
+    /// Nachsichtungsfrist einer Kategorie (nur SK 2 und SK 3).
+    public func retriageMinutes(for triage: Sichtungskategorie) -> Int {
+        switch triage {
+        case .sk2: retriageMinutesSK2
+        case .sk3: retriageMinutesSK3
+        default: 0
+        }
+    }
 
     public init(situationReportMinutes: Int = 30, transportWaitMinutes: Int = 20, placeholderMinutes: Int = 15) {
         self.situationReportMinutes = situationReportMinutes
@@ -138,6 +150,8 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
         transportWaitMinutes = try container.decodeIfPresent(Int.self, forKey: .transportWaitMinutes) ?? defaults.transportWaitMinutes
         placeholderMinutes = try container.decodeIfPresent(Int.self, forKey: .placeholderMinutes) ?? defaults.placeholderMinutes
         notifiesWhenLocked = try container.decodeIfPresent(Bool.self, forKey: .notifiesWhenLocked) ?? defaults.notifiesWhenLocked
+        retriageMinutesSK2 = try container.decodeIfPresent(Int.self, forKey: .retriageMinutesSK2) ?? defaults.retriageMinutesSK2
+        retriageMinutesSK3 = try container.decodeIfPresent(Int.self, forKey: .retriageMinutesSK3) ?? defaults.retriageMinutesSK3
     }
 
     /// Auswahl in den Einstellungen.

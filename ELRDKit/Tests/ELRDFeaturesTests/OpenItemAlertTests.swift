@@ -26,8 +26,9 @@ struct OpenItemAlertTests {
     @Test func timeBasedRemindersArePlannedAhead() throws {
         let store = try PreviewData.makeStore(now: now)
         let planned = OpenItemAlerts.upcoming(for: store.state, now: now, reminders: ReminderSettings())
-        // Lagemeldung + 6 Patienten SK 1–3 ohne Transportmittel + 3 Platzhalter (RD 3).
-        #expect(planned.count == 10)
+        // Lagemeldung + 6 Patienten SK 1–3 ohne Transportmittel + 3 Platzhalter (RD 3)
+        // + 5 Nachsichtungen (2 × SK 2, 3 × SK 3; Schritt 95).
+        #expect(planned.count == 15)
         #expect(planned.map(\.date) == planned.map(\.date).sorted(), "nächste zuerst")
         #expect(planned.first?.date == now.addingTimeInterval(15 * 60), "Platzhalter nach 15 min")
         #expect(planned.contains { $0.date == now.addingTimeInterval(30 * 60) && $0.body.contains("Lagemeldung") })
@@ -40,6 +41,8 @@ struct OpenItemAlertTests {
         off.situationReportMinutes = 0
         off.transportWaitMinutes = 0
         off.placeholderMinutes = 0
+        off.retriageMinutesSK2 = 0
+        off.retriageMinutesSK3 = 0
         #expect(OpenItemAlerts.upcoming(for: store.state, now: now, reminders: off).isEmpty, "„Aus“ plant nichts")
     }
 
@@ -137,5 +140,20 @@ struct OpenItemAlertTests {
         let item = try #require(later.first { $0.kind == .arrivalOverdue })
         #expect(item.title.contains("noch nicht eingetroffen"))
         #expect(item.target == .section(.organisation))
+    }
+
+    // MARK: 95 Nachsichtung
+
+    @Test func retriageBecomesDueAndConfirmResets() throws {
+        let store = try PreviewData.makeStore(now: now)
+        let sk2 = try #require(store.state.activePatients.first { $0.triage == .sk2 })
+        #expect(!OpenItem.items(for: store.state, now: now.addingTimeInterval(29 * 60)).contains { $0.id == "retriage-\(sk2.id.rawValue.uuidString)" })
+        let due = OpenItem.items(for: store.state, now: now.addingTimeInterval(31 * 60))
+        let item = try #require(due.first { $0.id == "retriage-\(sk2.id.rawValue.uuidString)" })
+        #expect(item.kind == .retriageDue)
+        #expect(item.detail.contains("SK 2"))
+        var off = ReminderSettings()
+        off.retriageMinutesSK2 = 0
+        #expect(!OpenItem.items(for: store.state, now: now.addingTimeInterval(31 * 60), reminders: off).contains { $0.kind == .retriageDue && $0.triage == .sk2 })
     }
 }

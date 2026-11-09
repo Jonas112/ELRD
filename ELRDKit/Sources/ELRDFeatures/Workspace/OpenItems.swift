@@ -19,6 +19,8 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
         case longWait
         /// Klinik über ihrem Kontingent (Schritt 71).
         case hospitalOverloaded
+        /// Nachsichtung fällig (Schritt 95).
+        case retriageDue
         /// Erwartetes Eintreffen überschritten (Schritt 92).
         case arrivalOverdue
         /// Platzhalter seit langem ohne Fahrzeug (Schritt 69).
@@ -110,6 +112,25 @@ public struct OpenItem: Identifiable, Equatable, Sendable {
                 actionTitle: "Kliniken",
                 target: .hospitals
             ))
+        }
+
+        // Schritt 95: Nachsichtung je Kategorie nach Frist.
+        if !state.mission.isClosed {
+            for patient in patients where patient.outcome == nil {
+                let limit = reminders.retriageMinutes(for: patient.triage)
+                guard limit > 0, let last = patient.lastTriagedAt else { continue }
+                let since = minutes(since: last, now)
+                guard since >= limit else { continue }
+                items.append(OpenItem(
+                    id: "retriage-\(patient.id.rawValue.uuidString)",
+                    kind: .retriageDue,
+                    triage: patient.triage,
+                    title: "\(patient.displayName) Nachsichtung fällig",
+                    detail: "zuletzt gesichtet vor \(since) min (\(patient.triage.shortName))",
+                    actionTitle: "Patient öffnen",
+                    target: .patient(patient.id)
+                ))
+            }
         }
 
         // Schritt 92: Eintreffen überfällig (Platzhalter oder Status 3 mit erwarteter Zeit).

@@ -278,6 +278,10 @@ public struct StartTransport: MissionCommand {
         }
         let now = draft.context.now
         try draft.update(Patient.self, id: patientID) { $0.startTransport(at: now) }
+        // Schritt 96: Transportmittel automatisch auf Status 7 „Patient aufgenommen“.
+        for unit in assigned where unit.type.transportsPatients && unit.status != .patientOnBoard && unit.status != .atDestination {
+            try SetUnitStatus(unitID: unit.id, status: .patientOnBoard).execute(&draft)
+        }
         let units = patient.unitIDs.compactMap { draft.get(MissionUnit.self, id: $0)?.displayName }.joined(separator: ", ")
         let target = patient.destination.map { " nach \($0.name)" } ?? ""
         draft.log(.patient, "Patient \(patient.number): Transport mit \(units)\(target)", subject: .patient(patientID))
@@ -496,6 +500,25 @@ public struct SetTriage: MissionCommand {
     }
 }
 
+/// Nachsichtung ohne Änderung der Kategorie (Schritt 95).
+public struct ConfirmTriage: MissionCommand {
+    public let patientID: PatientID
+
+    public init(patientID: PatientID) {
+        self.patientID = patientID
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let patient = draft.get(Patient.self, id: patientID), !patient.isDeleted else {
+            throw CommandError.notFound(.patient)
+        }
+        guard patient.triage.isTriaged else { throw CommandError.invalid("Patient ist noch nicht gesichtet.") }
+        let now = draft.context.now
+        try draft.update(Patient.self, id: patientID) { $0.confirmTriage(at: now) }
+        draft.log(.patient, "Patient \(patient.number): Nachsichtung, bleibt \(patient.triage.displayName)", subject: .patient(patientID))
+    }
+}
+
 /// Übernimmt den Vorschlag der geführten Sichtung (Schritt 87): SK setzen und die
 /// Antworten ins Protokoll schreiben (nur Nummer, keine Namen).
 public struct ApplyTriageSuggestion: MissionCommand {
@@ -508,7 +531,14 @@ public struct ApplyTriageSuggestion: MissionCommand {
     }
 
     public func execute(_ draft: inout MissionDraft) throws {
-        try SetTriage(patientID: patientID, triage: suggestion.triage).execute(&draft)
+        guard let before = draft.get(Patient.self, id: patientID) else { throw CommandError.notFound(.patient) }
+        if before.triage == suggestion.triage, before.triage.isTriaged {
+            // Gleiche Kategorie: zählt als Nachsichtung.
+            let now = draft.context.now
+            try draft.update(Patient.self, id: patientID) { $0.confirmTriage(at: now) }
+        } else {
+            try SetTriage(patientID: patientID, triage: suggestion.triage).execute(&draft)
+        }
         guard let patient = draft.get(Patient.self, id: patientID) else { return }
         draft.log(.patient, "Patient \(patient.number): \(suggestion.protocolText)", subject: .patient(patientID))
     }

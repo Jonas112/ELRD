@@ -201,6 +201,26 @@ struct PatientDetailView: View {
         return parts.joined(separator: " · ")
     }
 
+    @ViewBuilder
+    private func triageButtons(_ patient: Patient, algorithm: TriageAlgorithm) -> some View {
+        Button { showsTriageGuide = true } label: {
+            Label("Sichtungshilfe \(algorithm.displayName)", systemImage: "list.bullet.clipboard")
+                .font(.headline)
+                .frame(minHeight: TouchTarget.minimum)
+        }
+        .buttonStyle(.bordered)
+        if patient.triage.isTriaged, patient.outcome == nil {
+            Button {
+                do { try store.perform(ConfirmTriage(patientID: patientID)) } catch { saveState = .failed(ErrorText.message(for: error)) }
+            } label: {
+                Label("Nachsichtung: bleibt \(patient.triage.shortName)", systemImage: "checkmark.circle")
+                    .font(.headline)
+                    .frame(minHeight: TouchTarget.minimum)
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
     private func triageRow(_ patient: Patient) -> some View {
         let algorithm = appSettings?.settings.triageAlgorithm ?? .mstart
         return VStack(alignment: .leading, spacing: Spacing.s) {
@@ -212,13 +232,21 @@ struct PatientDetailView: View {
                     .disabled(!canEdit)
                 }
             }
-            if canEdit {
-                Button { showsTriageGuide = true } label: {
-                    Label("Sichtungshilfe \(algorithm.displayName)", systemImage: "list.bullet.clipboard")
-                        .font(.headline)
-                        .frame(minHeight: TouchTarget.minimum)
+            // Schritt 95: zuletzt gesichtet, Nachsichtung bestätigen.
+            if let last = patient.lastTriagedAt, patient.outcome == nil {
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    let minutes = max(0, Int(context.date.timeIntervalSince(last) / 60))
+                    let limit = (appSettings?.settings.reminders ?? ReminderSettings()).retriageMinutes(for: patient.triage)
+                    Label("Zuletzt gesichtet \(last.formatted(date: .omitted, time: .shortened)) Uhr (vor \(minutes) min)", systemImage: "clock.arrow.circlepath")
+                        .font(.subheadline.weight(limit > 0 && minutes >= limit ? .bold : .regular))
+                        .foregroundStyle(limit > 0 && minutes >= limit ? Color.orange : Color.secondary)
                 }
-                .buttonStyle(.bordered)
+            }
+            if canEdit {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.s) { triageButtons(patient, algorithm: algorithm) }
+                    VStack(alignment: .leading, spacing: Spacing.s) { triageButtons(patient, algorithm: algorithm) }
+                }
             }
         }
         .sheet(isPresented: $showsTriageGuide) {

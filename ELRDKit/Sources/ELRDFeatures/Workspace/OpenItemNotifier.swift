@@ -19,7 +19,7 @@ struct ScheduledReminder: Equatable {
 
 enum OpenItemAlerts {
     /// Arten, die als zeitabhängige Erinnerung vorgeplant werden.
-    static let scheduledKinds: Set<OpenItem.Kind> = [.situationReportDue, .longWait, .placeholderOverdue, .arrivalOverdue]
+    static let scheduledKinds: Set<OpenItem.Kind> = [.situationReportDue, .longWait, .placeholderOverdue, .arrivalOverdue, .retriageDue]
 
     /// Offene Punkte, die seit dem letzten Stand neu sind. Beim ersten Stand eines
     /// Einsatzes (`previous == nil`) ist nichts „neu“ – sonst meldet das Öffnen alles.
@@ -56,6 +56,18 @@ enum OpenItemAlerts {
                     target: .patient(patient.id)
                 ))
             }
+        }
+        // Schritt 95: Nachsichtung.
+        for patient in state.patients.active where patient.outcome == nil {
+            let limit = reminders.retriageMinutes(for: patient.triage)
+            guard limit > 0, let last = patient.lastTriagedAt else { continue }
+            let due = last.addingTimeInterval(Double(limit) * 60)
+            guard due > now else { continue }
+            result.append(ScheduledReminder(
+                id: "\(missionKey).retriage.\(patient.id.rawValue.uuidString)", date: due, title: title,
+                body: "Patient \(patient.number) (\(patient.triage.shortName)): Nachsichtung fällig.",
+                target: .patient(patient.id)
+            ))
         }
         // Schritt 92: zur erwarteten Zeit nachfragen.
         for unit in state.activeUnits where unit.isAwaitingArrival {

@@ -223,6 +223,22 @@ struct SituationOverview: View {
                     }
                 }
             }
+            // Schritt 96: Fahrzeuge nach Status.
+            let byStatus = UnitStatusSummary(units: store.state.activeUnits)
+            if !byStatus.entries.isEmpty {
+                HStack(spacing: Spacing.s) {
+                    ForEach(byStatus.entries, id: \.status) { entry in
+                        VStack(spacing: 0) {
+                            Text("\(entry.count)").font(.title3.weight(.heavy).monospacedDigit())
+                            Text(entry.status.shortName).font(.caption.weight(.bold))
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 52)
+                        .background(Surface.canvas, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(entry.count) \(entry.status.displayName)")
+                    }
+                }
+            }
         }
         .padding(Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)

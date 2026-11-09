@@ -443,6 +443,12 @@ struct MissionAidsSettingsView: View {
                 minutesPicker("Platzhalter ohne Fahrzeug ab", value: settings.reminders.placeholderMinutes) { value in
                     save { $0.reminders.placeholderMinutes = value }
                 }
+                minutesPicker("Nachsichtung SK 2 alle", value: settings.reminders.retriageMinutesSK2) { value in
+                    save { $0.reminders.retriageMinutesSK2 = value }
+                }
+                minutesPicker("Nachsichtung SK 3 alle", value: settings.reminders.retriageMinutesSK3) { value in
+                    save { $0.reminders.retriageMinutesSK3 = value }
+                }
                 Toggle(isOn: Binding(
                     get: { settings.reminders.notifiesWhenLocked },
                     set: { on in save { $0.reminders.notifiesWhenLocked = on } }

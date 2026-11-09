@@ -146,30 +146,7 @@ struct MissionListView: View {
         .sheet(item: $exportURL) { file in
             ActivityView(items: [file.url])
         }
-        .confirmationDialog(
-            "Personendaten entfernen?",
-            isPresented: Binding(get: { pendingAnonymize != nil }, set: { if !$0 { pendingAnonymize = nil } }),
-            titleVisibility: .visible,
-            presenting: pendingAnonymize
-        ) { summary in
-            Button("Namen und Personendaten entfernen", role: .destructive) {
-                do { try model.anonymize(summary.id) } catch { actionError = ErrorText.message(for: error) }
-            }
-        } message: { _ in
-            Text("Namen, Geburtsdaten, Merkmale und Freitext der Patienten werden gelöscht – auch bei allen, die den Einsatz teilen. Sichtung, Verletzungen, Verbleib und Zeiten bleiben. Lässt sich nicht rückgängig machen.")
-        }
-        .task(id: appSettings?.settings.anonymizeAfterDays ?? 0) {
-            model.anonymizeDue(afterDays: appSettings?.settings.anonymizeAfterDays ?? 0)
-        }
-        .sheet(isPresented: $showsStatistics) {
-            StatisticsSheet(model: model).largeSheet()
-        }
-        .sheet(isPresented: $showsPersonSearch) {
-            PersonSearchSheet(model: model) { mission in
-                do { onOpen(try model.open(mission)) } catch { actionError = ErrorText.message(for: error) }
-            }
-            .largeSheet()
-        }
+        .background { extrasHost }
         .sheet(isPresented: $showsNearby) {
             NearbySyncView(session: makeNearbySession())
         }
@@ -493,6 +470,36 @@ struct MissionListView: View {
             try model.restore(summary.id)
         } catch {
             actionError = ErrorText.message(for: error)
+        }
+    }
+
+    /// Schritte 100–102: Dialoge und Blätter an einer eigenen, unsichtbaren Ansicht –
+    /// sonst wird `body` für den Compiler zu lang.
+    private var extrasHost: some View {
+        Color.clear
+            .confirmationDialog(
+            "Personendaten entfernen?",
+            isPresented: Binding(get: { pendingAnonymize != nil }, set: { if !$0 { pendingAnonymize = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingAnonymize
+        ) { summary in
+            Button("Namen und Personendaten entfernen", role: .destructive) {
+                do { try model.anonymize(summary.id) } catch { actionError = ErrorText.message(for: error) }
+            }
+        } message: { _ in
+            Text("Namen, Geburtsdaten, Merkmale und Freitext der Patienten werden gelöscht – auch bei allen, die den Einsatz teilen. Sichtung, Verletzungen, Verbleib und Zeiten bleiben. Lässt sich nicht rückgängig machen.")
+        }
+            .task(id: appSettings?.settings.anonymizeAfterDays ?? 0) {
+            model.anonymizeDue(afterDays: appSettings?.settings.anonymizeAfterDays ?? 0)
+        }
+            .sheet(isPresented: $showsStatistics) {
+            StatisticsSheet(model: model).largeSheet()
+        }
+            .sheet(isPresented: $showsPersonSearch) {
+            PersonSearchSheet(model: model) { mission in
+                do { onOpen(try model.open(mission)) } catch { actionError = ErrorText.message(for: error) }
+            }
+            .largeSheet()
         }
     }
 

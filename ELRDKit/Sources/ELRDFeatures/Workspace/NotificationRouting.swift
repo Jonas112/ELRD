@@ -78,8 +78,8 @@ public final class NotificationInbox {
     }
 }
 
-/// Nimmt angetippte Mitteilungen entgegen. Im Vordergrund zeigt die App eigene
-/// Hinweise (Schritt 83) – Systemmitteilungen dann nicht zusätzlich.
+/// Nimmt angetippte Mitteilungen entgegen und zeigt sie auch bei offener App
+/// (Banner, Mitteilungszentrale, Ton – Schritt 105).
 public final class ELRDNotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
     public static let shared = ELRDNotificationDelegate()
 
@@ -99,6 +99,7 @@ public final class ELRDNotificationDelegate: NSObject, UNUserNotificationCenterD
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([])
+        // Schritt 105: neue offene Punkte auch bei offener App mit Banner und Ton.
+        completionHandler([.banner, .list, .sound])
     }
 }

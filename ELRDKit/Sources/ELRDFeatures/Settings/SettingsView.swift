@@ -493,8 +493,8 @@ struct MissionAidsSettingsView: View {
                     set: { on in save { $0.reminders.notifiesWhenLocked = on } }
                 )) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Mitteilungen bei gesperrtem Gerät").font(.headline)
-                        Text("Neue offene Punkte und fällige Erinnerungen auf dem Sperrbildschirm – ohne Patientennamen.")
+                        Text("Mitteilungen mit Ton").font(.headline)
+                        Text("Neue offene Punkte und fällige Erinnerungen als Mitteilung mit Ton – auch bei offener App und auf dem Sperrbildschirm, ohne Patientennamen.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }

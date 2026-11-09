@@ -2,10 +2,15 @@ import SwiftUI
 import ELRDDomain
 import ELRDStore
 
-/// Nachrichten (Glocke): oben schreiben, darunter neueste zuerst. Ungelesene sind
-/// hervorgehoben; „Gelesen“ je Nachricht oder „Alle gelesen“.
+/// Benachrichtigungen (Glocke): neue offene Punkte (Schritt 105) und Nachrichten.
+/// Oben schreiben, darunter neueste zuerst. Ungelesene sind hervorgehoben;
+/// „Gelesen“ je Nachricht oder „Alle gelesen“.
 struct MessagesView: View {
     let store: MissionStore
+    /// Zu einem offenen Punkt springen.
+    var onOpen: (OpenItem.Target) -> Void = { _ in }
+
+    @Environment(OpenItemNotifier.self) private var notifier: OpenItemNotifier?
 
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
@@ -18,9 +23,12 @@ struct MessagesView: View {
     var body: some View {
         let messages = MissionMessage.newestFirst(store.state.messages)
         let unread = store.state.unreadMessageCount
+        let records = notifier?.records(for: store.missionID) ?? []
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.l) {
+                    if !records.isEmpty { openItemRecords(records) }
+                    Text("Nachrichten").font(.title3.weight(.bold))
                     if canEdit { composer }
                     if messages.isEmpty {
                         Text("Noch keine Nachrichten. Sobald mehrere Geräte verbunden sind, erscheinen hier auch Nachrichten der anderen.")
@@ -39,7 +47,8 @@ struct MessagesView: View {
                 .padding(Spacing.xl)
             }
             .background(Surface.canvas)
-            .navigationTitle(unread == 0 ? "Nachrichten" : "Nachrichten (\(unread) neu)")
+            .navigationTitle("Benachrichtigungen")
+            .onDisappear { notifier?.markAllRead(store.missionID) }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -55,6 +64,50 @@ struct MessagesView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage ?? "")
+            }
+        }
+    }
+
+    /// Neue offene Punkte auf diesem Gerät, neueste zuerst; Tipp führt hin.
+    private func openItemRecords(_ records: [OpenItemRecord]) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Neue offene Punkte").font(.title3.weight(.bold))
+                Spacer()
+                if records.contains(where: { !$0.isRead }) {
+                    Button("Alle gelesen") { notifier?.markAllRead(store.missionID) }
+                        .font(.subheadline.weight(.semibold))
+                }
+            }
+            ForEach(records.prefix(30)) { record in
+                Button {
+                    onOpen(record.item.target)
+                } label: {
+                    HStack(alignment: .top, spacing: Spacing.m) {
+                        Image(systemName: record.isRead ? "bell" : "bell.badge.fill")
+                            .font(.title3)
+                            .foregroundStyle(record.isRead ? Color.secondary : Color.orange)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(record.item.title)
+                                .font(record.isRead ? .body : .body.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                            Text("\(record.date.formatted(date: .omitted, time: .shortened)) · \(record.item.kind.settingsTitle)")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        Text(record.item.actionTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.tint)
+                    }
+                    .padding(Spacing.m)
+                    .frame(minHeight: TouchTarget.comfortable)
+                    .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color.orange, lineWidth: record.isRead ? 0 : 2))
+                }
+                .buttonStyle(.plain)
             }
         }
     }

@@ -192,4 +192,30 @@ struct OpenItemAlertTests {
     @Test func kindKeysAreUnique() {
         #expect(Set(OpenItem.Kind.allCases.map(\.key)).count == OpenItem.Kind.allCases.count)
     }
+
+    // MARK: 105 Benachrichtigungen
+
+    @Test func newItemsAreListedUnderNotifications() throws {
+        let store = try PreviewData.makeStore(now: now)
+        let notifier = OpenItemNotifier(enabled: false)
+        let settings = AppSettings()
+        notifier.evaluate(store.state, now: now, settings: settings, appIsActive: false)
+        #expect(notifier.records(for: store.missionID).isEmpty, "Öffnen meldet nichts")
+
+        // Neuer Patient von einem anderen Gerät (Abgleich) → ungelesener Eintrag.
+        try store.perform(AddPatient(triage: .sk1))
+        notifier.evaluate(store.state, now: now, settings: settings, appIsActive: false)
+        #expect(notifier.unreadCount(for: store.missionID) == 1)
+        #expect(notifier.records(for: store.missionID).first?.item.kind == .criticalWithoutTransport)
+        #expect(WorkspaceBadges(state: store.state, notifications: notifier.unreadCount(for: store.missionID)).unreadMessages == 1)
+
+        // Eigene Änderung → in der Liste, aber schon gelesen.
+        try store.perform(AddPatient(triage: .ungesichtet))
+        notifier.acknowledge(store.state, now: now, settings: settings)
+        #expect(notifier.records(for: store.missionID).count == 2)
+        #expect(notifier.unreadCount(for: store.missionID) == 1)
+
+        notifier.markAllRead(store.missionID)
+        #expect(notifier.unreadCount(for: store.missionID) == 0)
+    }
 }

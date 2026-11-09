@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import AudioToolbox
 import UserNotifications
 import ELRDDomain
 import ELRDStore
@@ -109,31 +110,75 @@ enum OpenItemAlerts {
 
 // MARK: - Hinweise in der App und Mitteilungen
 
-/// Meldet neue offene Punkte: als Hinweis oben in der App und – wenn die App im
-/// Hintergrund ist oder das Gerät gesperrt – als lokale Mitteilung. Zeitabhängige
-/// Erinnerungen werden zusätzlich vorgeplant.
+/// Eintrag unter „Benachrichtigungen“ (Glocke): ein neuer offener Punkt (Schritt 105).
+/// Nur auf diesem Gerät – jedes Gerät erkennt neue Punkte selbst.
+struct OpenItemRecord: Identifiable, Equatable {
+    let id: UUID
+    let missionID: MissionID
+    let item: OpenItem
+    let date: Date
+    var isRead: Bool
+}
+
+/// Meldet neue offene Punkte (Schritt 83, 105): als lokale Mitteilung mit Ton –
+/// auch wenn die App offen ist – und als Eintrag unter „Benachrichtigungen“. Ohne
+/// Erlaubnis für Mitteilungen: Hinweis oben in der App mit Ton. Zeitabhängige
+/// Erinnerungen werden vorgeplant.
 @MainActor
 @Observable
 final class OpenItemNotifier {
-    /// Zuletzt neu hinzugekommener Punkt (Hinweis in der App).
+    /// Zuletzt neu hinzugekommener Punkt (Hinweis in der App, wenn Mitteilungen aus sind).
     private(set) var banner: OpenItem?
+    /// Neue offene Punkte, neueste zuletzt (je Einsatz höchstens 100).
+    private(set) var records: [OpenItemRecord] = []
 
     @ObservationIgnored private var known: [MissionID: Set<String>] = [:]
     @ObservationIgnored private var bannerTask: Task<Void, Never>?
     @ObservationIgnored private var lastScheduled: [MissionID: [ScheduledReminder]] = [:]
     @ObservationIgnored private let enabled: Bool
-    @ObservationIgnored private var authorizationRequested = false
+    /// Mitteilungen erlaubt (sonst Hinweis in der App).
+    @ObservationIgnored private var isAuthorized = false
 
     /// `enabled == false` bei Beispieldaten: keine Mitteilungen, kein Nachfragen.
     init(enabled: Bool) {
         self.enabled = enabled
     }
 
-    /// Einmal fragen, ob Mitteilungen erlaubt sind (beim ersten geöffneten Einsatz).
+    /// Fragt beim ersten Mal nach der Erlaubnis; danach liefert iOS nur den Stand.
     func requestAuthorizationIfNeeded() {
-        guard enabled, !authorizationRequested else { return }
-        authorizationRequested = true
-        Task { _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) }
+        guard enabled else { return }
+        Task { @MainActor [weak self] in
+            let granted = (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            self?.isAuthorized = granted
+        }
+    }
+
+    /// Einträge eines Einsatzes, neueste zuerst.
+    func records(for mission: MissionID) -> [OpenItemRecord] {
+        records.filter { $0.missionID == mission }.reversed()
+    }
+
+    func unreadCount(for mission: MissionID) -> Int {
+        records.filter { $0.missionID == mission && !$0.isRead }.count
+    }
+
+    func markAllRead(_ mission: MissionID) {
+        guard records.contains(where: { $0.missionID == mission && !$0.isRead }) else { return }
+        for index in records.indices where records[index].missionID == mission {
+            records[index].isRead = true
+        }
+    }
+
+    private func record(_ items: [OpenItem], mission: MissionID, now: Date, isRead: Bool) {
+        guard !items.isEmpty else { return }
+        records += items.sorted { $0.kind < $1.kind }.map {
+            OpenItemRecord(id: UUID(), missionID: mission, item: $0, date: now, isRead: isRead)
+        }
+        let own = records.filter { $0.missionID == mission }
+        if own.count > 100 {
+            let drop = Set(own.prefix(own.count - 100).map(\.id))
+            records.removeAll { drop.contains($0.id) }
+        }
     }
 
     /// Nach jeder Änderung und im Minutentakt: neue Punkte melden, Erinnerungen planen.
@@ -145,12 +190,14 @@ final class OpenItemNotifier {
         known[mission] = Set(items.map(\.id))
 
         if let first = fresh.sorted(by: { $0.kind < $1.kind }).first {
-            if appIsActive {
-                show(first)
-            } else if enabled, reminders.notifiesWhenLocked {
-                // Zeitabhängige Punkte sind schon vorgeplant – nicht doppelt melden.
+            record(fresh, mission: mission, now: now, isRead: false)
+            if enabled, isAuthorized, reminders.notifiesWhenLocked {
+                // Mitteilung mit Ton, auch im Vordergrund. Zeitabhängige Punkte sind
+                // schon vorgeplant – nicht doppelt melden.
                 let untimed = fresh.filter { !OpenItemAlerts.scheduledKinds.contains($0.kind) }
                 if !untimed.isEmpty { post(untimed, state: state) }
+            } else if appIsActive {
+                show(first)
             }
         }
         if enabled { schedule(state, now: now, reminders: reminders) }
@@ -160,6 +207,9 @@ final class OpenItemNotifier {
     /// Patienten gerade selbst angelegt hat, braucht keinen Hinweis darauf.
     func acknowledge(_ state: MissionState, now: Date, settings: AppSettings) {
         let items = OpenItem.items(for: state, now: now, reminders: settings.reminders)
+        // In der Liste festhalten, aber ohne Ton und als gelesen.
+        let fresh = OpenItemAlerts.newItems(previous: known[state.mission.id], current: items)
+        record(fresh, mission: state.mission.id, now: now, isRead: true)
         known[state.mission.id] = Set(items.map(\.id))
         if enabled { schedule(state, now: now, reminders: settings.reminders) }
     }
@@ -172,6 +222,7 @@ final class OpenItemNotifier {
     /// Einsatz verlassen: geplante Erinnerungen dieses Einsatzes entfernen.
     func forget(_ mission: MissionID) {
         known[mission] = nil
+        markAllRead(mission)
         guard enabled, let planned = lastScheduled.removeValue(forKey: mission), !planned.isEmpty else { return }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: planned.map(\.id))
     }
@@ -180,6 +231,8 @@ final class OpenItemNotifier {
         bannerTask?.cancel()
         withAnimation(.snappy) { banner = item }
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        // Ton auch ohne Mitteilungs-Erlaubnis (Schritt 105).
+        AudioServicesPlaySystemSound(1007)
         bannerTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(8))
             guard !Task.isCancelled else { return }

@@ -47,9 +47,10 @@ public struct WorkspaceBadges: Equatable, Sendable {
     public let openPatients: Int
     public let unreadMessages: Int
 
-    public init(state: MissionState) {
+    /// `notifications`: ungelesene Hinweise auf neue offene Punkte (Schritt 105).
+    public init(state: MissionState, notifications: Int = 0) {
         openPatients = state.patients.active.filter { $0.status != .released && $0.status != .inTransport }.count
-        unreadMessages = state.unreadMessageCount
+        unreadMessages = state.unreadMessageCount + notifications
     }
 
     public func badge(for section: WorkspaceSection) -> Int {

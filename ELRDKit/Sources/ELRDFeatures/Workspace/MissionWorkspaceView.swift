@@ -65,7 +65,7 @@ public struct MissionWorkspaceView: View {
     public var body: some View {
         GeometryReader { proxy in
             let layout = WorkspaceLayout.forWidth(proxy.size.width)
-            let badges = WorkspaceBadges(state: store.state)
+            let badges = WorkspaceBadges(state: store.state, notifications: notifier?.unreadCount(for: store.missionID) ?? 0)
             Group {
                 switch layout {
                 case .rail:
@@ -175,7 +175,14 @@ public struct MissionWorkspaceView: View {
             try? await Task.sleep(for: .seconds(6))
             if !Task.isCancelled { lastAdded = nil }
         }
-        .sheet(isPresented: $showsMessages) { MessagesView(store: store).largeSheet() }
+        .sheet(isPresented: $showsMessages) {
+            MessagesView(store: store) { target in
+                showsMessages = false
+                path = []
+                handle(target)
+            }
+            .largeSheet()
+        }
         .fullScreenCover(isPresented: $showsReport) {
             ReportEditorView(store: store, people: people, hospitals: catalogs.hospitals) { showsReport = false }
         }
@@ -764,7 +771,7 @@ struct MessagesBellButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.primary.opacity(0.8))
-        .accessibilityLabel(unread > 0 ? "Nachrichten, \(unread) ungelesen" : "Nachrichten")
+        .accessibilityLabel(unread > 0 ? "Benachrichtigungen, \(unread) ungelesen" : "Benachrichtigungen")
     }
 }
 

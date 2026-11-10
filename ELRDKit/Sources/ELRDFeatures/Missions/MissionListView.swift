@@ -497,6 +497,9 @@ struct MissionListView: View {
         }
             // Schritt 116: zugelassene Anfrage → Einsatz öffnen; wartende Anfragen
             // auch nach einem Neustart weiter nachsehen (alle 30 s).
+            // Schritt 120: Freigaben beendeter Einsätze löschen (auch nach Neustart,
+            // auch wenn ein anderes Gerät den Einsatz beendet hat).
+            .task(id: model.missions.filter(\.isClosed).count) { await cleanUpGPXShares() }
             .task {
                 guard let cloud else { return }
                 cloud.onJoinApproved = { mission in
@@ -506,6 +509,7 @@ struct MissionListView: View {
                 }
                 while !Task.isCancelled {
                     if cloud.pendingJoins.contains(where: { $0.status == .waiting }) { await cloud.checkJoinRequests() }
+                    await cleanUpGPXShares()
                     try? await Task.sleep(for: .seconds(30))
                 }
             }
@@ -515,6 +519,11 @@ struct MissionListView: View {
             }
             .largeSheet()
         }
+    }
+
+    private func cleanUpGPXShares() async {
+        let closed = Set(model.missions.filter(\.isClosed).map(\.id))
+        await GPXShareCenter.shared.cleanUp(closed: closed, deletesOnClose: appSettings?.settings.deletesGPXSharesOnClose ?? true)
     }
 
     private func delete(_ summary: MissionSummary) {

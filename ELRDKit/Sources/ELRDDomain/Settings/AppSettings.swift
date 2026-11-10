@@ -48,6 +48,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var nightMode: Bool = false
     /// Schritt 116: Beitritt zu eigenen geteilten Einsätzen nur nach Zulassung.
     public var requiresJoinApproval: Bool = false
+    /// Schritt 120: GPX-Freigaben für Hundeteams bei Einsatzende in iCloud löschen.
+    public var deletesGPXSharesOnClose: Bool = true
     public static let anonymizeChoices = [0, 30, 90, 180, 365]
 
     public init() {}
@@ -78,6 +80,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         gloveMode = try container.decodeIfPresent(Bool.self, forKey: .gloveMode) ?? false
         nightMode = try container.decodeIfPresent(Bool.self, forKey: .nightMode) ?? false
         requiresJoinApproval = try container.decodeIfPresent(Bool.self, forKey: .requiresJoinApproval) ?? false
+        deletesGPXSharesOnClose = try container.decodeIfPresent(Bool.self, forKey: .deletesGPXSharesOnClose) ?? true
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).

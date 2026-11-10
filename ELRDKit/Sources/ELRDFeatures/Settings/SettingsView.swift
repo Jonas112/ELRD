@@ -193,6 +193,19 @@ struct GeneralSettingsView: View {
                 Text("Gilt für Einsätze, die ab jetzt geteilt werden. Bereits geteilte behalten ihre Art – zum Umstellen Teilen beenden und neu teilen.")
             }
 
+            Section {
+                Toggle(isOn: Binding(get: { settings.deletesGPXSharesOnClose }, set: { on in save { $0.deletesGPXSharesOnClose = on } })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(Image(systemName: "trash"))  GPX-Freigaben bei Einsatzende löschen").font(.headline)
+                        Text("Links und QR-Codes für Hundeteams funktionieren nach dem Einsatz nicht mehr. Bereits heruntergeladene Dateien bleiben auf den Geräten der Teams.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+            } header: {
+                Text("Karten für Hundeteams (GPX)")
+            }
+
             MapCacheSection()
 
             Section("Standardbericht") {

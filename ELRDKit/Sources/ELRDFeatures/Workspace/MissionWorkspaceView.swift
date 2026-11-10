@@ -152,6 +152,12 @@ public struct MissionWorkspaceView: View {
                 try? await Task.sleep(for: .seconds(15))
             }
         }
+        // Schritt 120: bei Einsatzende GPX-Freigaben für Hundeteams löschen.
+        .onChange(of: store.state.mission.isClosed) { _, closed in
+            guard closed, appSettings?.settings.deletesGPXSharesOnClose ?? true else { return }
+            let mission = store.missionID
+            Task { await GPXShareCenter.shared.removeAll(for: mission) }
+        }
         // Offene Punkte im Minutentakt prüfen (Erinnerungen werden mit der Zeit fällig).
         .task {
             // Schritt 89: im geteilten Einsatz als Teilnehmer eintragen.

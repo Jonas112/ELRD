@@ -41,6 +41,8 @@ struct MissionMapView: View {
     @State private var viewingPhoto: FileAttachment?
     /// Schritt 119: Lagekarte als GPX.
     @State private var gpxFile: ExportedFile?
+    /// Schritt 120: Link/QR-Code für Hundeteams.
+    @State private var showsHandout = false
     /// Schritt 114: Auswahl taktischer Zeichen.
     @State private var showsSignPicker = AppLaunchOptions.current.demoScreen == .mapSigns
     /// Schritt 115: Polygon oder Pfeil, der gerade Punkt für Punkt gesetzt wird.
@@ -98,6 +100,10 @@ struct MissionMapView: View {
         }
         .sheet(item: $gpxFile) { file in
             ActivityView(items: [file.url])
+        }
+        .sheet(isPresented: $showsHandout) {
+            GPXHandoutSheet(mission: store.missionID, title: gpxTitle, makeContents: gpxDocument)
+                .largeSheet()
         }
         .sheet(item: $viewingPhoto) { file in
             JournalImageViewer(file: file, attachments: attachments)
@@ -423,13 +429,16 @@ struct MissionMapView: View {
             Button(action: printSnapshot) {
                 Label("Drucken", systemImage: "printer")
             }
+            Button { showsHandout = true } label: {
+                Label("Für Hundeteams (Link/QR-Code)", systemImage: "qrcode")
+            }
             Button(action: shareGPX) {
-                Label("Lagekarte als GPX (Garmin)", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                Label("Lagekarte als GPX-Datei (Garmin)", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
             }
         } label: {
             MapControlLabel(title: "Ausschnitt", systemImage: "camera.viewfinder")
         }
-        .accessibilityLabel("Kartenausschnitt ins Tagebuch, drucken oder als GPX teilen")
+        .accessibilityLabel("Kartenausschnitt ins Tagebuch, drucken, als GPX teilen oder für Hundeteams freigeben")
     }
 
     private func saveSnapshotToJournal() {
@@ -453,18 +462,25 @@ struct MissionMapView: View {
     }
 
     /// Einsatzort, Abschnitte und alle Formen als GPX-Datei (Garmin).
-    private func shareGPX() {
+    private var gpxTitle: String {
+        let reason = store.state.mission.reason
+        return reason.isEmpty ? "Lagekarte" : "Lagekarte \(reason)"
+    }
+
+    private func gpxDocument() -> String {
         let state = store.state
-        let title = state.mission.reason.isEmpty ? "Lagekarte" : "Lagekarte \(state.mission.reason)"
-        let document = GPXExport.document(
-            title: title,
+        return GPXExport.document(
+            title: gpxTitle,
             missionCoordinate: state.mission.coordinate,
             sections: state.sections.active,
             objects: state.mapObjects.active,
             createdAt: Date()
         )
+    }
+
+    private func shareGPX() {
         do {
-            gpxFile = try GPXSharing.file(named: title, contents: document)
+            gpxFile = try GPXSharing.file(named: gpxTitle, contents: gpxDocument())
         } catch {
             errorMessage = ErrorText.message(for: error)
         }

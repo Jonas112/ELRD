@@ -10,6 +10,12 @@
 	<key>com.apple.developer.icloud-services</key>
 	<array>
 		<string>CloudKit</string>
+		<!-- iCloud Drive der App: GPX für Hundeteams per Link (Schritt 120). -->
+		<string>CloudDocuments</string>
+	</array>
+	<key>com.apple.developer.ubiquity-container-identifiers</key>
+	<array>
+		<string>iCloud.ELRD.App</string>
 	</array>
 	<!-- Stille Push-Mitteilungen bei Änderungen (wird beim Export auf „production“ gesetzt). -->
 	<key>aps-environment</key>

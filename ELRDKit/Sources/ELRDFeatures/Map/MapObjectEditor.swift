@@ -38,6 +38,7 @@ struct MapObjectEditor: View {
     @State private var signText = ""
     /// Schritt 119: GPX für Garmin.
     @State private var gpxFile: ExportedFile?
+    @State private var showsHandout = false
     @State private var choosesSign = false
 
     var body: some View {
@@ -74,6 +75,15 @@ struct MapObjectEditor: View {
         .onDisappear(perform: commitText)
         .sheet(item: $gpxFile) { file in
             ActivityView(items: [file.url])
+        }
+        .sheet(isPresented: $showsHandout) {
+            if let object {
+                GPXHandoutSheet(mission: store.missionID, title: object.displayName) {
+                    let current = store.state.mapObjects.active.first { $0.id == objectID } ?? object
+                    return GPXExport.document(for: current, createdAt: Date())
+                }
+                .largeSheet()
+            }
         }
         .confirmationDialog("Markierung löschen?", isPresented: $confirmsDelete, titleVisibility: .visible) {
             Button("Löschen", role: .destructive) {
@@ -161,6 +171,15 @@ struct MapObjectEditor: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Form als GPX-Datei zum Import in Garmin-Geräte")
+                Button { showsHandout = true } label: {
+                    Label("Für Hundeteams (Link/QR-Code)", systemImage: "qrcode")
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
 
                 Text("Notiz").font(.headline).foregroundStyle(.secondary)
                 TextField("optional", text: $note, axis: .vertical)

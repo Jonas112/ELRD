@@ -142,6 +142,8 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
     public var retriageMinutesSK3: Int = 60
     /// Arten offener Punkte, die nicht angezeigt werden (Schlüssel, Schritt 96).
     public var hiddenOpenItemKinds: [String] = []
+    /// Automatisches Lagebild ins Tagebuch alle … Minuten (Schritt 109), 0 = aus.
+    public var situationSnapshotMinutes: Int = 0
 
     /// Nachsichtungsfrist einer Kategorie (nur SK 2 und SK 3).
     public func retriageMinutes(for triage: Sichtungskategorie) -> Int {
@@ -168,10 +170,13 @@ public struct ReminderSettings: Codable, Hashable, Sendable {
         retriageMinutesSK2 = try container.decodeIfPresent(Int.self, forKey: .retriageMinutesSK2) ?? defaults.retriageMinutesSK2
         retriageMinutesSK3 = try container.decodeIfPresent(Int.self, forKey: .retriageMinutesSK3) ?? defaults.retriageMinutesSK3
         hiddenOpenItemKinds = try container.decodeIfPresent([String].self, forKey: .hiddenOpenItemKinds) ?? []
+        situationSnapshotMinutes = try container.decodeIfPresent(Int.self, forKey: .situationSnapshotMinutes) ?? defaults.situationSnapshotMinutes
     }
 
     /// Auswahl in den Einstellungen.
     public static let choices = [0, 10, 15, 20, 30, 45, 60]
+    /// Auswahl für automatische Lagebilder.
+    public static let snapshotChoices = [0, 15, 30, 60]
 }
 
 /// Eintrag im Telefonbuch (Schritt 99).

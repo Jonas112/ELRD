@@ -9,6 +9,16 @@ struct MissionTimelineView: View {
     let store: MissionStore
     /// Schritt 107.
     @State private var showsDebrief = AppLaunchOptions.current.demoScreen == .debrief
+    /// Schritt 109: Lagebild per Tipp.
+    @State private var snapshotState: SnapshotState = .idle
+    @Environment(\.attachmentStore) private var attachments
+    @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
+
+    private enum SnapshotState: Equatable {
+        case idle, working, done(String), failed(String)
+
+        var isFailure: Bool { if case .failed = self { true } else { false } }
+    }
 
     var body: some View {
         // Im Minutentakt neu rechnen (Laufzeit, „seit“).
@@ -17,6 +27,7 @@ struct MissionTimelineView: View {
             let metrics = MissionMetrics(mission: state.mission, patients: state.patients, journal: state.journal, now: context.date)
             VStack(alignment: .leading, spacing: Spacing.l) {
                 debriefButton(state.mission)
+                if !state.mission.isClosed { snapshotButton(state) }
                 if state.mission.isExerciseMission, let evaluation = ExerciseEvaluation(patients: state.patients) {
                     exerciseCard(evaluation)
                 }
@@ -51,6 +62,57 @@ struct MissionTimelineView: View {
             .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: Lagebild (Schritt 109)
+
+    private func snapshotButton(_ state: MissionState) -> some View {
+        Button(action: takeSnapshot) {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: "photo.badge.plus")
+                    .font(.title2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Lagebild jetzt").font(.headline)
+                    Text(snapshotCaption(state))
+                        .font(.subheadline)
+                        .foregroundStyle(snapshotState.isFailure ? Color.orange : Color.secondary)
+                }
+                Spacer()
+                if snapshotState == .working { ProgressView() }
+            }
+            .padding(Spacing.l)
+            .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(snapshotState == .working)
+        .accessibilityHint("Kartenbild und Zahlen als Eintrag ins Tagebuch")
+    }
+
+    private func snapshotCaption(_ state: MissionState) -> String {
+        switch snapshotState {
+        case .working: return "wird erstellt …"
+        case .done(let text), .failed(let text): return text
+        case .idle:
+            let interval = appSettings?.settings.reminders.situationSnapshotMinutes ?? 0
+            let last = SituationSnapshot.latest(in: state.journal).map { "letztes \($0.formatted(date: .omitted, time: .shortened)) Uhr" }
+            let rhythm = interval > 0 ? "automatisch alle \(interval) min" : "automatisch: aus (Einstellungen)"
+            return [last, rhythm].compactMap { $0 }.joined(separator: " · ")
+        }
+    }
+
+    private func takeSnapshot() {
+        snapshotState = .working
+        Task { @MainActor in
+            do {
+                let entry = try await SituationSnapshotRenderer.capture(
+                    store: store, settings: appSettings?.settings ?? AppSettings(), attachments: attachments
+                )
+                snapshotState = .done(entry.map { "Als Eintrag \($0.number) im Tagebuch" } ?? "Gespeichert")
+            } catch {
+                snapshotState = .failed(ErrorText.message(for: error))
+            }
+        }
     }
 
     // MARK: Übung (Schritt 88)

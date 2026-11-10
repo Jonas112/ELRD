@@ -1,6 +1,7 @@
 import SwiftUI
 import ELRDDomain
 import ELRDStore
+import ELRDPersistence
 import ELRDCloud
 
 /// Arbeitsbereich eines Einsatzes.
@@ -35,6 +36,9 @@ public struct MissionWorkspaceView: View {
     @Environment(LiveActivityController.self) private var liveActivity: LiveActivityController?
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
+    @Environment(\.attachmentStore) private var attachments
+    /// Schritt 109: Lagebild wird gerade erstellt (MapKit braucht einen Moment).
+    @State private var snapshotInProgress = false
 
     public init(
         store: MissionStore,
@@ -314,6 +318,27 @@ public struct MissionWorkspaceView: View {
             settings: appSettings?.settings ?? AppSettings(),
             appIsActive: scenePhase == .active
         )
+        takeSituationSnapshotIfDue()
+    }
+
+    /// Schritt 109: automatisches Lagebild im eingestellten Takt.
+    private func takeSituationSnapshotIfDue() {
+        let settings = appSettings?.settings ?? AppSettings()
+        let interval = settings.reminders.situationSnapshotMinutes
+        let now = Date()
+        guard !snapshotInProgress,
+              AppLaunchOptions.current.demoScreen == nil,
+              SituationSnapshot.isResponsible(store.state.mission, userID: store.sessionUserID),
+              SituationSnapshot.isDue(store.state, intervalMinutes: interval, now: now) else { return }
+        snapshotInProgress = true
+        Task { @MainActor in
+            defer { snapshotInProgress = false }
+            // Halber Takt als Sperre: kam inzwischen ein Lagebild von einem anderen
+            // Gerät, entsteht kein zweites.
+            _ = try? await SituationSnapshotRenderer.capture(
+                store: store, settings: settings, attachments: attachments, minimumGap: TimeInterval(interval * 30)
+            )
+        }
     }
 
     /// Öffnet einen Patienten (z. B. aus „Offene Punkte“ oder der Schnellanlage).

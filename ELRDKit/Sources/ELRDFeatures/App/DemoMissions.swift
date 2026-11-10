@@ -169,6 +169,8 @@ enum DemoMissions {
             let file = try environment.attachments.save(jpeg, kind: .photo, createdAt: time.date, pixelWidth: 1200, pixelHeight: 800)
             _ = try running.perform(AddMapSnapshot(image: file))
         }
+        // Schritt 109: automatisches Lagebild (Text; das Kartenbild braucht MapKit).
+        _ = try running.perform(AddSituationSnapshot(text: SituationSnapshot.text(running.state, openItemCount: 3, now: time.date)))
         if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }
         if let nef = running.state.activeUnits.first(where: { $0.type == .nef }) {
             try running.perform(MoveUnit(unitID: nef.id, to: staging.id))

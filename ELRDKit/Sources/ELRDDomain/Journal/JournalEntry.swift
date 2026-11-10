@@ -21,6 +21,9 @@ public struct JournalEntry: VersionedEntity, MissionScoped {
     /// Abgehakter Punkt der Checkliste (Schritt 76). Abhaken = Eintrag anlegen,
     /// zurücknehmen = Eintrag löschen – so kollidieren zwei Geräte nie.
     public var checklistItemID: String?
+    /// Automatisches Lagebild (Schritt 109); `nil` = nein. Eigenes Feld statt neuer
+    /// `JournalCategory`, damit ältere Apps die Einträge weiter lesen (E95).
+    public var isSituationSnapshot: Bool?
 
     public init(
         id: JournalEntryID = JournalEntryID(),

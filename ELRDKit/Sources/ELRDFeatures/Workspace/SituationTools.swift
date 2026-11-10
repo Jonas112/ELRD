@@ -366,6 +366,8 @@ struct HospitalQuotaSheet: View {
     @State private var errorMessage: String?
     /// Klinik-Voranmeldung (Schritt 98).
     @State private var preannouncement: HospitalPreannouncement?
+    /// Verteilungsvorschlag (Schritt 108).
+    @State private var showsDistribution = AppLaunchOptions.current.demoScreen == .distribution
 
     var body: some View {
         let loads = HospitalDistribution.loads(store.state)
@@ -375,6 +377,17 @@ struct HospitalQuotaSheet: View {
                 if loads.isEmpty {
                     Text("Noch keine Klinik mit Kontingent oder zugewiesenen Patienten.")
                         .foregroundStyle(.secondary)
+                }
+                if !store.state.mission.isClosed {
+                    Section {
+                        Button { showsDistribution = true } label: {
+                            Label("Verteilung vorschlagen", systemImage: "arrow.triangle.branch")
+                                .font(.headline)
+                                .frame(minHeight: TouchTarget.comfortable)
+                        }
+                    } footer: {
+                        Text("Schlägt für alle gesichteten Patienten ohne Zielklinik die nächste Klinik mit freiem Platz vor. Übernommen wird erst nach Bestätigung.")
+                    }
                 }
                 ForEach(loads) { load in
                     Section {
@@ -437,6 +450,9 @@ struct HospitalQuotaSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.fontWeight(.bold) }
             }
+        .sheet(isPresented: $showsDistribution) {
+            DistributionSheet(store: store, hospitals: hospitals).largeSheet()
+        }
         .sheet(item: $preannouncement) { announcement in
             ShareTextSheet(
                 title: "Voranmeldung",

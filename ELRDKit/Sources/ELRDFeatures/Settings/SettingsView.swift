@@ -520,6 +520,22 @@ struct MissionAidsSettingsView: View {
             }
 
             Section {
+                Picker("Lagebild ins Tagebuch alle", selection: Binding(
+                    get: { settings.reminders.situationSnapshotMinutes },
+                    set: { value in save { $0.reminders.situationSnapshotMinutes = value } }
+                )) {
+                    ForEach(ReminderSettings.snapshotChoices, id: \.self) { minutes in
+                        Text(minutes == 0 ? "Aus" : "\(minutes) min").tag(minutes)
+                    }
+                }
+                .frame(minHeight: TouchTarget.minimum)
+            } header: {
+                Text("Automatische Lagebilder")
+            } footer: {
+                Text("Im Takt ein Eintrag im Tagebuch: Kartenbild um den Einsatzort mit Markierungen, dazu SK-Zahlen, Transporte und Einheiten – ohne Patientennamen. Im geteilten Einsatz erstellt nur das Gerät der Einsatzleitung die Lagebilder.")
+            }
+
+            Section {
                 ForEach(settings.effectiveMissionTypes) { entry in
                     // Name oben, Zuordnung darunter linksbündig – passt auch aufs iPhone.
                     VStack(alignment: .leading, spacing: Spacing.xxs) {

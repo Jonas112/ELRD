@@ -20,7 +20,7 @@ struct SituationOverview: View {
         case .situationReport?: .report
         case .checklist?: .checklist
         case .leadership?: .leadership
-        case .hospitals?: .hospitals
+        case .hospitals?, .distribution?: .hospitals
         case .handover?: .handover
         default: nil
         }

@@ -19,6 +19,24 @@ Stand: Schritt 57 (November 2026). Hochladen geht nur auf einem Mac mit Xcode un
 2. **Team:** In Xcode unter Signing & Capabilities das Team wählen, „Automatically manage signing“ an.
 3. **In-App-Kauf:** Wenn die App einen neuen Eintrag bekommt, muss das Abo dort neu angelegt werden.
 
+## Fähigkeiten, iCloud und CloudKit (Stand Schritt 120)
+
+**Developer-Portal → Identifiers → `ELRD.App`** (macht Xcode mit automatischer Signierung meist selbst – trotzdem prüfen):
+- iCloud: *CloudKit* **und** *iCloud Documents* (Schritt 120), Container `iCloud.ELRD.App` zugeordnet
+- Push Notifications (stille Mitteilungen für den Abgleich)
+- NFC Tag Reading (Schritt 110)
+- Widget `ELRD.App.Widgets`: eigene App-ID, keine besonderen Fähigkeiten (Live Activity läuft über die App)
+
+**Xcode → Ziel ELRD → Signing & Capabilities:** iCloud (CloudKit + iCloud Documents, Container `iCloud.ELRD.App`), Push Notifications, Background Modes → Remote notifications, Near Field Communication Tag Reading. `ELRD.entitlements` enthält das bereits; Xcode darf keine Fehler (rote Hinweise) zeigen.
+
+**CloudKit-Konsole (icloud.developer.apple.com) → Container `iCloud.ELRD.App`:**
+1. Einmal mit zwei Geräten in der Entwicklungsumgebung teilen, beitreten, Beitritt anfragen/zulassen – das legt die Datensatztypen an (`ELRDEvent`, `ELRDFile`, `ELRDJoinRequest`, `ELRDJoinDecision`). Alternativ in *Schema → Record Types* von Hand anlegen.
+2. *Schema → Indexes*: `ELRDJoinRequest.shareKey` → **Queryable** (sonst findet die Einsatzleitung keine Anfragen).
+3. *Schema → Deploy Schema Changes…* → in **Production** übernehmen. TestFlight und App Store nutzen die Produktionsumgebung – ohne diesen Schritt geht Teilen dort nicht.
+4. Bei jeder späteren Schemaänderung (neue Felder) erneut deployen.
+
+`aps-environment` steht auf `development`; beim Archivieren für App Store Connect setzt Xcode `production` selbst.
+
 ## Hochladen (Mac)
 
 1. Repo holen, `ELRD.xcodeproj` öffnen.

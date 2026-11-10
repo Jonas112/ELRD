@@ -207,6 +207,7 @@ struct GeneralSettingsView: View {
             }
         }
         .navigationTitle("Allgemein")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             organisation = settings.organisationName
             ilsEmail = settings.ilsEmail
@@ -308,6 +309,7 @@ struct VehicleImagesView: View {
             }
         }
         .navigationTitle("Fahrzeugbilder")
+        .navigationBarTitleDisplayMode(.inline)
         .onChange(of: item) { _, newItem in
             guard let newItem, let type = picking else { return }
             Task { await load(newItem, for: type) }
@@ -390,6 +392,7 @@ struct IVENASettingsView: View {
             }
         }
         .navigationTitle("IVENA")
+        .navigationBarTitleDisplayMode(.inline)
         .task(id: selectedID) {
             catalog = try? BundledMasterData.ivenaCatalog(id: selectedID)
         }
@@ -697,6 +700,7 @@ struct MissionAidsSettingsView: View {
             }
         }
         .navigationTitle("Erinnerungen und Checklisten")
+        .navigationBarTitleDisplayMode(.inline)
         .settingsError($errorMessage)
         .sheet(item: Binding(
             get: { editingTemplate.flatMap { id in store?.settings.effectiveMissionTypes.first { $0.id == id } } },
@@ -863,6 +867,7 @@ struct ChecklistEditorView: View {
             }
         }
         .navigationTitle(name.isEmpty ? "Checkliste" : name)
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             guard !loaded, let current else { return }
             name = current.name
@@ -951,6 +956,7 @@ struct LeadershipPeopleSettingsView: View {
             }
         }
         .navigationTitle("Führungspersonal")
+        .navigationBarTitleDisplayMode(.inline)
         .settingsError($errorMessage)
     }
 
@@ -1002,6 +1008,7 @@ struct LeadershipPersonEditor: View {
             }
         }
         .navigationTitle(draft?.name.isEmpty == false ? draft!.name : "Person")
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if draft == nil { draft = store?.settings.leadershipPeople.first { $0.id == personID } }
         }

@@ -138,16 +138,36 @@ struct SectionsView: View {
     }
 
     private func header(columns: [SectionColumn]) -> some View {
-        HStack(alignment: .center, spacing: Spacing.m) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Abschnitte").font(.title2.weight(.bold))
-                Text(summary(columns)).font(.subheadline).foregroundStyle(.secondary)
+        // iPhone: Knöpfe unter den Titel, damit nichts umbricht.
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: Spacing.m) {
+                headerTitle(columns)
+                Spacer(minLength: Spacing.s)
+                headerButtons
             }
-            Spacer(minLength: Spacing.s)
-            if canEdit {
+            VStack(alignment: .leading, spacing: Spacing.m) {
+                headerTitle(columns)
+                headerButtons
+            }
+        }
+    }
+
+    private func headerTitle(_ columns: [SectionColumn]) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Abschnitte").font(.title2.weight(.bold))
+            Text(summary(columns)).font(.subheadline).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var headerButtons: some View {
+        if canEdit {
+            HStack(spacing: Spacing.m) {
                 Button { showsAddSection = true } label: {
                     Label("Abschnitt", systemImage: "plus")
                         .font(.headline)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)
                         .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -157,6 +177,8 @@ struct SectionsView: View {
                 Button { showsAddUnit = true } label: {
                     Label("Einheit", systemImage: "plus")
                         .font(.headline)
+                        .lineLimit(1)
+                        .fixedSize()
                         .foregroundStyle(.white)
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)

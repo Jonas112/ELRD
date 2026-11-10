@@ -49,6 +49,7 @@ struct AgreementsView: View {
             }
         }
         .navigationTitle("Vereinbarungen")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -280,6 +281,7 @@ struct SubscriptionView: View {
             }
         }
         .navigationTitle("Abo")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await subscriptions?.refresh() }
     }
 }

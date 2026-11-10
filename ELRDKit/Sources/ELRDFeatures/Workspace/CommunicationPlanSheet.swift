@@ -56,11 +56,15 @@ struct CommunicationPlanSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Fertig") { dismiss() } }
-                ToolbarItemGroup(placement: .primaryAction) {
-                    Button { printPlan(plan) } label: { Label("Drucken", systemImage: "printer") }
-                        .disabled(plan.isEmpty)
-                    Button { sharing = true } label: { Label("Teilen", systemImage: "square.and.arrow.up") }
-                        .disabled(plan.isEmpty)
+                ToolbarItem(placement: .primaryAction) {
+                    // Ein Knopf für Teilen und Drucken – auf dem iPhone bleibt der Titel lesbar.
+                    Menu {
+                        Button { sharing = true } label: { Label("Als Text teilen", systemImage: "square.and.arrow.up") }
+                        Button { printPlan(plan) } label: { Label("Drucken", systemImage: "printer") }
+                    } label: {
+                        Label("Teilen oder drucken", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(plan.isEmpty)
                 }
             }
             .sheet(isPresented: $sharing) {

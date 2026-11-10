@@ -93,13 +93,13 @@ struct DistributionSheet: View {
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(isSelected ? "Patient \(proposal.number) abwählen" : "Patient \(proposal.number) auswählen")
-            badge(proposal.triage)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: Spacing.s) {
+                    badge(proposal.triage)
                     Text(proposal.number).font(.headline.monospacedDigit())
                     Image(systemName: "arrow.right").foregroundStyle(.secondary)
-                    Text(hospital.name).font(.headline)
                 }
+                Text(hospital.name).font(.headline)
                 Text(isChanged ? "Von Hand geändert" : proposal.reason)
                     .font(.subheadline)
                     .foregroundStyle(proposal.traumaRoom != .none && !isChanged ? Color.orange : Color.secondary)

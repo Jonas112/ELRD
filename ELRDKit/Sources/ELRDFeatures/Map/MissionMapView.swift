@@ -659,6 +659,42 @@ struct MissionMapView: View {
 
     // MARK: Polygon und Pfeil (Schritt 115)
 
+    private func pathButtons(_ draft: MapPath, compact: Bool) -> some View {
+        HStack(spacing: Spacing.s) {
+            Button(role: .cancel) { pathDraft = nil } label: {
+                Label("Abbrechen", systemImage: "xmark").labelStyle(PathLabelStyle(compact: compact))
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("Abbrechen")
+            Button {
+                guard var updated = pathDraft, !updated.points.isEmpty else { return }
+                updated.points.removeLast()
+                pathDraft = updated
+            } label: {
+                Label("Zurück", systemImage: "arrow.uturn.backward").labelStyle(PathLabelStyle(compact: compact))
+            }
+            .buttonStyle(.bordered)
+            .disabled(draft.points.isEmpty)
+            .accessibilityLabel("Letzten Punkt entfernen")
+            Button {
+                if let center { addPathPoint(center) }
+            } label: {
+                Label("Punkt", systemImage: "plus.circle.fill").labelStyle(PathLabelStyle(compact: compact))
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("Punkt in der Kartenmitte setzen")
+            Button {
+                finishPath()
+            } label: {
+                Text(draft.isValid ? "Fertig (\(draft.points.count))" : "\(draft.points.count) von \(draft.minimumPoints)")
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!draft.isValid)
+        }
+
     private func startPath(_ kind: MapPath.Kind) {
         placing = nil
         pathDraft = MapPath(kind: kind, points: [])
@@ -683,34 +719,10 @@ struct MissionMapView: View {
 
     /// Große Knöpfe unten: Punkt in der Kartenmitte, rückgängig, abbrechen, fertig.
     private func pathBar(_ draft: MapPath) -> some View {
-        HStack(spacing: Spacing.s) {
-            Button("Abbrechen", role: .cancel) { pathDraft = nil }
-                .buttonStyle(.bordered)
-            Button {
-                guard var updated = pathDraft, !updated.points.isEmpty else { return }
-                updated.points.removeLast()
-                pathDraft = updated
-            } label: {
-                Label("Zurück", systemImage: "arrow.uturn.backward")
-            }
-            .buttonStyle(.bordered)
-            .disabled(draft.points.isEmpty)
-            Button {
-                if let center { addPathPoint(center) }
-            } label: {
-                Label("Punkt", systemImage: "plus.circle.fill")
-                    .fixedSize()
-            }
-            .accessibilityLabel("Punkt in der Kartenmitte setzen")
-            .buttonStyle(.bordered)
-            Button {
-                finishPath()
-            } label: {
-                Text(draft.isValid ? "Fertig (\(draft.points.count))" : "\(draft.points.count) von \(draft.minimumPoints)")
-                    .fontWeight(.bold)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!draft.isValid)
+        // iPhone: Symbole statt Text, damit die Knöpfe nicht umbrechen.
+        ViewThatFits(in: .horizontal) {
+            pathButtons(draft, compact: false)
+            pathButtons(draft, compact: true)
         }
         .font(.headline)
         .controlSize(.large)
@@ -927,5 +939,24 @@ struct MapControlLabel: View {
         .frame(width: 68, height: 64)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: .black.opacity(0.15), radius: 4, y: 1)
+    }
+}
+
+/// Knöpfe der Punktleiste: auf schmalen Geräten nur Symbol (Schritt 117).
+private struct PathLabelStyle: LabelStyle {
+    let compact: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if compact {
+            configuration.icon
+                .frame(minWidth: 28)
+        } else {
+            HStack(spacing: 6) {
+                configuration.icon
+                configuration.title
+            }
+            .lineLimit(1)
+            .fixedSize()
+        }
     }
 }

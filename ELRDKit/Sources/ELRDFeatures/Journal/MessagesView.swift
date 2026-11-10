@@ -121,25 +121,45 @@ struct MessagesView: View {
                 .onSubmit(send)
                 .inputBox()
                 .draftSync($text, field: .message, mission: store.missionID)
-            HStack(spacing: Spacing.s) {
-                ChoiceChip("Information", isSelected: !isWarning, minHeight: TouchTarget.minimum + 4) { isWarning = false }
-                ChoiceChip("Warnung", isSelected: isWarning, minHeight: TouchTarget.minimum + 4) { isWarning = true }
-                Spacer(minLength: Spacing.s)
-                Button(action: send) {
-                    Label("Senden", systemImage: "paperplane.fill")
-                        .font(.headline)
-                        .foregroundStyle(trimmed.isEmpty ? Color.secondary : Color.white)
-                        .padding(.horizontal, Spacing.l)
-                        .frame(minHeight: TouchTarget.comfortable)
-                        .background(trimmed.isEmpty ? Surface.elevated : (isWarning ? Color.orange : ActionFill.primary),
-                                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            // iPhone: Art und „Senden“ untereinander, damit nichts umbricht.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Spacing.s) {
+                    kindChips
+                    Spacer(minLength: Spacing.s)
+                    sendButton
                 }
-                .buttonStyle(.plain)
-                .disabled(trimmed.isEmpty)
-                .keyboardShortcut(.return, modifiers: .command)
+                VStack(alignment: .leading, spacing: Spacing.s) {
+                    HStack(spacing: Spacing.s) { kindChips }
+                    sendButton.frame(maxWidth: .infinity)
+                }
             }
         }
         .cardStyle()
+    }
+
+    @ViewBuilder
+    private var kindChips: some View {
+        ChoiceChip("Information", isSelected: !isWarning, minHeight: TouchTarget.minimum + 4) { isWarning = false }
+            .fixedSize()
+        ChoiceChip("Warnung", isSelected: isWarning, minHeight: TouchTarget.minimum + 4) { isWarning = true }
+            .fixedSize()
+    }
+
+    private var sendButton: some View {
+        Button(action: send) {
+            Label("Senden", systemImage: "paperplane.fill")
+                .font(.headline)
+                .lineLimit(1)
+                .foregroundStyle(trimmed.isEmpty ? Color.secondary : Color.white)
+                .padding(.horizontal, Spacing.l)
+                .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
+                .background(trimmed.isEmpty ? Surface.elevated : (isWarning ? Color.orange : ActionFill.primary),
+                            in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .fixedSize(horizontal: true, vertical: false)
+        }
+        .buttonStyle(.plain)
+        .disabled(trimmed.isEmpty)
+        .keyboardShortcut(.return, modifiers: .command)
     }
 
     private func send() {

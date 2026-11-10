@@ -26,6 +26,7 @@ struct MasterDataSettingsView: View {
             }
         }
         .navigationTitle("Stammdaten")
+        .navigationBarTitleDisplayMode(.inline)
         .settingsError($errorMessage)
     }
 

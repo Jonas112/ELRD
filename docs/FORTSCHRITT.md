@@ -207,6 +207,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | # | Schritt | Status |
 |---|---|---|
 | 116 | Beitritt zu geteilten Einsätzen nur nach Zulassung durch die Einsatzleitung (globale Einstellung, keine Daten vor der Zulassung) | ✅ |
+| 117 | iPhone-Durchsicht aller Bildschirme: Umbrüche und Überlappungen behoben | 🧪 |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -291,6 +292,8 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **108–115 grün (2026-11-10):** CI 42752761822 (Build, Tests, Oberflächentests, Fotos geprüft); Nacharbeit (CI 42757790758 grün, Fotos geprüft): Text in NEF/BHP-Zeichen, Foto-Marker, Knopf „Punkt“, Test unabhängig von der Protokollreihenfolge. **Jonas prüft:** taktische Zeichen (Vorlagen in `TacticalSignPreset.all`), NFC am iPhone (Fähigkeit „NFC Tag Reading“ der App-ID), Handschuh-/Nachtmodus am Gerät.
 
 - **Schritt 116 (2026-11-10):** Jonas: Einsatzleitung genehmigt, keine Daten vorher, Schalter global. `AppSettings.requiresJoinApproval` → `CloudSyncCoordinator.requiresJoinApproval` → `share(…, requiresApproval:)` (`publicPermission = .none`), am Link `requiresApproval`. `JoinSeal` (Hash des Links, AES-GCM-Siegel), `CloudZoneStore`: `currentUserID`, `submitJoinRequest`, `joinRequests`, `admit`, `submitJoinDecision`, `joinDecision`, `withdrawJoinRequest` (CloudKit: öffentliche Datenbank). Koordinator: `join` meldet `approvalRequired`, `requestJoin`, `checkJoinRequests` (beide Seiten), `decide`, `cancelJoinRequest`; `pendingJoins` im Verzeichnis (übersteht Neustart). Oberfläche: Einstellungen › Allgemein › „Beitritt genehmigen“; Einsatz beitreten mit QR-Scanner in der App, Anfrage mit Namen, Warteliste; Arbeitsbereich oben `JoinRequestBanner` (Zulassen/Ablehnen). Tests: 4 Cloud. CI 42761753528 grün. **Jonas:** CloudKit-Dashboard einrichten (docs/SYNC.md, Abschnitt „Beitritt mit Genehmigung“), dann mit zwei Apple-IDs testen.
+
+- **Schritt 117 (2026-11-10):** CI fotografiert mit `[geraete: iphone]` nur das iPhone, jetzt alle 43 Bildschirme. Befunde und Änderungen: Einstellungs-Unterseiten mit kleinem Titel (großer Titel überlagerte den Inhalt, z. B. Allgemein, Stammdaten); Abschnitte: Knöpfe „+ Abschnitt/+ Einheit“ brachen um → bei wenig Breite unter dem Titel; Nachrichten: Art und „Senden“ brachen um → untereinander; Verteilungsvorschlag: Klinikname brach silbenweise → eigene Zeile; Fläche/Pfeil: Knopfleiste auf dem iPhone nur mit Symbolen; Kommunikationsplan: Teilen und Drucken in einem Knopf. Unverändert gelassen (lesbar, nur gekürzt): Einsatztitel in der Kopfzeile, lange Blatttitel (Nachbesprechung, Lagemeldung).
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

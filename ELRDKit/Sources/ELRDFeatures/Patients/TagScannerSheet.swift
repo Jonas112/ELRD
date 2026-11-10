@@ -14,6 +14,8 @@ struct TagScannerSheet: View {
     @State private var typed = ""
     @State private var scanned: String?
     @State private var errorMessage: String?
+    /// Schritt 110: NFC-Karten (nur iPhone).
+    @State private var nfc = NFCCardReader()
 
     private var scannerAvailable: Bool {
         DataScannerViewController.isSupported && DataScannerViewController.isAvailable
@@ -37,6 +39,15 @@ struct TagScannerSheet: View {
                         } else {
                             Label("Kamera zum Scannen hier nicht verfügbar – Nummer eintippen.", systemImage: "barcode.viewfinder")
                                 .foregroundStyle(.secondary)
+                        }
+                        if NFCCardReader.isAvailable {
+                            Button(action: readNFC) {
+                                Label("NFC-Karte ans iPhone halten", systemImage: "wave.3.right.circle.fill")
+                                    .font(.title3.weight(.semibold))
+                                    .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .accessibilityHint("Liest die Nummer vom Chip der Anhängekarte – auch im Dunkeln")
                         }
                         HStack(spacing: Spacing.s) {
                             TextField("Kartennummer", text: $typed)
@@ -64,6 +75,23 @@ struct TagScannerSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Schließen") { dismiss() } }
+            }
+        }
+    }
+
+    private func readNFC() {
+        errorMessage = nil
+        nfc.read { result in
+            switch result {
+            case .success(let text):
+                guard let tag = Patient.normalizedTag(text) else {
+                    errorMessage = "Auf der Karte steht keine gültige Nummer."
+                    return
+                }
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                scanned = tag
+            case .failure(let error):
+                errorMessage = error.errorDescription
             }
         }
     }

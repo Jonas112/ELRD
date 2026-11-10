@@ -32,7 +32,8 @@ public final class AttachmentFileStore: Sendable {
         createdAt: Date,
         pixelWidth: Int? = nil,
         pixelHeight: Int? = nil,
-        duration: TimeInterval? = nil
+        duration: TimeInterval? = nil,
+        coordinate: GeoCoordinate? = nil
     ) throws -> FileAttachment {
         let attachment = FileAttachment(
             kind: kind,
@@ -41,7 +42,8 @@ public final class AttachmentFileStore: Sendable {
             createdAt: createdAt,
             duration: duration,
             pixelWidth: pixelWidth,
-            pixelHeight: pixelHeight
+            pixelHeight: pixelHeight,
+            coordinate: coordinate
         )
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var options: Data.WritingOptions = [.atomic]

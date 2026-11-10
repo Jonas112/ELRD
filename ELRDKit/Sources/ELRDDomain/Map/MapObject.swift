@@ -13,6 +13,11 @@ public struct MapObject: VersionedEntity, MissionScoped {
     public var note: String
     public var color: RGBColor
     public private(set) var shape: MapShape
+    /// Taktisches Zeichen statt Kreis (Schritt 114); die Form ist dann ein kleiner
+    /// Kreis um den Standort – so sehen ältere Apps wenigstens einen Punkt.
+    public var tacticalSign: TacticalSign?
+    /// Polygon oder Pfeil (Schritt 115); die Form ist dann das umgebende Rechteck.
+    public private(set) var path: MapPath?
 
     /// `nil`, wenn die Form ungültig ist (siehe `MapShape.isValid`).
     public init?(
@@ -45,10 +50,34 @@ public struct MapObject: VersionedEntity, MissionScoped {
         return true
     }
 
-    /// Anzeigename: Titel, sonst Beschreibung der Form.
-    public var displayName: String {
-        title.isEmpty ? shape.summary : title
+    /// Linienzug setzen; die Form wird zum umgebenden Rechteck. `false` bei
+    /// ungültigem Linienzug (zu wenige Punkte).
+    @discardableResult
+    public mutating func setPath(_ newPath: MapPath) -> Bool {
+        guard newPath.isValid, let fallback = newPath.fallbackShape else { return false }
+        path = newPath
+        shape = fallback
+        return true
     }
+
+    /// Anzeigename: Titel, sonst Zeichen bzw. Beschreibung der Form.
+    public var displayName: String {
+        guard title.isEmpty else { return title }
+        if let tacticalSign {
+            return TacticalSignPreset.preset(tacticalSign.presetID)?.title
+                ?? (tacticalSign.text.isEmpty ? "Taktisches Zeichen" : tacticalSign.text)
+        }
+        return path?.summary ?? shape.summary
+    }
+
+    /// Größe bzw. Länge für Listen und Protokoll.
+    public var sizeText: String {
+        if tacticalSign != nil { return "Taktisches Zeichen" }
+        return path?.summary ?? shape.sizeText
+    }
+
+    /// Ob sich die Größe über einen Griff ändern lässt (nicht bei Zeichen und Linienzügen).
+    public var isResizable: Bool { tacticalSign == nil && path == nil }
 }
 
 /// Geometrie eines Kartenobjekts.

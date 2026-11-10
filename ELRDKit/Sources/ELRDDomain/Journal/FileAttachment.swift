@@ -46,6 +46,9 @@ public struct FileAttachment: Identifiable, Hashable, Codable, Sendable {
     /// Pixelmaße (Foto, Video, Zeichnung).
     public let pixelWidth: Int?
     public let pixelHeight: Int?
+    /// Aufnahmeort eines Fotos (Schritt 111, aus den Bilddaten oder dem Standort);
+    /// `nil` = unbekannt. Erscheint als Marker auf der Lagekarte.
+    public let coordinate: GeoCoordinate?
 
     public init(
         id: AttachmentID = AttachmentID(),
@@ -55,7 +58,8 @@ public struct FileAttachment: Identifiable, Hashable, Codable, Sendable {
         createdAt: Date,
         duration: TimeInterval? = nil,
         pixelWidth: Int? = nil,
-        pixelHeight: Int? = nil
+        pixelHeight: Int? = nil,
+        coordinate: GeoCoordinate? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -65,6 +69,7 @@ public struct FileAttachment: Identifiable, Hashable, Codable, Sendable {
         self.duration = duration.map { max($0, 0) }
         self.pixelWidth = pixelWidth
         self.pixelHeight = pixelHeight
+        self.coordinate = coordinate
     }
 
     /// Dateiname im Anhangsordner, abgeleitet aus Kennung und Art – nie aus Nutzereingaben.

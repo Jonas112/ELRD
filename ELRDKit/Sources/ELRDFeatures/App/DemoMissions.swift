@@ -169,6 +169,27 @@ enum DemoMissions {
             let file = try environment.attachments.save(jpeg, kind: .photo, createdAt: time.date, pixelWidth: 1200, pixelHeight: 800)
             _ = try running.perform(AddMapSnapshot(image: file))
         }
+        // Schritt 111: Foto mit Aufnahmeort (erscheint als Marker auf der Karte).
+        if let jpeg = Self.demoSnapshotJPEG(), let place = GeoCoordinate(latitude: 50.0995, longitude: 10.1812) {
+            let file = try environment.attachments.save(jpeg, kind: .photo, createdAt: time.date, pixelWidth: 1200, pixelHeight: 800, coordinate: place)
+            _ = try running.perform(AddJournalMedia(attachments: [file], text: "Unfallstelle von Süden"))
+        }
+        // Schritte 114–115: taktische Zeichen, Fläche und Pfeil.
+        let signs: [(String, Double, Double)] = [("elrd", 50.1036, 10.1745), ("rtw", 50.1003, 10.1815), ("pa", 50.0992, 10.1790), ("lp", 50.1027, 10.1838)]
+        for (presetID, latitude, longitude) in signs {
+            guard let preset = TacticalSignPreset.preset(presetID), let place = GeoCoordinate(latitude: latitude, longitude: longitude) else { continue }
+            _ = try running.perform(AddMapObject.sign(preset.sign, at: place))
+        }
+        let zone = MapPath(kind: .polygon, points: [
+            GeoCoordinate(latitude: 50.1016, longitude: 10.1760), GeoCoordinate(latitude: 50.1021, longitude: 10.1772),
+            GeoCoordinate(latitude: 50.1012, longitude: 10.1779), GeoCoordinate(latitude: 50.1008, longitude: 10.1766),
+        ].compactMap { $0 })
+        if let command = AddMapObject.withPath(zone, title: "Sperrzone", color: RGBColor(hex: 0xF57C00)) { _ = try running.perform(command) }
+        let route = MapPath(kind: .arrow, points: [
+            GeoCoordinate(latitude: 50.1040, longitude: 10.1750), GeoCoordinate(latitude: 50.1030, longitude: 10.1770),
+            GeoCoordinate(latitude: 50.1010, longitude: 10.1800),
+        ].compactMap { $0 })
+        if let command = AddMapObject.withPath(route, title: "Zufahrt", color: RGBColor(hex: 0x1976D2)) { _ = try running.perform(command) }
         // Schritt 109: automatisches Lagebild (Text; das Kartenbild braucht MapKit).
         _ = try running.perform(AddSituationSnapshot(text: SituationSnapshot.text(running.state, openItemCount: 3, now: time.date)))
         if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }

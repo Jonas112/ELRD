@@ -155,6 +155,29 @@ struct GeneralSettingsView: View {
                 Text("Empfänger für „Bericht an ILS“.")
             }
 
+            Section {
+                Toggle(isOn: Binding(get: { settings.gloveMode }, set: { on in save { $0.gloveMode = on } })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Handschuhmodus", systemImage: "hand.raised.fill").font(.headline)
+                        Text("Größere Knöpfe, Tippflächen und Schrift – für Handschuhe und Regen.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+                Toggle(isOn: Binding(get: { settings.nightMode }, set: { on in save { $0.nightMode = on } })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Nachtmodus", systemImage: "moon.stars.fill").font(.headline)
+                        Text("Dunkle, gedimmte Darstellung, die nachts nicht blendet. Displayhelligkeit zusätzlich im Kontrollzentrum senken.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+            } header: {
+                Text("Darstellung im Einsatz")
+            } footer: {
+                Text("Gilt für dieses Gerät.")
+            }
+
             MapCacheSection()
 
             Section("Standardbericht") {

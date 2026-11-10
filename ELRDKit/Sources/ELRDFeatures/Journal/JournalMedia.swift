@@ -38,10 +38,30 @@ enum PhotoImport {
         return (output as Data, image.width, image.height)
     }
 
-    /// Speichert ein verkleinertes Foto in der Ablage.
-    static func save(_ data: Data, in store: AttachmentFileStore, at date: Date = Date()) throws -> FileAttachment? {
+    /// Speichert ein verkleinertes Foto in der Ablage. Der Aufnahmeort kommt aus den
+    /// GPS-Daten des Bildes, sonst aus `fallback` (Schritt 111).
+    static func save(_ data: Data, in store: AttachmentFileStore, at date: Date = Date(), fallback: GeoCoordinate? = nil) throws -> FileAttachment? {
         guard let jpeg = jpeg(from: data) else { return nil }
-        return try store.save(jpeg.data, kind: .photo, createdAt: date, pixelWidth: jpeg.width, pixelHeight: jpeg.height)
+        return try store.save(
+            jpeg.data, kind: .photo, createdAt: date, pixelWidth: jpeg.width, pixelHeight: jpeg.height,
+            coordinate: coordinate(from: data) ?? fallback
+        )
+    }
+
+    /// Aufnahmeort aus den GPS-Metadaten (EXIF) eines Bildes.
+    static func coordinate(from data: Data) -> GeoCoordinate? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any] else { return nil }
+        return coordinate(gps: gps)
+    }
+
+    static func coordinate(gps: [CFString: Any]) -> GeoCoordinate? {
+        guard let latitude = (gps[kCGImagePropertyGPSLatitude] as? NSNumber)?.doubleValue,
+              let longitude = (gps[kCGImagePropertyGPSLongitude] as? NSNumber)?.doubleValue else { return nil }
+        let south = (gps[kCGImagePropertyGPSLatitudeRef] as? String)?.uppercased() == "S"
+        let west = (gps[kCGImagePropertyGPSLongitudeRef] as? String)?.uppercased() == "W"
+        return GeoCoordinate(latitude: south ? -latitude : latitude, longitude: west ? -longitude : longitude)
     }
 }
 

@@ -22,6 +22,7 @@ struct SituationOverview: View {
         case .leadership?: .leadership
         case .hospitals?, .distribution?: .hospitals
         case .handover?: .handover
+        case .communicationPlan?: .communication
         default: nil
         }
     }
@@ -31,7 +32,7 @@ struct SituationOverview: View {
 
     /// Werkzeuge der Lage (Schritte 67, 71, 73, 75, 76).
     enum Tool: String, Identifiable {
-        case report, checklist, handover, hospitals, leadership, phoneBook
+        case report, checklist, handover, hospitals, leadership, phoneBook, communication
         var id: String { rawValue }
     }
 
@@ -86,6 +87,7 @@ struct SituationOverview: View {
                 case .hospitals: HospitalQuotaSheet(store: store, hospitals: masterData?.hospitals ?? [])
                 case .leadership: LeadershipSheet(store: store)
                 case .phoneBook: PhoneBookSheet(store: store, settings: settings, hospitals: masterData?.hospitals ?? [])
+                case .communication: CommunicationPlanSheet(store: store)
                 }
             }
             .largeSheet()
@@ -106,6 +108,7 @@ struct SituationOverview: View {
                 toolButton("Kliniken", detail: hospitalDetail, symbol: "cross.case", tool: .hospitals)
                 toolButton("Übergabe", detail: "an die Ablösung", symbol: "arrow.left.arrow.right", tool: .handover)
                 toolButton("Telefonbuch", detail: "ILS, Kliniken, Führung", symbol: "phone", tool: .phoneBook)
+                toolButton("Kommunikation", detail: communicationDetail, symbol: "antenna.radiowaves.left.and.right.circle", tool: .communication)
             }
         }
     }
@@ -114,6 +117,11 @@ struct SituationOverview: View {
         let count = store.state.mission.leadership?.count ?? 0
         let strength = ForceOverview(state: store.state).strengthText
         return strength ?? (count == 0 ? "nicht erfasst" : "\(count) Funktionen")
+    }
+
+    private var communicationDetail: String {
+        let channels = CommunicationPlan(store.state).channels.count
+        return channels == 0 ? "Kanäle, Rufnamen" : (channels == 1 ? "1 Kanal" : "\(channels) Kanäle")
     }
 
     private var hospitalDetail: String {

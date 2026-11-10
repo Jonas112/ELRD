@@ -1,4 +1,5 @@
 import SwiftUI
+import Observation
 import UIKit
 import ELRDDomain
 
@@ -21,11 +22,33 @@ public enum Radius {
 }
 
 /// Mindestgröße für Tippflächen (Apple HIG: 44 pt; im Einsatz mit Handschuhen eher mehr).
+/// Im Handschuhmodus (Schritt 113) um ein Drittel größer; Ansichten, die die Werte
+/// lesen, werden über `DisplayMode` beim Umschalten neu gezeichnet.
 public enum TouchTarget {
-    public static let minimum: CGFloat = 44
-    public static let comfortable: CGFloat = 56
+    public static var minimum: CGFloat { 44 * DisplayMode.shared.touchScale }
+    public static var comfortable: CGFloat { 56 * DisplayMode.shared.touchScale }
     /// Hauptaktionen, die man auch verschlafen sofort trifft („Einsatz starten“).
-    public static let large: CGFloat = 72
+    public static var large: CGFloat { 72 * DisplayMode.shared.touchScale }
+}
+
+/// Darstellungsmodus aus den Einstellungen (Schritt 113). Beobachtbar, damit jede
+/// Ansicht, die `TouchTarget` liest, beim Umschalten neu gezeichnet wird.
+@Observable
+public final class DisplayMode: @unchecked Sendable {
+    public static let shared = DisplayMode()
+
+    public internal(set) var isGloveMode = false
+    public internal(set) var isNightMode = false
+
+    private init() {}
+
+    /// Faktor für Tippflächen.
+    public var touchScale: CGFloat { isGloveMode ? 1.3 : 1 }
+
+    func apply(_ settings: AppSettings) {
+        if isGloveMode != settings.gloveMode { isGloveMode = settings.gloveMode }
+        if isNightMode != settings.nightMode { isNightMode = settings.nightMode }
+    }
 }
 
 /// Flächen für Hauptaktionen (gefüllte Knöpfe mit weißer Schrift).

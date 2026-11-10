@@ -28,6 +28,16 @@ struct MapObjectEditor: View {
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
 
+    private var navigationTitle: String {
+        guard let object else { return "Markierung" }
+        if object.tacticalSign != nil { return "Taktisches Zeichen" }
+        if let path = object.path { return path.kind == .polygon ? "Fläche" : "Pfeil" }
+        return object.shape.summary.components(separatedBy: ",").first ?? "Markierung"
+    }
+
+    @State private var signText = ""
+    @State private var choosesSign = false
+
     var body: some View {
         NavigationStack {
             Group {
@@ -38,7 +48,7 @@ struct MapObjectEditor: View {
                 }
             }
             .background(Surface.canvas)
-            .navigationTitle(object?.shape.summary.components(separatedBy: ",").first ?? "Markierung")
+            .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -49,6 +59,15 @@ struct MapObjectEditor: View {
         .onAppear {
             title = object?.title ?? ""
             note = object?.note ?? ""
+            signText = object?.tacticalSign?.text ?? ""
+        }
+        .sheet(isPresented: $choosesSign) {
+            TacticalSignPicker { preset in
+                let sign = preset.sign
+                perform(EditMapObject(objectID: objectID, color: sign.isHazard ? MapObject.defaultColor : sign.organisation.fill, tacticalSign: sign))
+                signText = sign.text
+            }
+            .largeSheet()
         }
         .onDisappear(perform: commitText)
         .confirmationDialog("Markierung löschen?", isPresented: $confirmsDelete, titleVisibility: .visible) {
@@ -68,7 +87,11 @@ struct MapObjectEditor: View {
     private func form(_ object: MapObject) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.l) {
-                if !object.shape.isDrawing {
+                if let sign = object.tacticalSign {
+                    signSection(sign)
+                } else if object.path != nil {
+                    colorSection(object)
+                } else if !object.shape.isDrawing {
                     sizeSection(object)
                     colorSection(object)
                 }
@@ -92,7 +115,12 @@ struct MapObjectEditor: View {
 
                 HStack(spacing: Spacing.s) {
                     Button {
-                        if let mapCenter { perform(EditMapObject(objectID: objectID, shape: object.shape.moved(to: mapCenter))) }
+                        guard let mapCenter else { return }
+                        if let path = object.path {
+                            perform(EditMapObject(objectID: objectID, path: path.moved(to: mapCenter)))
+                        } else {
+                            perform(EditMapObject(objectID: objectID, shape: object.shape.moved(to: mapCenter)))
+                        }
                     } label: {
                         Label("In die Kartenmitte", systemImage: "scope")
                             .font(.headline)
@@ -121,6 +149,39 @@ struct MapObjectEditor: View {
             .padding(Spacing.xl)
         }
         .scrollDismissesKeyboard(.interactively)
+    }
+
+    /// Schritt 114: Zeichen ansehen, Kurztext ändern, anderes Zeichen wählen.
+    @ViewBuilder
+    private func signSection(_ sign: TacticalSign) -> some View {
+        HStack(spacing: Spacing.l) {
+            Image(uiImage: TacticalSignRenderer.image(for: sign, height: 64))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Spacing.s) {
+                Text(TacticalSignPreset.preset(sign.presetID)?.title ?? "Taktisches Zeichen").font(.headline)
+                Button("Anderes Zeichen …") { choosesSign = true }
+                    .font(.headline)
+                    .frame(minHeight: TouchTarget.minimum)
+                    .disabled(!canEdit)
+            }
+        }
+        Text("Kurztext im Zeichen").font(.headline).foregroundStyle(.secondary)
+        TextField("z. B. RTW 1, BR Nord", text: $signText)
+            .font(.title3)
+            .submitLabel(.done)
+            .onSubmit { commitSignText(sign) }
+            .inputBox()
+            .disabled(!canEdit)
+        Text("Höchstens 8 Zeichen.").font(.caption).foregroundStyle(.secondary)
+    }
+
+    private func commitSignText(_ sign: TacticalSign) {
+        guard canEdit else { return }
+        let trimmed = String(signText.trimmingCharacters(in: .whitespacesAndNewlines).prefix(8))
+        guard trimmed != sign.text else { return }
+        var updated = sign
+        updated.text = trimmed
+        perform(EditMapObject(objectID: objectID, tacticalSign: updated))
     }
 
     @ViewBuilder
@@ -203,7 +264,9 @@ struct MapObjectEditor: View {
 
     /// Bezeichnung und Notiz übernehmen (nur wenn geändert).
     private func commitText() {
-        guard canEdit, let object else { return }
+        guard canEdit else { return }
+        if let sign = object?.tacticalSign { commitSignText(sign) }
+        guard let object else { return }
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed != object.title || note != object.note else { return }
         perform(EditMapObject(objectID: objectID, title: trimmed, note: note))

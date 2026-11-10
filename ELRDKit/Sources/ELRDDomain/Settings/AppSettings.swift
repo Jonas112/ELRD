@@ -42,6 +42,10 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var phoneBook: [PhoneEntry] = []
     /// Beendete Einsätze nach … Tagen anonymisieren (Schritt 102); 0 = aus.
     public var anonymizeAfterDays: Int = 0
+    /// Handschuhmodus (Schritt 113): größere Tippflächen und Schrift.
+    public var gloveMode: Bool = false
+    /// Nachtmodus (Schritt 113): dunkel und abgedunkelt, blendfrei.
+    public var nightMode: Bool = false
     public static let anonymizeChoices = [0, 30, 90, 180, 365]
 
     public init() {}
@@ -69,6 +73,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         showsLiveActivity = try container.decodeIfPresent(Bool.self, forKey: .showsLiveActivity) ?? defaults.showsLiveActivity
         phoneBook = try container.decodeIfPresent([PhoneEntry].self, forKey: .phoneBook) ?? []
         anonymizeAfterDays = try container.decodeIfPresent(Int.self, forKey: .anonymizeAfterDays) ?? 0
+        gloveMode = try container.decodeIfPresent(Bool.self, forKey: .gloveMode) ?? false
+        nightMode = try container.decodeIfPresent(Bool.self, forKey: .nightMode) ?? false
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).

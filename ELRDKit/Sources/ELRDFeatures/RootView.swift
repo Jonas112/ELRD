@@ -28,6 +28,7 @@ public struct RootView: View {
                     .environment(environment.cloud)
                     .environment(environment.notifier)
                     .environment(environment.liveActivity)
+                    .modifier(DisplayModeModifier(settings: environment.settings))
             } else if let startupError {
                 ContentUnavailableView {
                     Label("ELRD konnte nicht starten", systemImage: "exclamationmark.triangle")
@@ -213,4 +214,33 @@ struct PreviewEnvironmentView: View {
 
 #Preview("Start (Anmeldung)") {
     PreviewEnvironmentView(screen: .login)
+}
+
+/// Handschuh- und Nachtmodus (Schritt 113) aus den Einstellungen anwenden.
+/// Handschuhe: Schrift mindestens „sehr groß“, große Bedienelemente, Tippflächen
+/// +30 %. Nacht: dunkle Darstellung und gedimmter Inhalt (Karte, Listen), damit
+/// das Display bei Dunkelheit nicht blendet.
+struct DisplayModeModifier: ViewModifier {
+    let settings: AppSettingsStore
+    private let mode = DisplayMode.shared
+
+    func body(content: Content) -> some View {
+        let glove = settings.settings.gloveMode
+        let night = settings.settings.nightMode
+        content
+            .dynamicTypeSize(glove ? DynamicTypeSize.xxLarge...DynamicTypeSize.accessibility3 : DynamicTypeSize.xSmall...DynamicTypeSize.accessibility3)
+            .controlSize(glove ? .large : .regular)
+            .preferredColorScheme(night ? .dark : nil)
+            .overlay {
+                if night {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
+            .onChange(of: settings.settings, initial: true) { _, new in
+                mode.apply(new)
+            }
+    }
 }

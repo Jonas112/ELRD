@@ -14,5 +14,10 @@
 	<!-- Stille Push-Mitteilungen bei Änderungen (wird beim Export auf „production“ gesetzt). -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- NFC-Anhängekarten lesen (Schritt 110, nur iPhone). -->
+	<key>com.apple.developer.nfc.readersession.formats</key>
+	<array>
+		<string>TAG</string>
+	</array>
 </dict>
 </plist>

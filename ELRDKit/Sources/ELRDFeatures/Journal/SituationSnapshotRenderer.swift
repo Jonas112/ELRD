@@ -24,6 +24,8 @@ enum SituationSnapshotRenderer {
             case image(GeoBounds, Data)
             case section(GeoCoordinate)
             case mission(GeoCoordinate)
+            case sign(GeoCoordinate, TacticalSign)
+            case path(MapPath)
         }
 
         let kind: Kind
@@ -87,6 +89,14 @@ enum SituationSnapshotRenderer {
     static func overlays(_ state: MissionState, attachments: AttachmentFileStore) -> [Overlay] {
         var result: [Overlay] = []
         for object in state.mapObjects.active {
+            if let sign = object.tacticalSign {
+                result.append(Overlay(kind: .sign(object.shape.center, sign), color: object.color, title: ""))
+                continue
+            }
+            if let path = object.path {
+                result.append(Overlay(kind: .path(path), color: object.color, title: object.title))
+                continue
+            }
             switch object.shape {
             case let .circle(center, radius):
                 result.append(Overlay(kind: .circle(center: center, radiusMeters: radius), color: object.color, title: object.title))
@@ -128,8 +138,10 @@ enum SituationSnapshotRenderer {
                 longitudes += [center.longitude - dLon, center.longitude + dLon]
             case let .rectangle(bounds), let .image(bounds, _):
                 addBounds(bounds)
-            case let .section(coordinate), let .mission(coordinate):
+            case let .section(coordinate), let .mission(coordinate), let .sign(coordinate, _):
                 addCoordinate(coordinate)
+            case let .path(path):
+                path.points.forEach(addCoordinate)
             }
         }
         guard let south = latitudes.min(), let north = latitudes.max(),
@@ -196,6 +208,36 @@ enum SituationSnapshotRenderer {
                     let p = point(coordinate)
                     dot(at: p, radius: 12, color: color, in: cg)
                     label(overlay.title, at: CGPoint(x: p.x, y: p.y - 15), color: color)
+                case let .sign(coordinate, sign):
+                    let p = point(coordinate)
+                    let units = TacticalSignRenderer.unitSize(of: sign)
+                    let scale = 40 / units.height
+                    TacticalSignRenderer.draw(sign, in: cg, origin: CGPoint(x: p.x - units.width * scale / 2, y: p.y - units.height * scale / 2), scale: scale)
+                case let .path(path):
+                    let points = path.points.map(point)
+                    guard let first = points.first else { continue }
+                    let line = UIBezierPath()
+                    line.move(to: first)
+                    points.dropFirst().forEach { line.addLine(to: $0) }
+                    if path.kind == .polygon {
+                        line.close()
+                        color.withAlphaComponent(0.18).setFill()
+                        line.fill()
+                    } else if points.count >= 2 {
+                        let tip = points[points.count - 1], from = points[points.count - 2]
+                        let angle = atan2(tip.y - from.y, tip.x - from.x)
+                        let head = UIBezierPath()
+                        head.move(to: tip)
+                        head.addLine(to: CGPoint(x: tip.x - 24 * cos(angle - .pi / 7), y: tip.y - 24 * sin(angle - .pi / 7)))
+                        head.addLine(to: CGPoint(x: tip.x - 24 * cos(angle + .pi / 7), y: tip.y - 24 * sin(angle + .pi / 7)))
+                        head.close()
+                        color.setFill()
+                        head.fill()
+                    }
+                    color.setStroke()
+                    line.lineWidth = path.kind == .arrow ? 5 : 3
+                    line.stroke()
+                    if let anchor = points.first { label(overlay.title, at: CGPoint(x: anchor.x, y: anchor.y - 6), color: color) }
                 }
             }
             headerBar(header, width: base.size.width)

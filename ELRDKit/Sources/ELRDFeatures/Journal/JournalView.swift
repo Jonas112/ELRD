@@ -155,6 +155,8 @@ struct JournalComposerSheet: View {
     @State private var showsCamera = false
     @State private var isImporting = false
     @StateObject private var recorder = VoiceRecorder()
+    /// Aufnahmeort für Kamerafotos (Schritt 111), nur mit bereits erteilter Freigabe.
+    @StateObject private var location = LocationAccess()
 
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -363,11 +365,19 @@ struct JournalComposerSheet: View {
             errorMessage = "Das Foto ließ sich nicht übernehmen."
             return
         }
-        do {
-            let file = try attachments.save(jpeg.data, kind: .photo, createdAt: Date(), pixelWidth: jpeg.width, pixelHeight: jpeg.height)
-            addMedia([file])
-        } catch {
-            errorMessage = ErrorText.message(for: error)
+        isImporting = true
+        Task { @MainActor in
+            defer { isImporting = false }
+            // Kamerabilder tragen keine GPS-Daten: Standort nur, wenn schon freigegeben.
+            let coordinate = location.isAllowed ? await location.currentCoordinate() : nil
+            do {
+                let file = try attachments.save(
+                    jpeg.data, kind: .photo, createdAt: Date(), pixelWidth: jpeg.width, pixelHeight: jpeg.height, coordinate: coordinate
+                )
+                addMedia([file])
+            } catch {
+                errorMessage = ErrorText.message(for: error)
+            }
         }
     }
 

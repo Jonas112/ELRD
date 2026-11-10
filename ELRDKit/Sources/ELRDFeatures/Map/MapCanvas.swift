@@ -46,6 +46,13 @@ struct MapCanvas: UIViewRepresentable {
     var onMoveMission: (GeoCoordinate) -> Void = { _ in }
     /// Ausschnitt ändert sich gerade (laufend, z. B. für die Zeichenfläche).
     var onRegionChanging: () -> Void = {}
+    /// Fotos mit Aufnahmeort (Schritt 111).
+    var photos: [MapPhotoPin] = []
+    var onSelectPhoto: (MapPhotoPin) -> Void = { _ in }
+    /// Punkte eines Polygons/Pfeils, der gerade gesetzt wird (Schritt 115).
+    var pathDraft: MapPath?
+    /// Tippen auf die Karte (nur beim Setzen von Punkten, Schritt 115).
+    var onTapMap: ((GeoCoordinate) -> Void)?
 
     /// Ausschnitt um den Einsatzort (mindestens ca. 800 m) und alles, was schon
     /// auf der Karte liegt (mit Rand); ohne Einsatzort ganz Deutschland.
@@ -105,6 +112,10 @@ struct MapCanvas: UIViewRepresentable {
         context.coordinator.attachments = attachments
         context.coordinator.updateSections(sections, on: map)
         context.coordinator.updateObjects(objects, on: map)
+        context.coordinator.updatePhotos(photos, on: map)
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
+        tap.delegate = context.coordinator
+        map.addGestureRecognizer(tap)
         return map
     }
 
@@ -124,6 +135,10 @@ struct MapCanvas: UIViewRepresentable {
         coordinator.attachments = attachments
         coordinator.updateSections(sections, on: map)
         coordinator.updateObjects(objects, on: map)
+        coordinator.onSelectPhoto = onSelectPhoto
+        coordinator.onTapMap = onTapMap
+        coordinator.updatePhotos(photos, on: map)
+        coordinator.updatePathDraft(pathDraft, on: map)
         if map.showsUserLocation != showsUserLocation { map.showsUserLocation = showsUserLocation }
         if let focus, focus.id != coordinator.lastFocusID {
             coordinator.lastFocusID = focus.id
@@ -139,7 +154,25 @@ struct MapCanvas: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, MKMapViewDelegate {
+    final class Coordinator: NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate {
+        var onTapMap: ((GeoCoordinate) -> Void)?
+
+        @objc func handleTap(_ recognizer: UITapGestureRecognizer) {
+            guard let onTapMap, recognizer.state == .ended, let map = recognizer.view as? MKMapView else { return }
+            let point = recognizer.location(in: map)
+            let coordinate = map.convert(point, toCoordinateFrom: map)
+            if let tapped = GeoCoordinate(latitude: coordinate.latitude, longitude: coordinate.longitude) { onTapMap(tapped) }
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+            true
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            // Nur beim Setzen von Punkten – sonst bleiben Tipps bei der Karte.
+            gestureRecognizer is UITapGestureRecognizer ? onTapMap != nil : true
+        }
+
         private var currentLayer: MapBaseLayer?
         private var tileOverlay: MKTileOverlay?
         private var marker: MKPointAnnotation?
@@ -154,8 +187,14 @@ struct MapCanvas: UIViewRepresentable {
         var onMoveMission: (GeoCoordinate) -> Void = { _ in }
         var onRegionChanging: () -> Void = {}
         var attachments: AttachmentFileStore?
-        /// Gezeichnete Objekte: Stand, Fläche, Beschriftung und Größen-Griff je Kennung.
-        private var drawn: [MapObjectID: (object: MapObject, overlay: any MKOverlay, label: MapObjectAnnotation, handle: MapResizeHandle?)] = [:]
+        var onSelectPhoto: (MapPhotoPin) -> Void = { _ in }
+        private var photoAnnotations: [AttachmentID: PhotoAnnotation] = [:]
+        private var draftOverlay: (any MKOverlay)?
+        private var draftPoints: [MKPointAnnotation] = []
+        private var currentDraft: MapPath?
+        /// Gezeichnete Objekte: Stand, Fläche (fehlt bei taktischen Zeichen), Beschriftung
+        /// bzw. Zeichen und Größen-Griff je Kennung.
+        private var drawn: [MapObjectID: (object: MapObject, overlay: (any MKOverlay)?, label: any MKAnnotation, handle: MapResizeHandle?)] = [:]
         /// Bearbeiten erlaubt, als die Objekte gezeichnet wurden (Griffe nur dann).
         private var drawnWithEditing = false
         /// Farbe je Fläche (für den Renderer).
@@ -168,28 +207,52 @@ struct MapCanvas: UIViewRepresentable {
             drawnWithEditing = canEdit
             for (id, entry) in drawn {
                 let current = wanted[id]
-                let unchanged = current.map { $0.shape == entry.object.shape && $0.color == entry.object.color && $0.displayName == entry.object.displayName } ?? false
+                let unchanged = current.map {
+                    $0.shape == entry.object.shape && $0.color == entry.object.color && $0.displayName == entry.object.displayName
+                        && $0.tacticalSign == entry.object.tacticalSign && $0.path == entry.object.path
+                } ?? false
                 guard !unchanged || editingChanged else { continue }
-                map.removeOverlay(entry.overlay)
+                if let overlay = entry.overlay {
+                    map.removeOverlay(overlay)
+                    overlayColors[ObjectIdentifier(overlay)] = nil
+                }
                 map.removeAnnotation(entry.label)
                 if let handle = entry.handle { map.removeAnnotation(handle) }
-                overlayColors[ObjectIdentifier(entry.overlay)] = nil
                 drawn[id] = nil
             }
             for object in objects where drawn[object.id] == nil {
-                guard let shapeOverlay = makeOverlay(for: object.shape) else { continue }
+                // Schritt 114: taktisches Zeichen als Bild am Standort, ohne Fläche.
+                if let sign = object.tacticalSign {
+                    let annotation = TacticalSignAnnotation(object: object, sign: sign)
+                    map.addAnnotation(annotation)
+                    drawn[object.id] = (object, nil, annotation, nil)
+                    continue
+                }
+                guard let shapeOverlay = makeOverlay(for: object) else { continue }
                 let label = MapObjectAnnotation(object: object)
                 overlayColors[ObjectIdentifier(shapeOverlay)] = object.color
                 map.addOverlay(shapeOverlay, level: .aboveLabels)
                 map.addAnnotation(label)
                 var handle: MapResizeHandle?
-                if canEdit, let position = object.shape.resizeHandle {
+                if canEdit, object.isResizable, let position = object.shape.resizeHandle {
                     let created = MapResizeHandle(objectID: object.id, coordinate: position.clLocation)
                     map.addAnnotation(created)
                     handle = created
                 }
                 drawn[object.id] = (object, shapeOverlay, label, handle)
             }
+        }
+
+        func makeOverlay(for object: MapObject) -> (any MKOverlay)? {
+            // Schritt 115: Polygon und Pfeil aus ihren Punkten.
+            if let path = object.path {
+                var points = path.points.map(\.clLocation)
+                switch path.kind {
+                case .polygon: return MKPolygon(coordinates: &points, count: points.count)
+                case .arrow: return ArrowPolyline(coordinates: &points, count: points.count)
+                }
+            }
+            return makeOverlay(for: object.shape)
         }
 
         func makeOverlay(for shape: MapShape) -> (any MKOverlay)? {
@@ -211,9 +274,65 @@ struct MapCanvas: UIViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            if let photo = view.annotation as? PhotoAnnotation {
+                mapView.deselectAnnotation(photo, animated: false)
+                onSelectPhoto(photo.pin)
+                return
+            }
+            if let sign = view.annotation as? TacticalSignAnnotation {
+                mapView.deselectAnnotation(sign, animated: false)
+                onSelectObject(sign.objectID)
+                return
+            }
             guard let label = view.annotation as? MapObjectAnnotation else { return }
             mapView.deselectAnnotation(label, animated: false)
             onSelectObject(label.objectID)
+        }
+
+        /// Fotos mit Aufnahmeort (Schritt 111) abgleichen.
+        func updatePhotos(_ pins: [MapPhotoPin], on map: MKMapView) {
+            let wanted = Set(pins.map(\.id))
+            for (id, annotation) in photoAnnotations where !wanted.contains(id) {
+                map.removeAnnotation(annotation)
+                photoAnnotations[id] = nil
+            }
+            for pin in pins where photoAnnotations[pin.id] == nil {
+                let annotation = PhotoAnnotation(pin: pin)
+                photoAnnotations[pin.id] = annotation
+                map.addAnnotation(annotation)
+            }
+        }
+
+        /// Vorschau des Polygons/Pfeils, der gerade gesetzt wird (Schritt 115).
+        func updatePathDraft(_ path: MapPath?, on map: MKMapView) {
+            guard path != currentDraft else { return }
+            currentDraft = path
+            if let draftOverlay { map.removeOverlay(draftOverlay) }
+            draftOverlay = nil
+            map.removeAnnotations(draftPoints)
+            draftPoints = []
+            guard let path, !path.points.isEmpty else { return }
+            var points = path.points.map(\.clLocation)
+            if points.count >= 2 {
+                let count = points.count
+                let overlay: any MKOverlay
+                if path.kind == .polygon, count >= 3 {
+                    overlay = DraftPolygon(coordinates: &points, count: count)
+                } else if path.kind == .arrow {
+                    overlay = ArrowPolyline(coordinates: &points, count: count)
+                } else {
+                    overlay = DraftPolyline(coordinates: &points, count: count)
+                }
+                overlayColors[ObjectIdentifier(overlay)] = RGBColor(hex: 0x1976D2)
+                map.addOverlay(overlay, level: .aboveLabels)
+                draftOverlay = overlay
+            }
+            for point in path.points {
+                let marker = DraftPointAnnotation()
+                marker.coordinate = point.clLocation
+                draftPoints.append(marker)
+            }
+            map.addAnnotations(draftPoints)
         }
 
         /// Gleicht die Abschnittsmarkierungen mit dem Stand ab (nur Änderungen).
@@ -253,6 +372,8 @@ struct MapCanvas: UIViewRepresentable {
                     onMoveSection(section.sectionID, moved)
                 } else if let label = annotation as? MapObjectAnnotation {
                     onMoveObject(label.objectID, moved)
+                } else if let sign = annotation as? TacticalSignAnnotation {
+                    onMoveObject(sign.objectID, moved)
                 } else if let handle = annotation as? MapResizeHandle {
                     onResizeObject(handle.objectID, moved)
                 } else if annotation === marker {
@@ -330,6 +451,19 @@ struct MapCanvas: UIViewRepresentable {
                 return DrawingOverlayRenderer(drawing: drawing)
             }
             let color = UIColor(overlayColors[ObjectIdentifier(overlay)] ?? MapObject.defaultColor)
+            if let arrow = overlay as? ArrowPolyline {
+                let renderer = ArrowRenderer(polyline: arrow)
+                renderer.strokeColor = color
+                renderer.lineWidth = 5
+                return renderer
+            }
+            if let line = overlay as? MKPolyline {
+                let renderer = MKPolylineRenderer(polyline: line)
+                renderer.strokeColor = color
+                renderer.lineWidth = 3
+                renderer.lineDashPattern = [8, 6]
+                return renderer
+            }
             if let circle = overlay as? MKCircle {
                 let renderer = MKCircleRenderer(circle: circle)
                 renderer.fillColor = color.withAlphaComponent(0.18)
@@ -342,12 +476,48 @@ struct MapCanvas: UIViewRepresentable {
                 renderer.fillColor = color.withAlphaComponent(0.18)
                 renderer.strokeColor = color
                 renderer.lineWidth = 3
+                if polygon is DraftPolygon { renderer.lineDashPattern = [8, 6] }
                 return renderer
             }
             return MKOverlayRenderer(overlay: overlay)
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
+            if let sign = annotation as? TacticalSignAnnotation {
+                let identifier = "sign"
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                    ?? MKAnnotationView(annotation: sign, reuseIdentifier: identifier)
+                view.annotation = sign
+                view.image = TacticalSignRenderer.image(for: sign.sign, height: 44)
+                view.displayPriority = .required
+                view.isDraggable = canEdit
+                view.canShowCallout = false
+                view.accessibilityLabel = sign.title
+                return view
+            }
+            if let photo = annotation as? PhotoAnnotation {
+                let identifier = "photo"
+                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)
+                    ?? MKMarkerAnnotationView(annotation: photo, reuseIdentifier: identifier)
+                view.annotation = photo
+                view.markerTintColor = .systemPurple
+                view.glyphImage = UIImage(systemName: "camera.fill")
+                view.titleVisibility = .hidden
+                view.displayPriority = .defaultLow
+                view.clusteringIdentifier = "photo"
+                view.accessibilityLabel = photo.title
+                return view
+            }
+            if annotation is DraftPointAnnotation {
+                let identifier = "draftPoint"
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
+                    ?? MKAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+                view.annotation = annotation
+                view.image = MapResizeHandle.image
+                view.displayPriority = .required
+                view.canShowCallout = false
+                return view
+            }
             if let label = annotation as? MapObjectAnnotation {
                 let identifier = "object"
                 let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView)

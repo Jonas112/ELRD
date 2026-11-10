@@ -37,6 +37,21 @@ struct MissionMapView: View {
     @State private var confirmsDiscardDrawing = false
     /// Kurze Bestätigung oben (z. B. „Als Eintrag A-4 im Tagebuch“).
     @State private var notice: String?
+    /// Schritt 111: angetipptes Foto.
+    @State private var viewingPhoto: FileAttachment?
+    /// Schritt 114: Auswahl taktischer Zeichen.
+    @State private var showsSignPicker = AppLaunchOptions.current.demoScreen == .mapSigns
+    /// Schritt 115: Polygon oder Pfeil, der gerade Punkt für Punkt gesetzt wird.
+    @State private var pathDraft: MapPath? = AppLaunchOptions.current.demoScreen == .mapPath ? MissionMapView.demoPathDraft : nil
+
+    /// Bildschirmfoto `mapPath`: Fläche mit drei gesetzten Ecken.
+    static var demoPathDraft: MapPath {
+        MapPath(kind: .polygon, points: [
+            GeoCoordinate(latitude: 50.1018, longitude: 10.1772),
+            GeoCoordinate(latitude: 50.1024, longitude: 10.1795),
+            GeoCoordinate(latitude: 50.1011, longitude: 10.1801),
+        ].compactMap { $0 })
+    }
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
 
@@ -78,6 +93,21 @@ struct MissionMapView: View {
                 }
             }
             .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $viewingPhoto) { file in
+            JournalImageViewer(file: file, attachments: attachments)
+        }
+        .sheet(isPresented: $showsSignPicker) {
+            TacticalSignPicker { preset in
+                guard let center else { return }
+                do {
+                    _ = try store.perform(AddMapObject.sign(preset.sign, at: center))
+                    show("\(preset.title) gesetzt – halten und ziehen verschiebt")
+                } catch {
+                    errorMessage = ErrorText.message(for: error)
+                }
+            }
+            .largeSheet()
         }
         .sheet(item: $editing) { item in
             MapObjectEditor(store: store, objectID: item.id, mapCenter: center)
@@ -183,6 +213,17 @@ struct MissionMapView: View {
     }
 
     /// Form direkt auf der Karte verschoben oder in der Größe geändert (Schritt 60).
+    /// Verschieben an der Beschriftung bzw. am Zeichen; Linienzüge wandern als Ganzes.
+    private func moveObject(_ id: MapObjectID, to coordinate: GeoCoordinate) {
+        guard canEdit, let object = store.state.mapObjects.active.first(where: { $0.id == id }) else { return }
+        if let path = object.path {
+            let moved = path.moved(to: coordinate)
+            if moved != path { _ = perform(EditMapObject(objectID: id, path: moved)) }
+        } else {
+            changeShape(id) { $0.moved(to: coordinate) }
+        }
+    }
+
     private func changeShape(_ id: MapObjectID, _ change: (MapShape) -> MapShape) {
         guard canEdit, let object = store.state.mapObjects.active.first(where: { $0.id == id }) else { return }
         let shape = change(object.shape)
@@ -215,13 +256,17 @@ struct MissionMapView: View {
                 onMoveSection: { id, coordinate in perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate)) },
                 objects: store.state.mapObjects.active,
                 onSelectObject: { editing = EditingMapObject(id: $0) },
-                onMoveObject: { id, coordinate in changeShape(id) { $0.moved(to: coordinate) } },
+                onMoveObject: { id, coordinate in moveObject(id, to: coordinate) },
                 onResizeObject: { id, handle in changeShape(id) { $0.resized(handle: handle) } },
                 attachments: attachments,
                 onMoveMission: { coordinate in
                     if perform(SetMissionCoordinate(coordinate)) { show("Einsatzort verschoben") }
                 },
-                onRegionChanging: { if isDrawing { freehand.followMap(proxy) } }
+                onRegionChanging: { if isDrawing { freehand.followMap(proxy) } },
+                photos: MapPhotoPin.pins(for: store.state),
+                onSelectPhoto: { viewingPhoto = $0.file },
+                pathDraft: pathDraft,
+                onTapMap: pathDraft == nil ? nil : { addPathPoint($0) }
             )
             .dropDestination(for: String.self) { items, point in
                 guard canEdit,
@@ -238,7 +283,7 @@ struct MissionMapView: View {
                     .accessibilityLabel("Zeichenfläche über der Karte")
             }
 
-            if target != nil, !isDrawing {
+            if target != nil || pathDraft != nil, !isDrawing {
                 Image(systemName: "plus")
                     .font(.system(size: 44, weight: .light))
                     .foregroundStyle(.red)
@@ -248,7 +293,7 @@ struct MissionMapView: View {
                     .accessibilityHidden(true)
             }
 
-            if !isDrawing { mapControls(mission, showsSectionButton: showsSectionButton) }
+            if !isDrawing, pathDraft == nil { mapControls(mission, showsSectionButton: showsSectionButton) }
         }
         .overlay(alignment: .bottomLeading) {
             if !NetworkStatus.shared.isOnline, !isDrawing, activePlacing(mission) == nil {
@@ -276,6 +321,8 @@ struct MissionMapView: View {
                     onCancel: cancelDrawing,
                     onDone: finishDrawing
                 )
+            } else if let pathDraft {
+                pathBar(pathDraft)
             } else if let target {
                 placingBar(for: target, mission: mission)
             }
@@ -291,6 +338,18 @@ struct MissionMapView: View {
                     .padding(.top, Spacing.m)
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .accessibilityAddTraits(.isStaticText)
+            }
+            if let pathDraft, !isDrawing {
+                Label(pathDraft.kind == .polygon
+                      ? "Ecken antippen oder Fadenkreuz + „Punkt hier“ · mindestens 3"
+                      : "Punkte antippen, der letzte wird zur Spitze · mindestens 2",
+                      systemImage: pathDraft.kind == .polygon ? "pentagon" : "arrow.up.right")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.horizontal, Spacing.m)
+                    .padding(.vertical, Spacing.s)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.top, Spacing.m)
+                    .allowsHitTesting(false)
             }
             if isDrawing {
                 Label("Ein Finger oder Stift zeichnet · zwei Finger verschieben und zoomen", systemImage: "scribble")
@@ -579,13 +638,85 @@ struct MissionMapView: View {
             Button { addObject(center.flatMap(MapObjectPalette.newRectangle(at:))) } label: {
                 Label("Rechteck", systemImage: "rectangle")
             }
+            Button { startPath(.polygon) } label: {
+                Label("Fläche (Polygon)", systemImage: "pentagon")
+            }
+            Button { startPath(.arrow) } label: {
+                Label("Pfeil", systemImage: "arrow.up.right")
+            }
             Button(action: startDrawing) {
                 Label("Freihand", systemImage: "scribble")
+            }
+            Divider()
+            Button { showsSignPicker = true } label: {
+                Label("Taktisches Zeichen …", systemImage: "square.on.circle")
             }
         } label: {
             MapControlLabel(title: "Zeichnen", systemImage: "pencil.and.outline")
         }
-        .accessibilityLabel("Kreis, Rechteck oder freihand zeichnen")
+        .accessibilityLabel("Kreis, Rechteck, Fläche, Pfeil, freihand oder taktisches Zeichen")
+    }
+
+    // MARK: Polygon und Pfeil (Schritt 115)
+
+    private func startPath(_ kind: MapPath.Kind) {
+        placing = nil
+        pathDraft = MapPath(kind: kind, points: [])
+    }
+
+    private func addPathPoint(_ coordinate: GeoCoordinate) {
+        guard var draft = pathDraft else { return }
+        draft.points.append(coordinate)
+        pathDraft = draft
+    }
+
+    private func finishPath() {
+        guard let draft = pathDraft, let command = AddMapObject.withPath(draft) else { return }
+        do {
+            let object = try store.perform(command)
+            pathDraft = nil
+            editing = EditingMapObject(id: object.id)
+        } catch {
+            errorMessage = ErrorText.message(for: error)
+        }
+    }
+
+    /// Große Knöpfe unten: Punkt in der Kartenmitte, rückgängig, abbrechen, fertig.
+    private func pathBar(_ draft: MapPath) -> some View {
+        HStack(spacing: Spacing.s) {
+            Button("Abbrechen", role: .cancel) { pathDraft = nil }
+                .buttonStyle(.bordered)
+            Button {
+                guard var updated = pathDraft, !updated.points.isEmpty else { return }
+                updated.points.removeLast()
+                pathDraft = updated
+            } label: {
+                Label("Zurück", systemImage: "arrow.uturn.backward")
+            }
+            .buttonStyle(.bordered)
+            .disabled(draft.points.isEmpty)
+            Button {
+                if let center { addPathPoint(center) }
+            } label: {
+                Label("Punkt hier", systemImage: "plus.circle.fill")
+            }
+            .buttonStyle(.bordered)
+            Button {
+                finishPath()
+            } label: {
+                Text(draft.isValid ? "Fertig (\(draft.points.count))" : "\(draft.points.count) von \(draft.minimumPoints)")
+                    .fontWeight(.bold)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!draft.isValid)
+        }
+        .font(.headline)
+        .controlSize(.large)
+        .frame(minHeight: TouchTarget.comfortable)
+        .padding(Spacing.m)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.bottom, Spacing.xl)
+        .padding(.horizontal, Spacing.m)
     }
 
     private func addObject(_ shape: MapShape?) {
@@ -691,13 +822,20 @@ struct MapSectionList: View {
     private func objectRow(_ object: MapObject) -> some View {
         Button { onSelectObject(object) } label: {
             HStack(spacing: Spacing.m) {
-                Image(systemName: object.shape.isDrawing ? "scribble" : object.shape.isCircle ? "circle.fill" : "rectangle.fill")
-                    .font(.title3)
-                    .foregroundStyle(Color(object.color))
-                    .frame(width: 32)
+                Group {
+                    if let sign = object.tacticalSign {
+                        Image(uiImage: TacticalSignRenderer.image(for: sign, height: 26))
+                    } else {
+                        Image(systemName: object.path.map { $0.kind == .polygon ? "pentagon.fill" : "arrow.up.right" }
+                              ?? (object.shape.isDrawing ? "scribble" : object.shape.isCircle ? "circle.fill" : "rectangle.fill"))
+                            .font(.title3)
+                            .foregroundStyle(Color(object.color))
+                    }
+                }
+                .frame(width: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(object.displayName).font(.headline).foregroundStyle(.primary).lineLimit(2)
-                    Text(object.shape.sizeText).font(.subheadline).foregroundStyle(.secondary)
+                    Text(object.sizeText).font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").foregroundStyle(.tertiary)

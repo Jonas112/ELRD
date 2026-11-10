@@ -55,6 +55,13 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<!-- NFC-Anhängekarten (Schritt 110): Text/Link auf der Karte oder Seriennummer des Chips. -->
+	<key>NFCReaderUsageDescription</key>
+	<string>Patientenanhängekarten mit NFC-Chip lesen.</string>
+	<key>com.apple.developer.nfc.readersession.iso7816.select-identifiers</key>
+	<array>
+		<string>D2760000850101</string>
+	</array>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_elrd-sync._tcp</string>

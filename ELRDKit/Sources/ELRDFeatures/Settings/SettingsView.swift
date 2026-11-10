@@ -158,7 +158,7 @@ struct GeneralSettingsView: View {
             Section {
                 Toggle(isOn: Binding(get: { settings.gloveMode }, set: { on in save { $0.gloveMode = on } })) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Handschuhmodus", systemImage: "hand.raised.fill").font(.headline)
+                        Text("\(Image(systemName: "hand.raised.fill"))  Handschuhmodus").font(.headline)
                         Text("Größere Knöpfe, Tippflächen und Schrift – für Handschuhe und Regen.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
@@ -166,7 +166,7 @@ struct GeneralSettingsView: View {
                 .frame(minHeight: TouchTarget.comfortable)
                 Toggle(isOn: Binding(get: { settings.nightMode }, set: { on in save { $0.nightMode = on } })) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Nachtmodus", systemImage: "moon.stars.fill").font(.headline)
+                        Text("\(Image(systemName: "moon.stars.fill"))  Nachtmodus").font(.headline)
                         Text("Dunkle, gedimmte Darstellung, die nachts nicht blendet. Displayhelligkeit zusätzlich im Kontrollzentrum senken.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
@@ -181,8 +181,7 @@ struct GeneralSettingsView: View {
             Section {
                 Toggle(isOn: Binding(get: { settings.requiresJoinApproval }, set: { on in save { $0.requiresJoinApproval = on } })) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Label("Beitritt genehmigen", systemImage: "person.badge.shield.checkmark")
-                            .font(.headline)
+                        Text("\(Image(systemName: "person.badge.shield.checkmark"))  Beitritt genehmigen").font(.headline)
                         Text("Wer einem von dir geteilten Einsatz beitreten will, schickt eine Anfrage; du lässt zu oder lehnst ab. Vorher kommen keine Einsatzdaten auf das andere Gerät.")
                             .font(.subheadline).foregroundStyle(.secondary)
                     }

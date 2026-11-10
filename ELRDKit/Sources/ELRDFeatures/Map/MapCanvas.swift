@@ -503,7 +503,7 @@ struct MapCanvas: UIViewRepresentable {
                 view.markerTintColor = .systemPurple
                 view.glyphImage = UIImage(systemName: "camera.fill")
                 view.titleVisibility = .hidden
-                view.displayPriority = .defaultLow
+                view.displayPriority = .defaultHigh
                 view.clusteringIdentifier = "photo"
                 view.accessibilityLabel = photo.title
                 return view

@@ -170,7 +170,7 @@ enum DemoMissions {
             _ = try running.perform(AddMapSnapshot(image: file))
         }
         // Schritt 111: Foto mit Aufnahmeort (erscheint als Marker auf der Karte).
-        if let jpeg = Self.demoSnapshotJPEG(), let place = GeoCoordinate(latitude: 50.0995, longitude: 10.1812) {
+        if let jpeg = Self.demoSnapshotJPEG(), let place = GeoCoordinate(latitude: 50.0978, longitude: 10.1835) {
             let file = try environment.attachments.save(jpeg, kind: .photo, createdAt: time.date, pixelWidth: 1200, pixelHeight: 800, coordinate: place)
             _ = try running.perform(AddJournalMedia(attachments: [file], text: "Unfallstelle von Süden"))
         }

@@ -82,7 +82,7 @@ enum TacticalSignRenderer {
                 context.setFillColor(UIColor.white.cgColor)
                 context.drawPath(using: .fillStroke)
             }
-            if !sign.text.isEmpty {
+            if !sign.text.isEmpty, !hasCaption(sign) {
                 drawText(sign.text, in: textFrame(sign), color: ink, context: context)
             }
         }
@@ -117,6 +117,8 @@ enum TacticalSignRenderer {
         guard !sign.text.isEmpty else { return false }
         switch sign.base {
         case .hubschrauber, .person, .personVerletzt, .personTot, .personZuTransportieren, .gefahr, .gefahrAkut, .massnahme: return true
+        // Im Kreis mit Kreuz ist kein Platz für Text.
+        case .stelle: return sign.task != nil
         default: return false
         }
     }
@@ -196,10 +198,12 @@ enum TacticalSignRenderer {
         let hasTask = sign.task != nil
         switch sign.base {
         case .stelle:
-            return hasTask ? CGRect(x: 6, y: 25, width: 15, height: 12) : CGRect(x: 5, y: 12, width: 35, height: 21)
+            return CGRect(x: 5, y: 12, width: 35, height: 21)
         case .gebaeude:
             return hasTask ? CGRect(x: 3, y: 33, width: 32, height: 10) : CGRect(x: 4, y: 14, width: 67, height: 26)
         default:
+            // Querstrich der ärztlichen Versorgung beginnt bei x = 25 – Text links davon.
+            if sign.task == .aerztlicheVersorgung { return CGRect(x: 3, y: 26, width: 21, height: 16) }
             return hasTask ? CGRect(x: 3, y: 26, width: 32, height: 16) : CGRect(x: 5, y: 8, width: 65, height: 30)
         }
     }

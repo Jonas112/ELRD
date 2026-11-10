@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** Gerätetest; Jonas: Datenschutz-Felder (102) bestätigen, Sichtungsfragen und Übungslagen prüfen; Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
+**Nächster Schritt:** Jonas prüft taktische Zeichen (114) und NFC am iPhone (110); Gerätetest; Jonas: Datenschutz-Felder (102) bestätigen, Sichtungsfragen und Übungslagen prüfen; Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -190,18 +190,18 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 ## S – Vorschläge 1 und 4 (von Jonas ausgewählt 2026-11-09)
 | # | Schritt | Status |
 |---|---|---|
-| 108 | Verteilungsvorschlag Kliniken: je Patient nächste Klinik mit freiem Kontingent seiner SK, SK 1 und Schockraum zuerst; Einsatzleitung hakt ab, ändert, übernimmt | 🧪 |
-| 109 | Automatische Lagebilder: im Takt (15/30/60 min, Einstellung) Kartenbild + SK-Zahlen, Transporte, Einheiten als Tagebucheintrag; „Lagebild jetzt“ im Verlauf | 🧪 |
+| 108 | Verteilungsvorschlag Kliniken: je Patient nächste Klinik mit freiem Kontingent seiner SK, SK 1 und Schockraum zuerst; Einsatzleitung hakt ab, ändert, übernimmt | ✅ |
+| 109 | Automatische Lagebilder: im Takt (15/30/60 min, Einstellung) Kartenbild + SK-Zahlen, Transporte, Einheiten als Tagebucheintrag; „Lagebild jetzt“ im Verlauf | ✅ |
 
 ## T – Ideen 1, 6, 7, 8, 11, 12 (von Jonas ausgewählt 2026-11-10)
 | # | Schritt | Status |
 |---|---|---|
-| 110 | NFC-Anhängekarten: Karte ans iPhone halten (Text/Link auf dem Chip, sonst Seriennummer) | 🧪 |
-| 111 | Fotos mit Ort: Aufnahmeort aus GPS-Daten bzw. Standort, Marker auf der Lagekarte, Tipp öffnet das Bild | 🧪 |
-| 112 | Kommunikationsplan: Kanäle, Führung, Abschnitte mit Rufnamen und Einheiten; teilen und drucken | 🧪 |
-| 113 | Handschuh- und Nachtmodus (Einstellungen › Allgemein › Darstellung im Einsatz) | 🧪 |
-| 114 | Taktische Zeichen nach DV 102 auf der Lagekarte (Auswahl, Kurztext, verschieben) | 🧪 |
-| 115 | Zeichnen: Fläche (Polygon) und Pfeil per Antippen, Rückgängig, Punkt in der Kartenmitte | 🧪 |
+| 110 | NFC-Anhängekarten: Karte ans iPhone halten (Text/Link auf dem Chip, sonst Seriennummer) | ✅ |
+| 111 | Fotos mit Ort: Aufnahmeort aus GPS-Daten bzw. Standort, Marker auf der Lagekarte, Tipp öffnet das Bild | ✅ |
+| 112 | Kommunikationsplan: Kanäle, Führung, Abschnitte mit Rufnamen und Einheiten; teilen und drucken | ✅ |
+| 113 | Handschuh- und Nachtmodus (Einstellungen › Allgemein › Darstellung im Einsatz) | ✅ |
+| 114 | Taktische Zeichen nach DV 102 auf der Lagekarte (Auswahl, Kurztext, verschieben) | ✅ |
+| 115 | Zeichnen: Fläche (Polygon) und Pfeil per Antippen, Rückgängig, Punkt in der Kartenmitte | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -282,6 +282,8 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritte 108–109 (2026-11-10):** 108: `HospitalDistribution.propose(_:hospitals:)` → `DistributionPlan` (Vorschläge mit Begründung und Luftlinie, Patienten ohne Vorschlag). Berücksichtigt nur eingetragene Plätze je SK abzüglich bereits zugewiesener Patienten; Reihenfolge SK 1 → SK 2 → SK 3, innerhalb Schockraum-Bedarf zuerst, dann nach Anlage; Klinik ohne Koordinaten nach allen mit Entfernung. Schockraum-Fähigkeit der Kliniken ist nicht hinterlegt → nur Hinweis „Schockraum A anmelden“. Lage › Kliniken › „Verteilung vorschlagen“ → `DistributionSheet` (Haken je Zeile, „Ändern“ mit freien Plätzen je Klinik, „Übernehmen (n)“) → `ApplyDistribution` (SetDestination je Patient + ein Protokolleintrag). Demo-Bildschirm `distribution`. 109: `ReminderSettings.situationSnapshotMinutes` (Standard aus), Einstellungen › Einsatzhilfen › „Automatische Lagebilder“. `SituationSnapshot` (fällig, Text, zuständiges Gerät), `AddSituationSnapshot` mit Sperre (halber Takt), Feld `JournalEntry.isSituationSnapshot` (keine neue Kategorie → Lagemeldungs-Erinnerung bleibt unberührt). Bild: `SituationSnapshotRenderer` mit `MKMapSnapshotter` (1200×800, Kreise, Rechtecke, Zeichnungen, Abschnitte, Einsatzort, Kopfzeile). Auslöser im Minutentakt des Arbeitsbereichs; im geteilten Einsatz nur das Gerät der Einsatzleitung. Tagebuch › Verlauf › „Lagebild jetzt“. Tests: 12 Store.
 
 - **Schritte 110–115 (2026-11-10):** 110: `NFCCardReader` (CoreNFC, `NFCTagReaderSession` ISO 14443/15693): NDEF-Text, sonst Link (letzter Pfadteil), sonst Chip-Seriennummer hex → `Patient.normalizedTag`. Knopf „NFC-Karte ans iPhone halten“ in `TagScannerSheet`, nur wenn das Gerät NFC lesen kann (iPad nie). Entitlement `com.apple.developer.nfc.readersession.formats = TAG`, Info.plist `NFCReaderUsageDescription` und NDEF-AID für ISO 7816. **Jonas:** In Xcode/Developer-Portal die Fähigkeit „NFC Tag Reading“ für die App-ID aktivieren (automatische Signierung macht das meist selbst); auf dem iPhone mit echter Karte testen. 111: `FileAttachment.coordinate` (optional); Galerie-Fotos aus EXIF-GPS, Kamerafotos aus dem Standort, wenn schon freigegeben (keine neue Abfrage). `MapPhotoPin` → lila Kamera-Marker (gruppiert), Tipp öffnet `JournalImageViewer`. 112: `CommunicationPlan` (ELRDStore) aus Führung, Abschnittsleitungen, Einheiten; Lage › „Kommunikation“ → `CommunicationPlanSheet` (Teilen als Text, Drucken als HTML-Tabelle). Demo `communicationPlan`. 113: `AppSettings.gloveMode/nightMode`; `DisplayMode` (beobachtbar) skaliert `TouchTarget` um 1,3 – Ansichten zeichnen sich beim Umschalten neu; Handschuh: Schrift mind. „xxLarge“, `controlSize(.large)`. Nacht: dunkles Schema + 35 % Abdunklung über dem Hauptfenster (Blätter nur dunkel). 114: `TacticalSign` (Bestandteile als Text, unbekannte Werte lesbar) + `TacticalSignPreset.all` (23 Vorlagen), `TacticalSignRenderer` (Core Graphics, Geometrie nach DV 102 im 75×45-Raster, angelehnt an das MIT-Projekt phjardas/taktische-zeichen). Kartenobjekt mit Zeichen = kleiner Kreis (ältere Apps), auf der Karte Bild fester Größe, ziehbar. Zeichnen › „Taktisches Zeichen …“ → `TacticalSignPicker`; Bearbeiten: Kurztext, anderes Zeichen. Auch im Lagebild. Demo `mapSigns`. 115: `MapPath` (Polygon/Pfeil, Punkte) als Feld am Kartenobjekt, Form = umgebendes Rechteck (ältere Apps). Zeichnen › „Fläche (Polygon)“/„Pfeil“: Tippen setzt Punkte, „Punkt hier“ (Fadenkreuz), „Zurück“, „Fertig (n)“; gestrichelte Vorschau, Pfeilspitze in fester Bildschirmgröße (`ArrowRenderer`). Verschieben an der Beschriftung verschiebt alle Punkte. Demo `mapPath`. Tests: 10 Store, 6 Features.
+
+- **108–115 grün (2026-11-10):** CI 42752761822 (Build, Tests, Oberflächentests, Fotos geprüft); Nacharbeit danach: Text in NEF/BHP-Zeichen, Foto-Marker, Knopf „Punkt“. **Jonas prüft:** taktische Zeichen (Vorlagen in `TacticalSignPreset.all`), NFC am iPhone (Fähigkeit „NFC Tag Reading“ der App-ID), Handschuh-/Nachtmodus am Gerät.
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

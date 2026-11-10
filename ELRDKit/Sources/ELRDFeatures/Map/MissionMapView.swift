@@ -341,7 +341,7 @@ struct MissionMapView: View {
             }
             if let pathDraft, !isDrawing {
                 Label(pathDraft.kind == .polygon
-                      ? "Ecken antippen oder Fadenkreuz + „Punkt hier“ · mindestens 3"
+                      ? "Ecken antippen oder Fadenkreuz + „Punkt“ · mindestens 3"
                       : "Punkte antippen, der letzte wird zur Spitze · mindestens 2",
                       systemImage: pathDraft.kind == .polygon ? "pentagon" : "arrow.up.right")
                     .font(.subheadline.weight(.semibold))
@@ -698,8 +698,10 @@ struct MissionMapView: View {
             Button {
                 if let center { addPathPoint(center) }
             } label: {
-                Label("Punkt hier", systemImage: "plus.circle.fill")
+                Label("Punkt", systemImage: "plus.circle.fill")
+                    .fixedSize()
             }
+            .accessibilityLabel("Punkt in der Kartenmitte setzen")
             .buttonStyle(.bordered)
             Button {
                 finishPath()

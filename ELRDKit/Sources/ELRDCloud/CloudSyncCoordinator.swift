@@ -48,6 +48,16 @@ public final class CloudSyncCoordinator {
     /// iCloud nicht verfügbar (kein Konto, MDM-Sperre) – Grund für die Oberfläche.
     public private(set) var accountProblem: String?
 
+    /// Schritt 116: offene Beitrittsanfragen an eigene Freigaben (Einsatzleitung).
+    public private(set) var joinRequests: [JoinRequestItem] = []
+    /// Eigene Anfragen, die auf Antwort warten (Spiegel des Verzeichnisses, beobachtbar).
+    public private(set) var pendingJoins: [PendingJoin] = []
+    /// Neue Freigaben nur für zugelassene Personen (Einstellung, Schritt 116).
+    @ObservationIgnored public var requiresJoinApproval = false
+    /// Nach Zulassung einer eigenen Anfrage beigetreten.
+    @ObservationIgnored public var onJoinApproved: ((MissionID) -> Void)?
+    @ObservationIgnored private var checkingJoins = false
+
     /// Nach übernommenen fremden Änderungen: offene Einsätze neu laden.
     @ObservationIgnored public var onImported: ((Set<MissionID>) -> Void)?
 
@@ -90,6 +100,7 @@ public final class CloudSyncCoordinator {
         self.sleep = sleep
         transport = CloudKitTransport(store: store)
         engine = SyncEngine(repository: repository, transport: transport, clock: clock, deviceID: deviceID, files: files, now: now)
+        pendingJoins = (try? directory())?.pendingJoins ?? []
     }
 
     // MARK: Abfragen
@@ -194,9 +205,13 @@ public final class CloudSyncCoordinator {
                 return url
             }
             let zone = self.link(for: mission)?.zone ?? .owned(mission)
-            let url = try await self.store.share(zone, title: title)
+            let approval = self.requiresJoinApproval
+            let url = try await self.store.share(zone, title: title, requiresApproval: approval)
             try self.updateDirectory { directory in
+                let isFirstShare = directory[mission]?.shareURL == nil
                 var link = directory[mission] ?? CloudMissionLink(zone: zone, shareURL: url, linkedAt: self.now())
+                // Bestehende Freigabe behält ihre Art; nur beim ersten Teilen festhalten.
+                if isFirstShare { link.requiresApproval = approval ? true : nil }
                 link.shareURL = url
                 directory[mission] = link
             }
@@ -218,7 +233,14 @@ public final class CloudSyncCoordinator {
         let task = Task { @MainActor () throws -> MissionID in
             if !self.activated { await self.activate() }
             if let problem = self.accountProblem { throw CloudShareError.account(problem) }
-            let zone = try await self.store.accept(url)
+            let zone: CloudZone
+            do {
+                zone = try await self.store.accept(url)
+            } catch let error as CloudStoreError where error == .permissionDenied || error == .zoneMissing {
+                // Link gilt nicht für jeden: Beitritt muss genehmigt werden (oder
+                // die Freigabe ist beendet) – die Oberfläche bietet eine Anfrage an.
+                throw CloudShareError.approvalRequired
+            }
             return try await self.connectJoined(zone, url: url)
         }
         joining[url] = task
@@ -247,6 +269,91 @@ public final class CloudSyncCoordinator {
         await transport.connect(mission, to: zone)
         await syncNow(mission)
         return mission
+    }
+
+    // MARK: Beitritt mit Genehmigung (Schritt 116)
+
+    /// Bittet die Einsatzleitung um Zulassung. Erneutes Anfragen überschreibt.
+    public func requestJoin(_ url: URL, displayName: String) async throws {
+        if !activated { await activate() }
+        if let problem = accountProblem { throw CloudShareError.account(problem) }
+        let userID = try await store.currentUserID()
+        let shareKey = JoinSeal.shareKey(for: url)
+        let name = JoinSeal.requestName(shareKey: shareKey, userID: userID)
+        let payload = JoinRequestPayload(userID: userID, displayName: displayName, requestedAt: now())
+        try await store.submitJoinRequest(SealedJoinRequest(name: name, shareKey: shareKey, sealed: try JoinSeal.seal(payload, url: url)))
+        try updateDirectory { directory in
+            var pending = (directory.pendingJoins ?? []).filter { $0.requestName != name }
+            pending.append(PendingJoin(url: url, requestName: name, requestedAt: now(), status: .waiting))
+            directory.pendingJoins = pending
+        }
+    }
+
+    /// Eigene Anfrage verwerfen (auch nach Ablehnung).
+    public func cancelJoinRequest(_ pending: PendingJoin) async {
+        try? await store.withdrawJoinRequest(name: pending.requestName)
+        try? updateDirectory { $0.pendingJoins = ($0.pendingJoins ?? []).filter { $0.requestName != pending.requestName } }
+    }
+
+    /// Beide Seiten nachsehen: eigene Anfragen (zugelassen → beitreten) und Anfragen
+    /// an eigene Freigaben. Läuft höchstens einmal gleichzeitig.
+    public func checkJoinRequests() async {
+        guard !checkingJoins else { return }
+        checkingJoins = true
+        defer { checkingJoins = false }
+        guard let current = try? directory() else { return }
+        if !(current.pendingJoins ?? []).isEmpty || !current.ownedShares.isEmpty, !activated { await activate() }
+        for pending in current.pendingJoins ?? [] where pending.status == .waiting {
+            guard let decision = try? await store.joinDecision(requestName: pending.requestName) else { continue }
+            switch decision {
+            case .approved:
+                guard let mission = try? await join(pending.url) else { continue }
+                try? await store.withdrawJoinRequest(name: pending.requestName)
+                try? updateDirectory { $0.pendingJoins = ($0.pendingJoins ?? []).filter { $0.requestName != pending.requestName } }
+                onJoinApproved?(mission)
+            case .denied:
+                try? await store.withdrawJoinRequest(name: pending.requestName)
+                try? updateDirectory { directory in
+                    directory.pendingJoins = (directory.pendingJoins ?? []).map {
+                        var updated = $0
+                        if updated.requestName == pending.requestName { updated.status = .denied }
+                        return updated
+                    }
+                }
+            }
+        }
+        await refreshOwnedJoinRequests(current)
+    }
+
+    private func refreshOwnedJoinRequests(_ current: CloudMissionDirectory) async {
+        let shares = current.ownedShares
+        guard !shares.isEmpty else {
+            if !joinRequests.isEmpty { joinRequests = [] }
+            return
+        }
+        let byKey = Dictionary(shares.map { (JoinSeal.shareKey(for: $0.url), $0) }, uniquingKeysWith: { first, _ in first })
+        guard let sealed = try? await store.joinRequests(shareKeys: Array(byKey.keys)) else { return }
+        let decided = Set((try? directory())?.decidedJoinRequests ?? [])
+        let items = sealed.compactMap { request -> JoinRequestItem? in
+            guard !decided.contains(request.name), let share = byKey[request.shareKey],
+                  let payload = try? JoinSeal.open(request.sealed, url: share.url) else { return nil }
+            return JoinRequestItem(id: request.name, mission: share.mission, payload: payload)
+        }
+        .sorted { $0.payload.requestedAt < $1.payload.requestedAt }
+        if items != joinRequests { joinRequests = items }
+    }
+
+    /// Einsatzleitung: Anfrage zulassen (Teilnehmer der Freigabe) oder ablehnen.
+    public func decide(_ request: JoinRequestItem, approve: Bool) async throws {
+        guard let link = link(for: request.mission), link.isOwner else { throw CloudShareError.invalidLink }
+        if approve { try await store.admit(userID: request.payload.userID, to: link.zone) }
+        try await store.submitJoinDecision(approve ? .approved : .denied, requestName: request.id)
+        try updateDirectory { directory in
+            var decided = directory.decidedJoinRequests ?? []
+            decided.append(request.id)
+            directory.decidedJoinRequests = Array(decided.suffix(200))
+        }
+        joinRequests.removeAll { $0.id == request.id }
     }
 
     /// Beendet die Verbindung des Einsatzes mit iCloud. Eigentümer: Freigabe
@@ -478,6 +585,8 @@ public final class CloudSyncCoordinator {
 
     private func save(_ directory: CloudMissionDirectory) throws {
         try repository.saveDocument(directory, key: .cloudMissions, at: now())
+        let pending = directory.pendingJoins ?? []
+        if pending != pendingJoins { pendingJoins = pending }
     }
 
     /// Lesen, ändern, schreiben – ohne `await` dazwischen, also nie verschränkt.
@@ -492,11 +601,14 @@ public final class CloudSyncCoordinator {
 public enum CloudShareError: Error, Equatable, LocalizedError {
     case account(String)
     case invalidLink
+    /// Link gilt nicht (mehr) für jeden: Beitritt anfragen (Schritt 116).
+    case approvalRequired
 
     public var errorDescription: String? {
         switch self {
         case .account(let message): message
         case .invalidLink: "Dieser Link ist keine ELRD-Einladung."
+        case .approvalRequired: "Kein Zugriff über diesen Link. Wenn die Einsatzleitung Beitritte genehmigt, kannst du den Beitritt anfragen – sonst wurde das Teilen beendet."
         }
     }
 }

@@ -172,3 +172,19 @@ Ausgangslage: Die App arbeitet lokal zuerst. Jede Änderung ist ein Ereignis, un
 4. **Vor TestFlight:** CloudKit Console → Schema *Deploy to Production*. Sonst funktioniert es in TestFlight nicht.
 5. Gerätetest: siehe `GERAETETEST.md`, Abschnitt iCloud.
 
+
+## Beitritt mit Genehmigung (Schritt 116, 2026-11-10)
+Einstellung „Beitritt genehmigen“ (Einstellungen › Allgemein, je Gerät der Einsatzleitung). Neue Freigaben entstehen dann mit `publicPermission = .none`: Der Link allein öffnet nichts, vor der Zulassung kommt kein Datensatz des Einsatzes auf ein fremdes Gerät.
+
+Ablauf:
+1. Gast: „Einsatz beitreten“ → Link/QR → Zugriff verweigert → „Beitritt anfragen“ mit Namen. Die Anfrage liegt in der **öffentlichen Datenbank** des Containers (`ELRDJoinRequest`): `shareKey` = SHA-256 des Links, `sealed` = Name, iCloud-Benutzerkennung und Zeit, AES-GCM-verschlüsselt mit einem Schlüssel aus dem Link. Ohne den Link ist nichts lesbar oder einem Einsatz zuzuordnen.
+2. Einsatzleitung: Der Arbeitsbereich sieht alle 15 s nach (nur bei eigenen Freigaben mit Genehmigung) und zeigt oben „… möchte beitreten – Zulassen/Ablehnen“. Zulassen nimmt die Person über `shareParticipant(forUserRecordID:)` als Teilnehmer (lesen/schreiben) in den `CKShare` auf.
+3. Die Entscheidung liegt als `ELRDJoinDecision` (Name aus der Anfrage abgeleitet) in der öffentlichen Datenbank. Das Gerät des Gasts sieht nach (offenes Beitrittsblatt alle 5 s, Einsatzliste alle 30 s), tritt bei Zulassung bei, öffnet den Einsatz und löscht seine Anfrage.
+
+**Einrichtung im CloudKit-Dashboard (Jonas, einmalig):**
+- Satztyp `ELRDJoinRequest`: Felder `shareKey` (String, **Index: Queryable**), `sealed` (Bytes).
+- Satztyp `ELRDJoinDecision`: Feld `decision` (String).
+- Sicherheitsrollen der öffentlichen Datenbank: Standard („World: lesen“, „Creator: schreiben“) genügt.
+- Schema danach in die Produktionsumgebung übernehmen („Deploy Schema Changes“).
+
+Grenzen: Bereits geteilte Einsätze behalten ihre Art (zum Umstellen Teilen beenden und neu teilen). Der QR-Code mit der Systemkamera funktioniert bei Genehmigungspflicht nicht – gescannt wird in ELRD unter „Einsatz beitreten“.

@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import CoreImage
+import VisionKit
 import CoreImage.CIFilterBuiltins
 import ELRDDomain
 import ELRDStore
@@ -30,7 +31,7 @@ struct CloudShareSection: View {
             if let link {
                 statusRow(cloud.state(for: mission), pending: cloud.pendingCount(for: mission))
                 if let url = link.shareURL {
-                    Button { invite = CloudInvite(url: url, title: title) } label: {
+                    Button { invite = CloudInvite(url: url, title: title, requiresApproval: link.requiresApproval == true) } label: {
                         Label("Einladung zeigen (QR-Code)", systemImage: "qrcode")
                             .frame(minHeight: TouchTarget.minimum)
                     }
@@ -153,7 +154,7 @@ struct CloudShareSection: View {
             do {
                 let url = try await cloud.startSharing(store.missionID, title: title)
                 cloud.requestSync(store.missionID)
-                invite = CloudInvite(url: url, title: title)
+                invite = CloudInvite(url: url, title: title, requiresApproval: cloud.link(for: store.missionID)?.requiresApproval == true)
             } catch {
                 errorMessage = ErrorText.message(for: error)
             }
@@ -203,6 +204,7 @@ extension View {
 struct CloudInvite: Identifiable {
     let url: URL
     let title: String
+    var requiresApproval = false
     var id: URL { url }
 }
 
@@ -228,7 +230,9 @@ struct CloudInviteSheet: View {
                             .background(.white, in: RoundedRectangle(cornerRadius: Radius.card))
                             .accessibilityLabel("QR-Code der Einladung")
                     }
-                    Text("Mit der Kamera des anderen Geräts scannen. Dort öffnet sich ELRD und tritt dem Einsatz bei – auch mit einer anderen Apple-ID.")
+                    Text(invite.requiresApproval
+                         ? "Auf dem anderen Gerät in ELRD unter „Einsatz beitreten“ scannen. Du bekommst eine Beitrittsanfrage und lässt zu."
+                         : "Mit der Kamera des anderen Geräts scannen. Dort öffnet sich ELRD und tritt dem Einsatz bei – auch mit einer anderen Apple-ID.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -238,7 +242,9 @@ struct CloudInviteSheet: View {
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
                     }
                     .buttonStyle(.bordered)
-                    Text("Wer den Link hat, kann beitreten und bearbeiten. Nur an Einsatzkräfte weitergeben.")
+                    Text(invite.requiresApproval
+                         ? "Beitritt nur nach deiner Zulassung."
+                         : "Wer den Link hat, kann beitreten und bearbeiten. Nur an Einsatzkräfte weitergeben.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -259,24 +265,52 @@ struct CloudInviteSheet: View {
 }
 
 /// Einem geteilten Einsatz über einen Link beitreten (wenn nicht per Kamera geöffnet).
+/// Schritt 116: Gilt der Link nur für zugelassene Personen, wird hier die Anfrage
+/// gestellt und auf die Zulassung gewartet (der Beitritt folgt dann von selbst).
 struct JoinCloudMissionSheet: View {
     let cloud: CloudSyncCoordinator
+    var displayName: String = ""
     let onJoined: (MissionID) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var link = ""
     @State private var isWorking = false
     @State private var errorMessage: String?
+    @State private var needsApproval = false
+    @State private var requestName = ""
+    @State private var scans = false
+
+    private var scannerAvailable: Bool {
+        DataScannerViewController.isSupported && DataScannerViewController.isAvailable
+    }
 
     var body: some View {
         NavigationStack {
             Form {
+                if !cloud.pendingJoins.isEmpty {
+                    pendingSection
+                }
                 Section {
+                    if scans, scannerAvailable {
+                        BarcodeScannerView { code in
+                            guard let scanned = URL(string: code), scanned.scheme == "https" else { return }
+                            UINotificationFeedbackGenerator().notificationOccurred(.success)
+                            link = scanned.absoluteString
+                            scans = false
+                            join()
+                        }
+                        .frame(height: 280)
+                        .listRowInsets(EdgeInsets())
+                    } else if scannerAvailable {
+                        Button("QR-Code der Einladung scannen", systemImage: "qrcode.viewfinder") { scans = true }
+                            .frame(minHeight: TouchTarget.minimum)
+                    }
                     TextField("https://www.icloud.com/share/…", text: $link, axis: .vertical)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
                         .font(.body.monospaced())
+                        .onChange(of: link) { needsApproval = false }
                     if UIPasteboard.general.hasURLs {
                         Button("Aus Zwischenablage einfügen", systemImage: "doc.on.clipboard") {
                             if let url = UIPasteboard.general.url { link = url.absoluteString }
@@ -285,32 +319,88 @@ struct JoinCloudMissionSheet: View {
                 } header: {
                     Text("Einladungslink")
                 } footer: {
-                    Text("Einfacher: den QR-Code mit der Kamera scannen. Dann öffnet sich ELRD von selbst.")
+                    Text("Ohne Genehmigungspflicht reicht es auch, den QR-Code mit der Kamera zu scannen – dann öffnet sich ELRD von selbst.")
                 }
-                if let errorMessage {
+                if needsApproval {
+                    Section {
+                        TextField("Dein Name", text: $requestName)
+                            .textContentType(.name)
+                        Button(action: requestJoin) {
+                            HStack {
+                                Label("Beitritt anfragen", systemImage: "person.badge.clock")
+                                    .font(.headline)
+                                Spacer()
+                                if isWorking { ProgressView() }
+                            }
+                            .frame(minHeight: TouchTarget.comfortable)
+                        }
+                        .disabled(requestName.trimmingCharacters(in: .whitespaces).isEmpty || isWorking)
+                    } header: {
+                        Text("Genehmigung nötig")
+                    } footer: {
+                        Text("Die Einsatzleitung sieht deinen Namen und lässt dich zu. Danach tritt ELRD dem Einsatz von selbst bei.")
+                    }
+                }
+                if let errorMessage, !needsApproval {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                     }
                 }
-                Section {
-                    Button(action: join) {
-                        HStack {
-                            Text("Beitreten").font(.title3.weight(.bold))
-                            Spacer()
-                            if isWorking { ProgressView() }
+                if !needsApproval {
+                    Section {
+                        Button(action: join) {
+                            HStack {
+                                Text("Beitreten").font(.title3.weight(.bold))
+                                Spacer()
+                                if isWorking { ProgressView() }
+                            }
+                            .frame(minHeight: TouchTarget.comfortable)
                         }
-                        .frame(minHeight: TouchTarget.comfortable)
+                        .disabled(url == nil || isWorking)
                     }
-                    .disabled(url == nil || isWorking)
                 }
             }
             .navigationTitle("Einsatz beitreten")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss() }
+                    Button("Schließen") { dismiss() }
                 }
+            }
+            .onAppear { if requestName.isEmpty { requestName = displayName } }
+            // Solange das Blatt offen ist und Anfragen warten: alle 5 s nachsehen.
+            .task(id: cloud.pendingJoins.filter { $0.status == .waiting }.count) {
+                while !Task.isCancelled, cloud.pendingJoins.contains(where: { $0.status == .waiting }) {
+                    await cloud.checkJoinRequests()
+                    try? await Task.sleep(for: .seconds(5))
+                }
+            }
+        }
+    }
+
+    private var pendingSection: some View {
+        Section("Deine Anfragen") {
+            ForEach(cloud.pendingJoins) { pending in
+                HStack(spacing: Spacing.m) {
+                    if pending.status == .waiting {
+                        ProgressView()
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Wartet auf Zulassung").font(.headline)
+                            Text("angefragt \(pending.requestedAt.formatted(date: .omitted, time: .shortened)) Uhr")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Image(systemName: "xmark.octagon.fill").foregroundStyle(.red).font(.title2)
+                        Text("Abgelehnt").font(.headline)
+                    }
+                    Spacer()
+                    Button(pending.status == .waiting ? "Zurückziehen" : "Entfernen", role: .destructive) {
+                        Task { await cloud.cancelJoinRequest(pending) }
+                    }
+                    .buttonStyle(.borderless)
+                }
+                .frame(minHeight: TouchTarget.comfortable)
             }
         }
     }
@@ -331,6 +421,89 @@ struct JoinCloudMissionSheet: View {
                 let mission = try await cloud.join(url)
                 dismiss()
                 onJoined(mission)
+            } catch CloudShareError.approvalRequired {
+                needsApproval = true
+            } catch {
+                errorMessage = ErrorText.message(for: error)
+            }
+        }
+    }
+
+    private func requestJoin() {
+        guard let url else { return }
+        isWorking = true
+        Task {
+            defer { isWorking = false }
+            do {
+                try await cloud.requestJoin(url, displayName: requestName)
+                needsApproval = false
+                link = ""
+            } catch {
+                needsApproval = false
+                errorMessage = ErrorText.message(for: error)
+            }
+        }
+    }
+}
+
+/// Schritt 116: Beitrittsanfragen an die Einsatzleitung, oben im Arbeitsbereich.
+struct JoinRequestBanner: View {
+    let cloud: CloudSyncCoordinator
+    let mission: MissionID
+
+    @State private var working: String?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        let requests = cloud.joinRequests.filter { $0.mission == mission }
+        if !requests.isEmpty {
+            VStack(spacing: Spacing.s) {
+                ForEach(requests) { request in
+                    HStack(spacing: Spacing.m) {
+                        Image(systemName: "person.badge.clock.fill")
+                            .font(.title2)
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(request.payload.displayName.isEmpty ? "Unbekannt" : request.payload.displayName) möchte beitreten")
+                                .font(.headline)
+                            Text("angefragt \(request.payload.requestedAt.formatted(date: .omitted, time: .shortened)) Uhr · erhält danach Zugriff auf alle Einsatzdaten")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: Spacing.s)
+                        if working == request.id {
+                            ProgressView()
+                        } else {
+                            Button("Ablehnen", role: .destructive) { decide(request, approve: false) }
+                                .buttonStyle(.bordered)
+                            Button("Zulassen") { decide(request, approve: true) }
+                                .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .controlSize(.large)
+                    .padding(Spacing.m)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .accessibilityElement(children: .contain)
+                }
+                if let errorMessage {
+                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                        .padding(Spacing.s)
+                        .background(.regularMaterial, in: Capsule())
+                }
+            }
+            .padding(.horizontal, Spacing.l)
+            .padding(.top, Spacing.s)
+        }
+    }
+
+    private func decide(_ request: JoinRequestItem, approve: Bool) {
+        working = request.id
+        errorMessage = nil
+        Task {
+            defer { working = nil }
+            do {
+                try await cloud.decide(request, approve: approve)
             } catch {
                 errorMessage = ErrorText.message(for: error)
             }

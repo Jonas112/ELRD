@@ -141,6 +141,17 @@ public struct MissionWorkspaceView: View {
             openReport: { showsReport = true },
             openDetails: { showsDetails = true }
         ))
+        // Schritt 116: Beitrittsanfragen an eigene Freigaben (alle 15 s, nur wenn geteilt).
+        .overlay(alignment: .top) {
+            if let cloud { JoinRequestBanner(cloud: cloud, mission: store.missionID) }
+        }
+        .task(id: cloud?.link(for: store.missionID)?.requiresApproval == true) {
+            guard let cloud, cloud.link(for: store.missionID)?.requiresApproval == true else { return }
+            while !Task.isCancelled {
+                await cloud.checkJoinRequests()
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
         // Offene Punkte im Minutentakt prüfen (Erinnerungen werden mit der Zeit fällig).
         .task {
             // Schritt 89: im geteilten Einsatz als Teilnehmer eintragen.

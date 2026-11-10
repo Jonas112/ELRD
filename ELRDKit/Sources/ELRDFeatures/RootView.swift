@@ -29,6 +29,10 @@ public struct RootView: View {
                     .environment(environment.notifier)
                     .environment(environment.liveActivity)
                     .modifier(DisplayModeModifier(settings: environment.settings))
+                    // Schritt 116: neue Freigaben nur für zugelassene Personen.
+                    .onChange(of: environment.settings.settings.requiresJoinApproval, initial: true) { _, required in
+                        environment.cloud?.requiresJoinApproval = required
+                    }
             } else if let startupError {
                 ContentUnavailableView {
                     Label("ELRD konnte nicht starten", systemImage: "exclamationmark.triangle")

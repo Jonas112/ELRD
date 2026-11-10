@@ -46,6 +46,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var gloveMode: Bool = false
     /// Nachtmodus (Schritt 113): dunkel und abgedunkelt, blendfrei.
     public var nightMode: Bool = false
+    /// Schritt 116: Beitritt zu eigenen geteilten Einsätzen nur nach Zulassung.
+    public var requiresJoinApproval: Bool = false
     public static let anonymizeChoices = [0, 30, 90, 180, 365]
 
     public init() {}
@@ -75,6 +77,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         anonymizeAfterDays = try container.decodeIfPresent(Int.self, forKey: .anonymizeAfterDays) ?? 0
         gloveMode = try container.decodeIfPresent(Bool.self, forKey: .gloveMode) ?? false
         nightMode = try container.decodeIfPresent(Bool.self, forKey: .nightMode) ?? false
+        requiresJoinApproval = try container.decodeIfPresent(Bool.self, forKey: .requiresJoinApproval) ?? false
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).

@@ -13,6 +13,8 @@ actor FakeCloudServer {
         var shareURL: URL?
         var participants: Set<String> = []
         var keysReset = false
+        /// Schritt 116: Link gilt nur für zugelassene Konten.
+        var requiresApproval = false
     }
 
     private struct Token: Codable {
@@ -23,6 +25,9 @@ actor FakeCloudServer {
 
     private var zones: [String: Zone] = [:]
     private var epochs = 0
+    /// Öffentliche Datenbank (Schritt 116).
+    private var joinRequests: [String: SealedJoinRequest] = [:]
+    private var decisions: [String: JoinDecision] = [:]
     private var failures: [(Operation, CloudStoreError)] = []
     private var tokenGeneration = 0
     private var delay: Duration = .zero
@@ -151,11 +156,12 @@ actor FakeCloudServer {
         return zones[zoneKey]!.records[name]?.record
     }
 
-    func share(_ zone: CloudZone, account: String) async throws -> URL {
+    func share(_ zone: CloudZone, account: String, requiresApproval: Bool = false) async throws -> URL {
         try checkFailure(.share)
         createZone(zone, account: account)
         let zoneKey = key(account, zone.zoneName)
         if let url = zones[zoneKey]!.shareURL { return url }
+        zones[zoneKey]?.requiresApproval = requiresApproval
         await pause()
         // Nach der Pause erneut prüfen – wie `.ifServerRecordUnchanged` bei CloudKit.
         if let url = zones[zoneKey]?.shareURL { return url }
@@ -178,8 +184,30 @@ actor FakeCloudServer {
         let zoneKey = key(owner, name)
         guard zones[zoneKey]?.shareURL == url else { throw CloudStoreError.invalidShare }
         if owner == account { return CloudZone(scope: .owned, zoneName: name, ownerName: CloudZone.currentUser) }
+        if zones[zoneKey]?.requiresApproval == true, zones[zoneKey]?.participants.contains(account) != true {
+            throw CloudStoreError.permissionDenied
+        }
         zones[zoneKey]?.participants.insert(account)
         return CloudZone(scope: .joined, zoneName: name, ownerName: owner)
+    }
+}
+
+extension FakeCloudServer {
+    func submitJoinRequest(_ request: SealedJoinRequest) { joinRequests[request.name] = request }
+    func joinRequests(shareKeys: [String]) -> [SealedJoinRequest] {
+        joinRequests.values.filter { shareKeys.contains($0.shareKey) }.sorted { $0.name < $1.name }
+    }
+    func admit(userID: String, to zone: CloudZone, account: String) throws {
+        let zoneKey = key(account, zone.zoneName)
+        guard zones[zoneKey]?.shareURL != nil else { throw CloudStoreError.invalidShare }
+        zones[zoneKey]?.participants.insert(userID)
+    }
+    func submitJoinDecision(_ decision: JoinDecision, requestName: String) { decisions[requestName] = decision }
+    func joinDecision(requestName: String) -> JoinDecision? { decisions[requestName] }
+    func withdrawJoinRequest(name: String) { joinRequests[name] = nil }
+    func hasJoinRequest(_ name: String) -> Bool { joinRequests[name] != nil }
+    func eventsVisible(to account: String, owner: String, zoneName: String) -> Bool {
+        zones[key(owner, zoneName)]?.participants.contains(account) == true
     }
 }
 
@@ -242,4 +270,34 @@ final class FakeCloudZoneStore: CloudZoneStore, @unchecked Sendable {
         return try await server.accept(url, account: account)
     }
     func subscribeToChanges() async throws {}
+
+    func share(_ zone: CloudZone, title: String, requiresApproval: Bool) async throws -> URL {
+        let account = try current()
+        return try await server.share(zone, account: account, requiresApproval: requiresApproval)
+    }
+    func currentUserID() async throws -> String { try current() }
+    func submitJoinRequest(_ request: SealedJoinRequest) async throws {
+        _ = try current()
+        await server.submitJoinRequest(request)
+    }
+    func joinRequests(shareKeys: [String]) async throws -> [SealedJoinRequest] {
+        _ = try current()
+        return await server.joinRequests(shareKeys: shareKeys)
+    }
+    func admit(userID: String, to zone: CloudZone) async throws {
+        let account = try current()
+        try await server.admit(userID: userID, to: zone, account: account)
+    }
+    func submitJoinDecision(_ decision: JoinDecision, requestName: String) async throws {
+        _ = try current()
+        await server.submitJoinDecision(decision, requestName: requestName)
+    }
+    func joinDecision(requestName: String) async throws -> JoinDecision? {
+        _ = try current()
+        return await server.joinDecision(requestName: requestName)
+    }
+    func withdrawJoinRequest(name: String) async throws {
+        _ = try current()
+        await server.withdrawJoinRequest(name: name)
+    }
 }

@@ -182,4 +182,23 @@ public protocol CloudZoneStore: Sendable {
 
     /// Richtet stille Push-Mitteilungen bei Änderungen ein (idempotent).
     func subscribeToChanges() async throws
+
+    // MARK: Beitritt mit Genehmigung (Schritt 116)
+
+    /// Wie `share(_:title:)`; mit `requiresApproval` gilt der Link nur für
+    /// Personen, die die Einsatzleitung zugelassen hat.
+    func share(_ zone: CloudZone, title: String, requiresApproval: Bool) async throws -> URL
+    /// iCloud-Kennung des angemeldeten Kontos (für die Aufnahme als Teilnehmer).
+    func currentUserID() async throws -> String
+    /// Legt eine Anfrage in der öffentlichen Datenbank ab (überschreibt eine frühere).
+    func submitJoinRequest(_ request: SealedJoinRequest) async throws
+    /// Offene Anfragen zu diesen Freigaben.
+    func joinRequests(shareKeys: [String]) async throws -> [SealedJoinRequest]
+    /// Nimmt eine Person als Teilnehmer (lesen und schreiben) in die Freigabe auf.
+    func admit(userID: String, to zone: CloudZone) async throws
+    func submitJoinDecision(_ decision: JoinDecision, requestName: String) async throws
+    /// Entscheidung zu einer Anfrage; `nil` = noch offen.
+    func joinDecision(requestName: String) async throws -> JoinDecision?
+    /// Eigene Anfrage zurückziehen (fehlende Anfrage ist kein Fehler).
+    func withdrawJoinRequest(name: String) async throws
 }

@@ -192,6 +192,13 @@ public final class CloudKitZoneStore: CloudZoneStore, @unchecked Sendable {
     // MARK: Freigabe
 
     public func share(_ zone: CloudZone, title: String) async throws -> URL {
+        try await share(zone, title: title, requiresApproval: false)
+    }
+
+    /// Mit `requiresApproval` gilt der Link nicht für jeden (`publicPermission = .none`);
+    /// Teilnehmer nimmt die Einsatzleitung einzeln auf (`admit`). Eine bestehende
+    /// Freigabe behält ihre Art.
+    public func share(_ zone: CloudZone, title: String, requiresApproval: Bool) async throws -> URL {
         try await createZone(zone)
         return try await run {
             let database = database(.owned)
@@ -201,7 +208,7 @@ public final class CloudKitZoneStore: CloudZoneStore, @unchecked Sendable {
             }
             let share = CKShare(recordZoneID: zoneID(zone))
             share[CKShare.SystemFieldKey.title] = title as CKRecordValue
-            share.publicPermission = .readWrite
+            share.publicPermission = requiresApproval ? .none : .readWrite
             do {
                 // `.ifServerRecordUnchanged`: Hat ein anderes Gerät desselben Kontos
                 // gleichzeitig freigegeben, gilt dessen Freigabe.
@@ -246,6 +253,94 @@ public final class CloudKitZoneStore: CloudZoneStore, @unchecked Sendable {
         }
         try await run { _ = try await container.accept(metadata) }
         return CloudZone(scope: .joined, zoneName: zoneID.zoneName, ownerName: zoneID.ownerName)
+    }
+
+    // MARK: Beitritt mit Genehmigung (Schritt 116)
+
+    private static let joinRequestType = "ELRDJoinRequest"
+    private static let joinDecisionType = "ELRDJoinDecision"
+
+    public func currentUserID() async throws -> String {
+        try await run { try await container.userRecordID().recordName }
+    }
+
+    public func submitJoinRequest(_ request: SealedJoinRequest) async throws {
+        try await run {
+            let record = CKRecord(recordType: Self.joinRequestType, recordID: CKRecord.ID(recordName: request.name))
+            record["shareKey"] = request.shareKey as CKRecordValue
+            record["sealed"] = request.sealed as CKRecordValue
+            let result = try await container.publicCloudDatabase.modifyRecords(saving: [record], deleting: [], savePolicy: .allKeys)
+            if let error = Self.firstRealError(result.saveResults.values) { throw error }
+        }
+    }
+
+    public func joinRequests(shareKeys: [String]) async throws -> [SealedJoinRequest] {
+        guard !shareKeys.isEmpty else { return [] }
+        return try await run {
+            // Braucht im CloudKit-Schema einen abfragbaren Index auf `shareKey` (docs/SYNC.md).
+            let query = CKQuery(recordType: Self.joinRequestType, predicate: NSPredicate(format: "shareKey IN %@", shareKeys))
+            let (matches, _) = try await container.publicCloudDatabase.records(matching: query, resultsLimit: 100)
+            return matches.compactMap { id, outcome in
+                guard case .success(let record) = outcome,
+                      let key = record["shareKey"] as? String,
+                      let sealed = record["sealed"] as? Data else { return nil }
+                return SealedJoinRequest(name: id.recordName, shareKey: key, sealed: sealed)
+            }
+        }
+    }
+
+    public func admit(userID: String, to zone: CloudZone) async throws {
+        try await run {
+            let database = database(.owned)
+            let shareID = CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: zoneID(zone))
+            let participant = try await container.shareParticipant(forUserRecordID: CKRecord.ID(recordName: userID))
+            participant.permission = .readWrite
+            // Zwei Versuche: Hat ein anderes Gerät die Freigabe gerade geändert, neu laden.
+            for attempt in 0..<2 {
+                guard let share = try await existingShare(shareID, in: database) else { throw CloudStoreError.invalidShare }
+                if share.participants.contains(where: { $0.userIdentity.userRecordID?.recordName == userID }) { return }
+                share.addParticipant(participant)
+                do {
+                    let result = try await database.modifyRecords(saving: [share], deleting: [], savePolicy: .ifServerRecordUnchanged, atomically: true)
+                    if let error = Self.firstRealError(result.saveResults.values) { throw error }
+                    return
+                } catch let error as CKError where error.code == .serverRecordChanged && attempt == 0 {
+                    continue
+                }
+            }
+        }
+    }
+
+    public func submitJoinDecision(_ decision: JoinDecision, requestName: String) async throws {
+        try await run {
+            let id = CKRecord.ID(recordName: JoinSeal.decisionName(requestName: requestName))
+            let record = CKRecord(recordType: Self.joinDecisionType, recordID: id)
+            record["decision"] = decision.rawValue as CKRecordValue
+            let result = try await container.publicCloudDatabase.modifyRecords(saving: [record], deleting: [], savePolicy: .allKeys)
+            if let error = Self.firstRealError(result.saveResults.values) { throw error }
+        }
+    }
+
+    public func joinDecision(requestName: String) async throws -> JoinDecision? {
+        try await run {
+            let id = CKRecord.ID(recordName: JoinSeal.decisionName(requestName: requestName))
+            do {
+                let record = try await container.publicCloudDatabase.record(for: id)
+                return (record["decision"] as? String).flatMap(JoinDecision.init(rawValue:))
+            } catch let error as CKError where error.code == .unknownItem {
+                return nil
+            }
+        }
+    }
+
+    public func withdrawJoinRequest(name: String) async throws {
+        try await run {
+            do {
+                _ = try await container.publicCloudDatabase.deleteRecord(withID: CKRecord.ID(recordName: name))
+            } catch let error as CKError where error.code == .unknownItem {
+                return
+            }
+        }
     }
 
     // MARK: Push

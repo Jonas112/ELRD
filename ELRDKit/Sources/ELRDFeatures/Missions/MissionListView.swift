@@ -152,7 +152,7 @@ struct MissionListView: View {
         }
         .sheet(isPresented: $showsJoin) {
             if let cloud {
-                JoinCloudMissionSheet(cloud: cloud) { mission in
+                JoinCloudMissionSheet(cloud: cloud, displayName: model.session.displayName) { mission in
                     model.reload()
                     do { onOpen(try model.open(mission)) } catch { actionError = ErrorText.message(for: error) }
                 }
@@ -495,6 +495,20 @@ struct MissionListView: View {
             .sheet(isPresented: $showsStatistics) {
             StatisticsSheet(model: model).largeSheet()
         }
+            // Schritt 116: zugelassene Anfrage → Einsatz öffnen; wartende Anfragen
+            // auch nach einem Neustart weiter nachsehen (alle 30 s).
+            .task {
+                guard let cloud else { return }
+                cloud.onJoinApproved = { mission in
+                    model.reload()
+                    showsJoin = false
+                    do { onOpen(try model.open(mission)) } catch { actionError = ErrorText.message(for: error) }
+                }
+                while !Task.isCancelled {
+                    if cloud.pendingJoins.contains(where: { $0.status == .waiting }) { await cloud.checkJoinRequests() }
+                    try? await Task.sleep(for: .seconds(30))
+                }
+            }
             .sheet(isPresented: $showsPersonSearch) {
             PersonSearchSheet(model: model) { mission in
                 do { onOpen(try model.open(mission)) } catch { actionError = ErrorText.message(for: error) }

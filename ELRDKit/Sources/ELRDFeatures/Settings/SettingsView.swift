@@ -178,6 +178,22 @@ struct GeneralSettingsView: View {
                 Text("Gilt für dieses Gerät.")
             }
 
+            Section {
+                Toggle(isOn: Binding(get: { settings.requiresJoinApproval }, set: { on in save { $0.requiresJoinApproval = on } })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Beitritt genehmigen", systemImage: "person.badge.shield.checkmark")
+                            .font(.headline)
+                        Text("Wer einem von dir geteilten Einsatz beitreten will, schickt eine Anfrage; du lässt zu oder lehnst ab. Vorher kommen keine Einsatzdaten auf das andere Gerät.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+            } header: {
+                Text("Geteilte Einsätze (iCloud)")
+            } footer: {
+                Text("Gilt für Einsätze, die ab jetzt geteilt werden. Bereits geteilte behalten ihre Art – zum Umstellen Teilen beenden und neu teilen.")
+            }
+
             MapCacheSection()
 
             Section("Standardbericht") {

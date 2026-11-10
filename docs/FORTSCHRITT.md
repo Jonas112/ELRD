@@ -207,7 +207,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | # | Schritt | Status |
 |---|---|---|
 | 116 | Beitritt zu geteilten Einsätzen nur nach Zulassung durch die Einsatzleitung (globale Einstellung, keine Daten vor der Zulassung) | ✅ |
-| 117 | iPhone-Durchsicht aller Bildschirme: Umbrüche und Überlappungen behoben | 🧪 |
+| 117 | iPhone-Durchsicht aller Bildschirme: Umbrüche und Überlappungen behoben | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

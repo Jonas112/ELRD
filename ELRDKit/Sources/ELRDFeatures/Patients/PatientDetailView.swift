@@ -16,6 +16,8 @@ struct PatientDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isCompact: Bool { sizeClass == .compact }
     @State private var form: PatientEditForm?
     @State private var saveState: SaveState = .saved
     @State private var confirmsDelete = false
@@ -89,6 +91,7 @@ struct PatientDetailView: View {
         GeometryReader { proxy in
             let width = proxy.size.width
             let isWide = width >= 900
+            ScrollViewReader { scroller in
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.l) {
                     header(patient)
@@ -102,13 +105,13 @@ struct PatientDetailView: View {
                         }
                     } else {
                         // Schmaler: Person über die volle Breite, darunter Zustand und Transport.
-                        personCard(patient)
+                        personCard(patient).id(DetailAnchor.person)
                         let rest = width >= 700
                             ? AnyLayout(HStackLayout(alignment: .top, spacing: Spacing.l))
                             : AnyLayout(VStackLayout(spacing: Spacing.l))
                         rest {
-                            conditionCard
-                            transportCard(patient)
+                            conditionCard.id(DetailAnchor.condition)
+                            transportCard(patient).id(DetailAnchor.transport)
                         }
                     }
                 }
@@ -117,6 +120,20 @@ struct PatientDetailView: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
+            // Bildschirmfotos (Schritt 118): weiter unten liegende Karten zeigen.
+            .task {
+                let anchor: DetailAnchor? = switch AppLaunchOptions.current.demoScreen {
+                case .patientDetailPerson: .person
+                case .patientDetailCondition: .condition
+                case .patientDetailTransport: .transport
+                default: nil
+                }
+                guard let anchor else { return }
+                if anchor == .person { showsPersonDetails = true }
+                try? await Task.sleep(for: .milliseconds(400))
+                scroller.scrollTo(anchor, anchor: .top)
+            }
+            }
             .onChange(of: width, initial: true) { _, newWidth in
                 // Spaltenbreite der Zustandskarte (Rand und Abstand grob abgezogen).
                 let columns: CGFloat = newWidth >= 1150 ? 3 : newWidth >= 700 ? 2 : 1
@@ -172,11 +189,17 @@ struct PatientDetailView: View {
     @ViewBuilder private var saveIndicator: some View {
         switch saveState {
         case .saved:
-            Label("gespeichert", systemImage: "checkmark").labelStyle(.titleAndIcon).font(.subheadline).foregroundStyle(.secondary)
+            // iPhone: nur Haken – sonst wird der Text in der Leiste abgeschnitten.
+            if isCompact {
+                Image(systemName: "checkmark").foregroundStyle(.secondary).accessibilityLabel("gespeichert")
+            } else {
+                Label("gespeichert", systemImage: "checkmark").labelStyle(.titleAndIcon).font(.subheadline).foregroundStyle(.secondary)
+            }
         case .pending:
             Label("…", systemImage: "pencil").labelStyle(.iconOnly).foregroundStyle(.secondary)
         case .failed:
-            Label("nicht gespeichert", systemImage: "exclamationmark.triangle.fill").labelStyle(.titleAndIcon)
+            Label("nicht gespeichert", systemImage: "exclamationmark.triangle.fill")
+                .labelStyle(isCompact ? AnyLabelStyle(IconOnlyLabelStyle()) : AnyLabelStyle(TitleAndIconLabelStyle()))
                 .font(.subheadline).foregroundStyle(.orange)
         }
     }
@@ -192,13 +215,14 @@ struct PatientDetailView: View {
                 .background(Color.triage(patient.triage), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(patient.fullName.isEmpty ? "Name unbekannt" : patient.fullName)
-                    .font(.title.weight(.heavy))
+                    .font((isCompact ? Font.title2 : Font.title).weight(.heavy))
                     .foregroundStyle(patient.fullName.isEmpty ? .secondary : .primary)
-                    .lineLimit(1)
+                    .lineLimit(isCompact ? 2 : 1)
+                    .minimumScaleFactor(0.8)
                 Text(subtitle(patient))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .lineLimit(isCompact ? 3 : 1)
             }
         }
     }
@@ -214,11 +238,13 @@ struct PatientDetailView: View {
     }
 
     @ViewBuilder
-    private func triageButtons(_ patient: Patient, algorithm: TriageAlgorithm) -> some View {
+    private func triageButtons(_ patient: Patient, algorithm: TriageAlgorithm, fullWidth: Bool = false) -> some View {
         Button { showsTriageGuide = true } label: {
             Label("Sichtungshilfe \(algorithm.displayName)", systemImage: "list.bullet.clipboard")
                 .font(.headline)
-                .frame(minHeight: TouchTarget.minimum)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: TouchTarget.minimum)
         }
         .buttonStyle(.bordered)
         if patient.triage.isTriaged, patient.outcome == nil {
@@ -227,7 +253,9 @@ struct PatientDetailView: View {
             } label: {
                 Label("Nachsichtung: bleibt \(patient.triage.shortName)", systemImage: "checkmark.circle")
                     .font(.headline)
-                    .frame(minHeight: TouchTarget.minimum)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: TouchTarget.minimum)
             }
             .buttonStyle(.bordered)
         }
@@ -255,9 +283,13 @@ struct PatientDetailView: View {
                 }
             }
             if canEdit {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: Spacing.s) { triageButtons(patient, algorithm: algorithm) }
-                    VStack(alignment: .leading, spacing: Spacing.s) { triageButtons(patient, algorithm: algorithm) }
+                if isCompact {
+                    VStack(alignment: .leading, spacing: Spacing.s) { triageButtons(patient, algorithm: algorithm, fullWidth: true) }
+                } else {
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: Spacing.s) { triageButtons(patient, algorithm: algorithm) }
+                        VStack(alignment: .leading, spacing: Spacing.s) { triageButtons(patient, algorithm: algorithm) }
+                    }
                 }
             }
         }
@@ -312,7 +344,10 @@ struct PatientDetailView: View {
                         .frame(width: 130, alignment: .leading)
                     }
                 }
-                HStack(spacing: Spacing.s) {
+                let genderLayout = isCompact
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.s))
+                    : AnyLayout(HStackLayout(spacing: Spacing.s))
+                genderLayout {
                     SegmentedChoice(
                         options: [(Gender.maennlich, "männlich"), (.weiblich, "weiblich"), (.unklar, "unklar")],
                         selection: binding.gender
@@ -868,8 +903,9 @@ struct SegmentedChoice<Value: Hashable>: View {
                 }
                 Text(title)
                     .font(.subheadline.weight(isSelected ? .heavy : .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.75)
             }
             .foregroundStyle(isSelected ? Color.white : color)
             .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum + 4)
@@ -877,8 +913,9 @@ struct SegmentedChoice<Value: Hashable>: View {
         } else {
             Text(title)
                 .font(.subheadline.weight(isSelected ? .heavy : .semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.75)
                 .foregroundStyle(isSelected ? .primary : .secondary)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum + 4)
                 .background(isSelected ? Surface.card : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -910,7 +947,9 @@ struct TriageChoiceButton: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
-                .font(category.shortName.count > 3 ? .headline.weight(.heavy) : .title3.weight(.heavy))
+                // Lange Namen (unverletzt, ungesichtet, verstorben) kleiner, damit sie
+                // auch auf dem iPhone in eine Zeile passen.
+                .font(category.isTransportTriage ? .title3.weight(.heavy) : .headline.weight(.heavy))
                 .padding(.horizontal, Spacing.xs)
                 .foregroundStyle(Color.onTriage(category))
                 .frame(maxWidth: .infinity, minHeight: 64)
@@ -924,5 +963,27 @@ struct TriageChoiceButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel(category.displayName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// Sprungziele der Patientenseite (Bildschirmfotos).
+private enum DetailAnchor: Hashable {
+    case person, condition, transport
+}
+
+private extension Sichtungskategorie {
+    var isTransportTriage: Bool { self == .sk1 || self == .sk2 || self == .sk3 }
+}
+
+/// Typlöschung für `labelStyle` mit Bedingung.
+struct AnyLabelStyle: LabelStyle {
+    private let make: (Configuration) -> AnyView
+
+    init<Style: LabelStyle>(_ style: Style) {
+        make = { AnyView(style.makeBody(configuration: $0)) }
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        make(configuration)
     }
 }

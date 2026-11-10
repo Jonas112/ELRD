@@ -39,6 +39,8 @@ struct MissionMapView: View {
     @State private var notice: String?
     /// Schritt 111: angetipptes Foto.
     @State private var viewingPhoto: FileAttachment?
+    /// Schritt 119: Lagekarte als GPX.
+    @State private var gpxFile: ExportedFile?
     /// Schritt 114: Auswahl taktischer Zeichen.
     @State private var showsSignPicker = AppLaunchOptions.current.demoScreen == .mapSigns
     /// Schritt 115: Polygon oder Pfeil, der gerade Punkt für Punkt gesetzt wird.
@@ -93,6 +95,9 @@ struct MissionMapView: View {
                 }
             }
             .presentationDetents([.medium, .large])
+        }
+        .sheet(item: $gpxFile) { file in
+            ActivityView(items: [file.url])
         }
         .sheet(item: $viewingPhoto) { file in
             JournalImageViewer(file: file, attachments: attachments)
@@ -418,10 +423,13 @@ struct MissionMapView: View {
             Button(action: printSnapshot) {
                 Label("Drucken", systemImage: "printer")
             }
+            Button(action: shareGPX) {
+                Label("Lagekarte als GPX (Garmin)", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+            }
         } label: {
             MapControlLabel(title: "Ausschnitt", systemImage: "camera.viewfinder")
         }
-        .accessibilityLabel("Kartenausschnitt ins Tagebuch oder drucken")
+        .accessibilityLabel("Kartenausschnitt ins Tagebuch, drucken oder als GPX teilen")
     }
 
     private func saveSnapshotToJournal() {
@@ -439,6 +447,24 @@ struct MissionMapView: View {
             )
             let entry = try store.perform(AddMapSnapshot(image: file))
             show("Als Eintrag \(entry.number) im Tagebuch")
+        } catch {
+            errorMessage = ErrorText.message(for: error)
+        }
+    }
+
+    /// Einsatzort, Abschnitte und alle Formen als GPX-Datei (Garmin).
+    private func shareGPX() {
+        let state = store.state
+        let title = state.mission.reason.isEmpty ? "Lagekarte" : "Lagekarte \(state.mission.reason)"
+        let document = GPXExport.document(
+            title: title,
+            missionCoordinate: state.mission.coordinate,
+            sections: state.sections.active,
+            objects: state.mapObjects.active,
+            createdAt: Date()
+        )
+        do {
+            gpxFile = try GPXSharing.file(named: title, contents: document)
         } catch {
             errorMessage = ErrorText.message(for: error)
         }

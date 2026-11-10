@@ -14,6 +14,7 @@ struct PatientsView: View {
     var onOpen: (PatientID) -> Void = { _ in }
 
     @State private var showsScanner = false
+    @Environment(\.horizontalSizeClass) private var sizeClass
     /// Verbleibsliste (Schritt 93).
     @State private var showsWhereabouts = AppLaunchOptions.current.demoScreen == .whereabouts
 
@@ -146,11 +147,13 @@ struct PatientsView: View {
                 ForEach(PatientSort.allCases, id: \.self) { Text($0.title).tag($0) }
             }
         } label: {
+            // iPhone: nur Symbol – die Auswahl zeigt das Menü.
             Label(query.sort.title, systemImage: "arrow.up.arrow.down")
+                .labelStyle(sizeClass == .compact ? AnyLabelStyle(IconOnlyLabelStyle()) : AnyLabelStyle(TitleAndIconLabelStyle()))
                 .font(.headline)
                 .lineLimit(1)
                 .fixedSize()
-                .padding(.horizontal, Spacing.l)
+                .padding(.horizontal, sizeClass == .compact ? Spacing.m : Spacing.l)
                 .frame(minHeight: TouchTarget.minimum + 4)
                 .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
@@ -416,13 +419,15 @@ struct CompactPatientRow: View {
                 if !row.details.isEmpty {
                     Text(row.details).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                 }
-                HStack(spacing: Spacing.s) {
-                    PatientUnitText(row: row)
-                    if let destination = row.destination, let registration = row.registration {
-                        Text("· \(destination)").lineLimit(1)
-                        Text(registration.displayName)
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.registration(registration))
+                // Passt alles in eine Zeile, sonst Einheit und Klinik untereinander (iPhone).
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Spacing.s) {
+                        PatientUnitText(row: row)
+                        destinationLine(prefix: "· ")
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        PatientUnitText(row: row)
+                        destinationLine(prefix: "")
                     }
                 }
                 .font(.subheadline)
@@ -441,6 +446,21 @@ struct CompactPatientRow: View {
         .background(Surface.card)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .contentShape(Rectangle())
+    }
+}
+
+extension CompactPatientRow {
+    @ViewBuilder
+    func destinationLine(prefix: String) -> some View {
+        if let destination = row.destination, let registration = row.registration {
+            HStack(spacing: Spacing.s) {
+                Text(prefix + destination).lineLimit(1)
+                Text(registration.displayName)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.registration(registration))
+                    .fixedSize()
+            }
+        }
     }
 }
 

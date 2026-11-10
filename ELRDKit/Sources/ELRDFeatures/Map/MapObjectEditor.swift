@@ -36,6 +36,8 @@ struct MapObjectEditor: View {
     }
 
     @State private var signText = ""
+    /// Schritt 119: GPX für Garmin.
+    @State private var gpxFile: ExportedFile?
     @State private var choosesSign = false
 
     var body: some View {
@@ -70,6 +72,9 @@ struct MapObjectEditor: View {
             .largeSheet()
         }
         .onDisappear(perform: commitText)
+        .sheet(item: $gpxFile) { file in
+            ActivityView(items: [file.url])
+        }
         .confirmationDialog("Markierung löschen?", isPresented: $confirmsDelete, titleVisibility: .visible) {
             Button("Löschen", role: .destructive) {
                 if perform(DeleteMapObject(objectID: objectID)) { dismiss() }
@@ -139,6 +144,23 @@ struct MapObjectEditor: View {
                     .buttonStyle(.plain)
                 }
                 .disabled(!canEdit)
+
+                Button {
+                    do {
+                        gpxFile = try GPXSharing.file(named: object.displayName, contents: GPXExport.document(for: object, createdAt: Date()))
+                    } catch {
+                        errorMessage = ErrorText.message(for: error)
+                    }
+                } label: {
+                    Label("Als GPX teilen (Garmin)", systemImage: "square.and.arrow.up")
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Form als GPX-Datei zum Import in Garmin-Geräte")
 
                 Text("Notiz").font(.headline).foregroundStyle(.secondary)
                 TextField("optional", text: $note, axis: .vertical)

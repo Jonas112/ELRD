@@ -225,7 +225,7 @@ jobs:
             xcrun simctl boot "$PHONE_ID" || true
             xcrun simctl bootstatus "$PHONE_ID" -b
             xcrun simctl install "$PHONE_ID" "$APP"
-            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapObject mapDrawing mapSigns mapPath journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan transportBoard handover}"
+            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail patientDetailPerson patientDetailCondition patientDetailTransport triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapObject mapDrawing mapSigns mapPath journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan transportBoard handover}"
             xcrun simctl shutdown "$PHONE_ID" || true
           elif [ -n "$PHONE_ID" ] && want iphone; then
             echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPhone übersprungen"

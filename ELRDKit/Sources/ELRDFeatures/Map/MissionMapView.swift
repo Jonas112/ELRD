@@ -694,6 +694,7 @@ struct MissionMapView: View {
             .buttonStyle(.borderedProminent)
             .disabled(!draft.isValid)
         }
+    }
 
     private func startPath(_ kind: MapPath.Kind) {
         placing = nil

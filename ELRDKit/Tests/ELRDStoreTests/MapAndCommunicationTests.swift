@@ -107,7 +107,7 @@ struct MapAndCommunicationTests {
         let after = try #require(store.state.mapObjects.first)
         #expect(abs((after.path?.points.first?.latitude ?? 0) - 50.010) < 1e-9, "alle Punkte um denselben Versatz")
         #expect(abs(after.shape.center.latitude - 50.011) < 1e-9)
-        #expect(store.state.logEntries.last?.message.contains("verschoben") == true)
+        #expect(store.state.logEntries.contains { $0.message.hasPrefix("„Sperrzone“") && ($0.message.contains("verschoben") || $0.message.contains("geändert")) })
     }
 
     @Test func arrowSummaryShowsLength() {

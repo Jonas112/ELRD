@@ -2,6 +2,11 @@ import Foundation
 import Testing
 @testable import ELRDDomain
 
+private enum GPXSample {
+    static let missionID = MissionID()
+    static func meta() -> EntityMetadata { .new(by: nil, at: Date(timeIntervalSince1970: 1_800_000_000)) }
+}
+
 @Suite("GPX für Garmin (Schritt 119)")
 struct GPXExportTests {
     private func point(_ latitude: Double, _ longitude: Double) -> GeoCoordinate {
@@ -9,7 +14,7 @@ struct GPXExportTests {
     }
 
     @Test func circleBecomesClosedTrack() throws {
-        let object = try #require(MapObject(missionID: Sample.missionID, metadata: Sample.meta(), title: "Gefahr <A&B>",
+        let object = try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(), title: "Gefahr <A&B>",
                                             shape: .circle(center: point(50, 10), radiusMeters: 100)))
         let items = GPXExport.items(for: object)
         let track = try #require(items.tracks.first)
@@ -25,13 +30,13 @@ struct GPXExportTests {
     }
 
     @Test func polygonClosedArrowOpenSignAsWaypoint() throws {
-        var polygon = try #require(MapObject(missionID: Sample.missionID, metadata: Sample.meta(), title: "Sperrzone",
+        var polygon = try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(), title: "Sperrzone",
                                              shape: .circle(center: point(50, 10), radiusMeters: 10)))
         let polygonSet = polygon.setPath(MapPath(kind: .polygon, points: [point(50, 10), point(50.001, 10), point(50.001, 10.001)]))
         #expect(polygonSet)
         #expect(GPXExport.items(for: polygon).tracks.first?.points.count == 4)
 
-        var arrow = try #require(MapObject(missionID: Sample.missionID, metadata: Sample.meta(), title: "Zufahrt",
+        var arrow = try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(), title: "Zufahrt",
                                            shape: .circle(center: point(50, 10), radiusMeters: 10)))
         let arrowSet = arrow.setPath(MapPath(kind: .arrow, points: [point(50, 10), point(50.002, 10.002)]))
         #expect(arrowSet)
@@ -39,7 +44,7 @@ struct GPXExportTests {
         #expect(arrowTrack.points.count == 2)
         #expect(arrowTrack.points.first != arrowTrack.points.last)
 
-        var sign = try #require(MapObject(missionID: Sample.missionID, metadata: Sample.meta(),
+        var sign = try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(),
                                           shape: .circle(center: point(50.1, 10.1), radiusMeters: 10)))
         sign.tacticalSign = TacticalSign(base: .stelle, organisation: .hilfsorganisation, text: "BR", presetID: "br")
         let items = GPXExport.items(for: sign)
@@ -50,7 +55,7 @@ struct GPXExportTests {
 
     @Test func rectangleHasFiveCorners() throws {
         let bounds = try #require(GeoBounds(north: 50.01, south: 50, east: 10.01, west: 10))
-        let object = try #require(MapObject(missionID: Sample.missionID, metadata: Sample.meta(), shape: .rectangle(bounds: bounds)))
+        let object = try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(), shape: .rectangle(bounds: bounds)))
         let points = try #require(GPXExport.items(for: object).tracks.first?.points)
         #expect(points.count == 5)
         #expect(points.first == points.last)

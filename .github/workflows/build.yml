@@ -175,6 +175,9 @@ jobs:
           # „[fotos: map journal]“ fotografiert nur diese Bildschirme (schneller), „[fotos]“ alle.
           ONLY=$(printf '%s' "$HEAD_MESSAGE" | sed -n 's/.*\[fotos: *\([A-Za-z ]*\)\].*/\1/p' | head -1)
           if [ -n "$ONLY" ]; then echo "::notice title=Bildschirmfotos::Nur $ONLY"; fi
+          # „[geraete: iphone]“ (ipad, iphone, mini) beschränkt die Geräte.
+          DEVICES=$(printf '%s' "$HEAD_MESSAGE" | sed -n 's/.*\[geraete: *\([a-z ]*\)\].*/\1/p' | head -1)
+          want() { [ -z "$DEVICES" ] || printf ' %s ' "$DEVICES" | grep -q " $1 "; }
           DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c '
           import json, sys
           devices = json.load(sys.stdin)["devices"]
@@ -185,9 +188,6 @@ jobs:
           xcodebuild -project ELRD.xcodeproj -scheme ELRD -configuration Debug \
             -destination "id=$DEVICE_ID" -derivedDataPath "$DERIVED" CODE_SIGNING_ALLOWED=NO build > shots-build.log 2>&1 || { tail -20 shots-build.log; exit 1; }
           APP="$DERIVED/Build/Products/Debug-iphonesimulator/ELRD.app"
-          xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl bootstatus "$DEVICE_ID" -b
-          xcrun simctl install "$DEVICE_ID" "$APP"
           rm -rf shots && mkdir -p shots
           shoot() { # Gerät, Präfix, Modi, Bildschirme
             local device=$1 prefix=$2 modes=$3 screens=$4
@@ -203,10 +203,15 @@ jobs:
               done
             done
           }
+          if want ipad; then
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          xcrun simctl install "$DEVICE_ID" "$APP"
           shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan mapSigns mapPath transportBoard handover}"
           # Jedes Gerät nach seinen Fotos herunterfahren: mehrere laufende Simulatoren
           # bremsen den Runner so stark, dass der Lauf das Zeitlimit reißt.
           xcrun simctl shutdown "$DEVICE_ID" || true
+          fi
           over_budget() { [ $SECONDS -gt 2100 ]; } # nach 35 min keine weiteren Geräte
           # iPhone (hochkant): kleinste Breite
           PHONE_ID=$(xcrun simctl list devices available -j | python3 -c '
@@ -216,13 +221,13 @@ jobs:
           pick = next((d for d in ios if d["name"].startswith("iPhone") and "Pro" in d["name"] and "Max" not in d["name"]), next((d for d in ios if d["name"].startswith("iPhone")), None))
           print(pick["udid"] if pick else "")
           ')
-          if [ -n "$PHONE_ID" ] && ! over_budget; then
+          if [ -n "$PHONE_ID" ] && want iphone && ! over_budget; then
             xcrun simctl boot "$PHONE_ID" || true
             xcrun simctl bootstatus "$PHONE_ID" -b
             xcrun simctl install "$PHONE_ID" "$APP"
-            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-login missions statistics newMission newExercise workspace missionDetails patients patientDetail triageGuide whereabouts injuries unitPicker sections addUnit map journal journalNew missionTimeline report settings onboarding situationReport transportBoard leadership}"
+            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapObject mapDrawing mapSigns mapPath journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan transportBoard handover}"
             xcrun simctl shutdown "$PHONE_ID" || true
-          elif [ -n "$PHONE_ID" ]; then
+          elif [ -n "$PHONE_ID" ] && want iphone; then
             echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPhone übersprungen"
           else
             echo "::warning title=Bildschirmfotos::Kein iPhone-Simulator gefunden"
@@ -235,13 +240,13 @@ jobs:
           pick = next((d for d in ios if "iPad mini" in d["name"]), None)
           print(pick["udid"] if pick else "")
           ')
-          if [ -n "$MINI_ID" ] && ! over_budget; then
+          if [ -n "$MINI_ID" ] && want mini && ! over_budget; then
             xcrun simctl boot "$MINI_ID" || true
             xcrun simctl bootstatus "$MINI_ID" -b
             xcrun simctl install "$MINI_ID" "$APP"
             shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan mapSigns mapPath transportBoard handover}"
             xcrun simctl shutdown "$MINI_ID" || true
-          elif [ -n "$MINI_ID" ]; then
+          elif [ -n "$MINI_ID" ] && want mini; then
             echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPad mini übersprungen"
           else
             echo "::warning title=Bildschirmfotos::Kein iPad-mini-Simulator gefunden"

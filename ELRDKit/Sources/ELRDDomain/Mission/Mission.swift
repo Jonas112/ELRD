@@ -50,6 +50,10 @@ public struct Mission: VersionedEntity, MissionScoped {
     public var acknowledgedItems: [AcknowledgedOpenItem]?
     /// Sonstige Stellen und benachbarte Kräfte für den Kommunikationsplan (Schritt 126).
     public var communicationContacts: [CommunicationContact]?
+    /// Einlagen der Übungsleitung (Schritt 138); nur bei Übungen.
+    public var exerciseInjects: [ExerciseInject]?
+    /// Lernpfad-Einsatz (Schritt 139): Übung mit Anleitung Schritt für Schritt.
+    public var isTutorial: Bool?
 
     public init(
         id: MissionID = MissionID(),

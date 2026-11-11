@@ -227,6 +227,9 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 134 | Globale Suche: Lupe in Seitenleiste bzw. Kopfzeile, ⌘K; Patienten, Einheiten, Abschnitte, Bereiche und Aktionen | 🧪 |
 | 135 | Lesbarkeit: kleinste Schrift im Organigramm größer, „Name unbekannt“ nicht kursiv, SK 3 ohne Einheit ohne Warnfarbe, Einsatztitel skaliert statt abzuschneiden | 🧪 |
 | 136 | Leerzustände mit nächster Aktion (Patienten, Einheiten, Tagebuch, Nachrichten); Einstellungen „Allgemein“ in drei Seiten | 🧪 |
+| 137 | Bericht: Deckblatt (Titel, Einsatzangaben, Kennzahlen, Lagekarte) und Diagramm „Sichtungskategorien im Verlauf“ | 🧪 |
+| 138 | Übungsleiter-Modus: Einlagen planen/einspielen (Patienten, Klinik voll, Verschlechterung, Einheit fällt aus, Meldung), Punkte bis 100 | 🧪 |
+| 139 | Lernpfad: geführte Übung in 10 Schritten mit Fortschrittskarte | 🧪 |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -341,6 +344,10 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritt 134:** `GlobalSearch` (ohne Akzente/Großschreibung): Patienten nach Nummer, Name, ILS-Nr., Anhängekarte, Merkmalen, SK; Einheiten; Abschnitte samt Leitung; Bereiche, Nachrichten, Bericht, „Neuer Patient SK …“. Leeres Feld zeigt die Aktionen; Eingabetaste öffnet den ersten Treffer. Lupe „Suchen“ in der Seitenleiste, auf dem iPhone in der Kopfzeile; ⌘K. Demo `search`.
 - **Schritt 135:** Graue/kleine Texte geprüft: `.tertiary` nur noch an Pfeilen und Symbolen; Organigramm `.caption2` → `.caption`; „Name unbekannt“ nicht mehr kursiv; „keine Einheit“ nur bei SK 1/2/ungesichtet orange, bei SK 3 grau (sonst warnt jede Zeile); Einsatztitel in der Kopfzeile darf auf 80 % schrumpfen.
 - **Schritt 136:** `EmptyStateView` in Patienten (erklärt die Schnellanlage), Einheiten („Einheit hinzufügen“), Tagebuch („Ersten Eintrag schreiben“), Nachrichten. Einstellungen: „Allgemein“ aufgeteilt in „Organisation und Bericht“, „Darstellung“, „Teilen und Karten“ (`GeneralSettingsView(part:)`).
+- **Schritte 137–139 (2026-11-11):** Jonas wählte aus neuen Ideen 7 (animierter Bericht), 8 (Übungsleiter-Modus), 9 (Lernpfad).
+- **Schritt 137:** Neuer Baustein `ReportBlock.chart(ReportChart)` (Stufenlinien je SK, Rasterlinien, Zeitachse, Legende; nur vorhandene Zeichenbefehle) und Textstile `.title`/`.subtitle`. Option `showsCover` (Standard an, ältere Vorlagen lesbar): Deckblatt mit Titel, Nummer · Ort · Beginn · Dauer, „Lage in Zahlen“, Lagekarte, SK-Verlauf, danach neue Seite; das Kapitel Einsatzdaten lässt Kennzahlen und Karte dann weg. Ohne Deckblatt steht das Diagramm unter „Verlauf“. Schalter im Bericht-Editor.
+- **Schritt 138:** `ExerciseInject` (optional `Mission.exerciseInjects`, Art als Text mit Rückfall, E95): Weitere Patienten (ungesichtet, Befund mit „Einlage: “, erwartete SK), Klinik voll (Kontingent = bereits Zugewiesene), Verschlechterung (erster SK‑2-Patient: erwartet SK 1), Einheit fällt aus und Meldung (nur Warnmeldung). Jede Einlage schickt „ÜBUNG – …“ als Warnung an alle. Geplante Einlagen spielt das Gerät der Einsatzleitung minütlich ein (`ReleaseDueExerciseInjects`). Werkzeug „Übungsleitung“ in der Lage (nur Übungen): Punkte, Einlagen mit „Jetzt“, Vorlagen, eigene Meldung. `ExerciseScore`: Sichtung 40, vollständig 15, Tempo 20, Lagemeldungen 10, Einlagen 15. Vorlagen sind ein Vorschlag von Claude – **Jonas:** fachlich prüfen. Übungsleitung auf zweitem Gerät braucht Rechte „Voll“.
+- **Schritt 139:** `TutorialStep.all` (10 Schritte, erkannt aus den Einsatzdaten; „Bericht ansehen“ über das Öffnen des Berichts). Einsatzliste: Karte „Lernpfad: ELRD in 10 Schritten“ legt eine Übung `isTutorial` an. Im Einsatz unten links `TutorialCoach` (einklappbar, „Hinführen“ wechselt den Bereich, Haptik bei jedem erledigten Schritt). Demo `tutorial`.
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

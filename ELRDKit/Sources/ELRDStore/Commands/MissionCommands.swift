@@ -16,6 +16,8 @@ public struct NewMissionRequest: Sendable {
     /// Übung (Schritt 88); mit `scenario` werden deren Patienten eingespielt.
     public var isExercise: Bool = false
     public var scenario: ExerciseScenario?
+    /// Lernpfad (Schritt 139): Übung mit Anleitung.
+    public var isTutorial: Bool = false
 
     public init(
         reason: String = "",
@@ -50,7 +52,8 @@ public struct NewMissionRequest: Sendable {
             commanderID: context.session.userID
         )
         var created = mission
-        if isExercise || scenario != nil { created.isExercise = true }
+        if isExercise || scenario != nil || isTutorial { created.isExercise = true }
+        if isTutorial { created.isTutorial = true }
         try draft.insert(created)
         draft.log(.mission, created.isExerciseMission ? "Übung \(mission.displayNumber()) angelegt" : "Einsatz \(mission.displayNumber()) angelegt", subject: .mission(mission.id))
 

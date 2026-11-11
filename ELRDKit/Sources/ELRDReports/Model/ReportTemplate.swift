@@ -69,6 +69,8 @@ public struct ReportChapterOptions: Codable, Hashable, Sendable {
     public var showsTimeline: Bool = true
     /// Nachbesprechung, falls vorhanden (Schritt 107).
     public var showsDebrief: Bool = true
+    /// Deckblatt mit Titel, Kennzahlen, Lagekarte und SK-Verlauf (Schritt 137).
+    public var showsCover: Bool = true
 
     // Organisation
     /// Platzhalter (Fahrzeug unbekannt) mit aufführen.
@@ -102,6 +104,7 @@ public struct ReportChapterOptions: Codable, Hashable, Sendable {
         showsMapImage = try container.decodeIfPresent(Bool.self, forKey: .showsMapImage) ?? defaults.showsMapImage
         showsTimeline = try container.decodeIfPresent(Bool.self, forKey: .showsTimeline) ?? defaults.showsTimeline
         showsDebrief = try container.decodeIfPresent(Bool.self, forKey: .showsDebrief) ?? defaults.showsDebrief
+        showsCover = try container.decodeIfPresent(Bool.self, forKey: .showsCover) ?? defaults.showsCover
         includesPlaceholders = try container.decodeIfPresent(Bool.self, forKey: .includesPlaceholders) ?? defaults.includesPlaceholders
         showsPatientAssignment = try container.decodeIfPresent(Bool.self, forKey: .showsPatientAssignment) ?? defaults.showsPatientAssignment
         triageFilter = try container.decodeIfPresent(Set<Sichtungskategorie>.self, forKey: .triageFilter) ?? defaults.triageFilter

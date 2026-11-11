@@ -83,6 +83,8 @@ struct ReportStyle {
 
     func attributed(_ string: String, style: ReportTextStyle) -> NSAttributedString {
         switch style {
+        case .title: attributed(string, font: font(size: base * 2.6, weight: .heavy), color: text, lineSpacing: 0)
+        case .subtitle: attributed(string, font: font(size: base * 1.25, weight: .medium), color: muted)
         case .body: attributed(string, font: font(size: base), color: text)
         case .small: attributed(string, font: font(size: base * 0.85), color: text)
         case .muted: attributed(string, font: font(size: base * 0.85), color: muted)

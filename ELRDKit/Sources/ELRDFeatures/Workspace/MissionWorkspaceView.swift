@@ -27,6 +27,8 @@ public struct MissionWorkspaceView: View {
     @State private var showsSearch = AppLaunchOptions.current.demoScreen == .search
     /// Breite des Inhalts (Schritt 130, geteilte Ansicht ab 1050 pt).
     @State private var contentWidth: CGFloat = 0
+    /// Lernpfad (Schritt 139): was die App nicht aus den Daten sieht.
+    @State private var tutorialProgress = TutorialProgress()
     /// Schritt 133: „Rückgängig“ nach schnellen Aktionen (ersetzt den Hinweis nur für neue Patienten).
     @State private var undoCenter = UndoCenter()
     @State private var errorMessage: String?
@@ -118,6 +120,17 @@ public struct MissionWorkspaceView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
+            .overlay(alignment: .bottomLeading) {
+                if store.state.mission.isTutorial == true || AppLaunchOptions.current.demoScreen == .tutorial, !store.state.mission.isClosed {
+                    TutorialCoach(state: store.state, progress: tutorialProgress) { section in
+                        path.removeAll()
+                        selection = section
+                    }
+                    .padding(.leading, layout == .bottomBar ? Spacing.m : 96 + Spacing.l)
+                    .padding(.trailing, Spacing.m)
+                    .padding(.bottom, layout == .bottomBar ? 96 : Spacing.l)
+                }
+            }
             .animation(reduceMotion ? nil : .snappy, value: undoCenter.current?.id)
             .environment(\.undoCenter, undoCenter)
             // Schritt 83: neuer offener Punkt als Hinweis oben.
@@ -175,6 +188,7 @@ public struct MissionWorkspaceView: View {
             notifier?.requestAuthorizationIfNeeded()
             while !Task.isCancelled {
                 evaluateOpenItems()
+                releaseDueInjects()
                 try? await Task.sleep(for: .seconds(60))
             }
         }
@@ -230,6 +244,7 @@ public struct MissionWorkspaceView: View {
             }
             .formSheet()
         }
+        .onChange(of: showsReport) { _, shows in if shows { tutorialProgress.openedReport = true } }
         .fullScreenCover(isPresented: $showsReport) {
             ReportEditorView(store: store, people: people, hospitals: catalogs.hospitals) { showsReport = false }
         }
@@ -428,6 +443,16 @@ public struct MissionWorkspaceView: View {
                 store: store, settings: settings, attachments: attachments, minimumGap: TimeInterval(interval * 30)
             )
         }
+    }
+
+    /// Schritt 138: geplante Übungseinlagen einspielen – nur das Gerät der
+    /// Einsatzleitung (bzw. ohne Teilnehmer jedes), damit nichts doppelt kommt.
+    private func releaseDueInjects() {
+        let mission = store.state.mission
+        guard mission.isExerciseMission, !mission.isClosed, mission.exerciseInjects?.contains(where: { !$0.isReleased }) == true else { return }
+        let isLead = (mission.participants ?? []).isEmpty || mission.commanderID == store.sessionUserID
+        guard isLead else { return }
+        _ = try? store.perform(ReleaseDueExerciseInjects(now: Date()))
     }
 
     /// Treffer der globalen Suche öffnen (Schritt 134).

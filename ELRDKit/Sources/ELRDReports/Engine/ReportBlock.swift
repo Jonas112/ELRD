@@ -16,6 +16,8 @@ public enum ReportBlock {
     case image(CGImage, caption: String?, maxHeight: CGFloat)
     /// Kennzahlen als Kacheln in einer Reihe (z. B. Sichtung).
     case metrics([ReportMetric])
+    /// Liniendiagramm (Schritt 137), z. B. Sichtungskategorien im Verlauf.
+    case chart(ReportChart)
     case spacer(CGFloat)
     /// Feine Trennlinie.
     case rule
@@ -23,6 +25,9 @@ public enum ReportBlock {
 }
 
 public enum ReportTextStyle: Sendable, Equatable {
+    /// Deckblatt: großer Titel und Untertitel (Schritt 137).
+    case title
+    case subtitle
     case body
     case small
     case muted
@@ -118,4 +123,41 @@ public struct ReportTable: Sendable, Equatable {
             }
         }
     }
+}
+
+/// Stufen-Liniendiagramm über die Zeit (Schritt 137): je Reihe Zeitpunkte mit Wert;
+/// der Wert gilt bis zum nächsten Zeitpunkt.
+public struct ReportChart: Sendable, Equatable {
+    public struct Series: Sendable, Equatable {
+        public let label: String
+        public let color: RGBColor
+        public let points: [(date: Date, value: Int)]
+
+        public init(label: String, color: RGBColor, points: [(date: Date, value: Int)]) {
+            self.label = label
+            self.color = color
+            self.points = points
+        }
+
+        public static func == (lhs: Series, rhs: Series) -> Bool {
+            lhs.label == rhs.label && lhs.color == rhs.color
+                && lhs.points.map(\.date) == rhs.points.map(\.date) && lhs.points.map(\.value) == rhs.points.map(\.value)
+        }
+    }
+
+    public let title: String
+    public let start: Date
+    public let end: Date
+    public let series: [Series]
+    public let height: CGFloat
+
+    public init(title: String, start: Date, end: Date, series: [Series], height: CGFloat = 170) {
+        self.title = title
+        self.start = start
+        self.end = max(end, start.addingTimeInterval(60))
+        self.series = series
+        self.height = height
+    }
+
+    public var maxValue: Int { max(1, series.flatMap { $0.points.map(\.value) }.max() ?? 1) }
 }

@@ -64,6 +64,7 @@ struct MissionListView: View {
                 VStack(alignment: .leading, spacing: Spacing.xxl) {
                     banner
                     topRow(running: result.running)
+                    if model.canCreate { tutorialBanner }
                     finishedSection(result)
                     if !model.deletedMissions.isEmpty { deletedSection }
                 }
@@ -279,6 +280,45 @@ struct MissionListView: View {
                 newMissionButton
                 runningColumn(running)
             }
+        }
+    }
+
+    /// Schritt 139: Lernpfad – geführte Übung für neue Einsatzleiter.
+    private var tutorialBanner: some View {
+        Button(action: startTutorial) {
+            HStack(spacing: Spacing.m) {
+                Image(systemName: "graduationcap.fill")
+                    .font(.title2)
+                    .foregroundStyle(.purple)
+                    .frame(width: 48, height: 48)
+                    .background(Color.purple.opacity(0.14), in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Lernpfad: ELRD in 10 Schritten").font(.headline).foregroundStyle(.primary)
+                    Text("Geführte Übung – Patienten, Einheiten, Karte, Lagemeldung, Bericht.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: Spacing.s)
+                Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+            }
+            .padding(Spacing.l)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Legt eine Übung an und erklärt Schritt für Schritt.")
+    }
+
+    private func startTutorial() {
+        var form = NewMissionForm()
+        form.reason = "Lernpfad ELRD"
+        form.type = .verkehrsunfall
+        form.location = "Übungsgelände"
+        form.isExercise = true
+        form.isTutorial = true
+        do {
+            onOpen(try model.create(form))
+        } catch {
+            actionError = ErrorText.message(for: error)
         }
     }
 

@@ -67,6 +67,13 @@ enum TextMeasure {
         return ceil(size.height) + 1
     }
 
+    /// Breite einer Zeile (für Legenden).
+    static func width(of text: NSAttributedString) -> CGFloat {
+        guard text.length > 0 else { return 0 }
+        let line = CTLineCreateWithAttributedString(text)
+        return ceil(CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
+    }
+
     /// Wie viele Zeichen ab `start` in die Höhe passen (ganze Zeilen) und wie hoch sie sind.
     static func fit(_ text: NSAttributedString, from start: Int, width: CGFloat, height: CGFloat) -> (length: Int, height: CGFloat) {
         guard start < text.length, height > 0 else { return (0, 0) }
@@ -164,6 +171,10 @@ struct PDFLayoutEngine {
             placeMetrics(metrics)
             cursorY += blockSpacing
 
+        case let .chart(chart):
+            placeChart(chart)
+            cursorY += blockSpacing
+
         case let .spacer(height):
             if !isAtPageTop { cursorY = min(cursorY + height, content.maxY) }
 
@@ -185,6 +196,7 @@ struct PDFLayoutEngine {
         case .keyValues, .table: return line * 3 + 8
         case .image(_, _, let maxHeight): return min(maxHeight, 120)
         case .metrics: return 54
+        case .chart(let chart): return chart.height + 30
         default: return line
         }
     }
@@ -326,5 +338,63 @@ struct PDFLayoutEngine {
             add(.text(label, CGRect(x: x + 2, y: cursorY + style.base * 2.7, width: width - 4, height: style.base * 1.6)))
         }
         cursorY += height
+    }
+
+    /// Stufen-Liniendiagramm mit Achsen, Rasterlinien und Legende (Schritt 137).
+    private mutating func placeChart(_ chart: ReportChart) {
+        let titleText = style.attributed(chart.title, style: .emphasis)
+        let titleHeight = TextMeasure.height(of: titleText, width: content.width)
+        let legendHeight = style.base * 1.6
+        let axisHeight = style.base * 1.4
+        ensure(titleHeight + 4 + chart.height + axisHeight + legendHeight)
+        add(.text(titleText, CGRect(x: content.minX, y: cursorY, width: content.width, height: titleHeight)))
+        cursorY += titleHeight + 4
+
+        let labelWidth: CGFloat = 24
+        let plot = CGRect(x: content.minX + labelWidth, y: cursorY, width: content.width - labelWidth, height: chart.height)
+        let maxValue = chart.maxValue
+        let span = chart.end.timeIntervalSince(chart.start)
+        func x(_ date: Date) -> CGFloat { plot.minX + plot.width * CGFloat(min(max(date.timeIntervalSince(chart.start) / span, 0), 1)) }
+        func y(_ value: Int) -> CGFloat { plot.maxY - plot.height * CGFloat(value) / CGFloat(maxValue) }
+
+        // Rasterlinien mit Werten (höchstens 5).
+        let step = max(1, Int((Double(maxValue) / 4).rounded(.up)))
+        for value in stride(from: 0, through: maxValue, by: step) {
+            add(.line(from: CGPoint(x: plot.minX, y: y(value)), to: CGPoint(x: plot.maxX, y: y(value)), color: style.rule, width: value == 0 ? 0.8 : 0.3))
+            let label = style.attributed("\(value)", font: style.font(size: style.base * 0.75), color: style.muted, alignment: .right, lineSpacing: 0)
+            add(.text(label, CGRect(x: content.minX, y: y(value) - style.base * 0.55, width: labelWidth - 4, height: style.base)))
+        }
+        // Reihen als Stufenlinie.
+        for series in chart.series {
+            let color = UIColor(series.color)
+            var points = series.points.sorted { $0.date < $1.date }
+            if let last = points.last, last.date < chart.end { points.append((chart.end, last.value)) }
+            for index in points.indices.dropLast() {
+                let current = points[index], next = points[index + 1]
+                add(.line(from: CGPoint(x: x(current.date), y: y(current.value)), to: CGPoint(x: x(next.date), y: y(current.value)), color: color, width: 2.2))
+                if next.value != current.value {
+                    add(.line(from: CGPoint(x: x(next.date), y: y(current.value)), to: CGPoint(x: x(next.date), y: y(next.value)), color: color, width: 2.2))
+                }
+            }
+        }
+        cursorY += chart.height + 2
+        // Zeitachse: Beginn, Mitte, Ende.
+        let times = [chart.start, chart.start.addingTimeInterval(span / 2), chart.end]
+        for (index, date) in times.enumerated() {
+            let alignment: NSTextAlignment = index == 0 ? .left : index == 1 ? .center : .right
+            let text = style.attributed(ReportFormat.time(date), font: style.font(size: style.base * 0.75), color: style.muted, alignment: alignment, lineSpacing: 0)
+            add(.text(text, CGRect(x: plot.minX, y: cursorY, width: plot.width, height: axisHeight)))
+        }
+        cursorY += axisHeight
+        // Legende.
+        var legendX = plot.minX
+        for series in chart.series {
+            add(.fill(CGRect(x: legendX, y: cursorY + style.base * 0.35, width: 12, height: 4), UIColor(series.color), cornerRadius: 1))
+            let text = style.attributed(series.label, font: style.font(size: style.base * 0.8, weight: .medium), color: style.text, lineSpacing: 0)
+            let width = TextMeasure.width(of: text) + 4
+            add(.text(text, CGRect(x: legendX + 16, y: cursorY, width: width, height: legendHeight)))
+            legendX += 16 + width + 12
+        }
+        cursorY += legendHeight
     }
 }

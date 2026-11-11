@@ -26,14 +26,20 @@ enum MissionInfoChapter {
             pairs.append(ReportKeyValue("Kilometerstand", "\(start) – \(end)\(driven)"))
         }
 
-        var blocks: [ReportBlock] = [.heading(ReportChapter.Kind.missionInfo.displayName, level: 1), .keyValues(pairs)]
-        if options.showsSummary {
+        let map = options.showsMapImage ? mapImage(input) : nil
+        var blocks: [ReportBlock] = []
+        if options.showsCover {
+            blocks += coverBlocks(input, theme: theme, map: map)
+        }
+        blocks += [.heading(ReportChapter.Kind.missionInfo.displayName, level: 1), .keyValues(pairs)]
+        if options.showsSummary, !options.showsCover {
             blocks.append(.heading("Lage in Zahlen", level: 2))
             blocks.append(.metrics(triageMetrics(input.patients, theme: theme)))
             blocks.append(.paragraph(statusLine(input.patients), style: .muted))
         }
         if options.showsTimeline {
             blocks.append(contentsOf: timelineBlocks(input))
+            if !options.showsCover, let chart = triageChart(input, theme: theme) { blocks.append(.chart(chart)) }
         }
         if options.showsDebrief, let debrief = input.mission.debrief, !debrief.isEmpty {
             blocks.append(.heading("Nachbesprechung", level: 2))
@@ -47,7 +53,7 @@ enum MissionInfoChapter {
                 blocks.append(.paragraph("\(title): \(text)"))
             }
         }
-        if options.showsMapImage, let map = mapImage(input) {
+        if !options.showsCover, let map {
             blocks.append(.heading("Lagekarte", level: 2))
             blocks.append(.image(map.image, caption: map.caption, maxHeight: 340))
         }
@@ -77,6 +83,49 @@ enum MissionInfoChapter {
             return count > 0 ? "\(count) \(status.displayName.lowercased())" : nil
         }
         return parts.isEmpty ? "Keine Patienten erfasst." : "Stand: " + parts.joined(separator: " · ")
+    }
+
+    /// Deckblatt (Schritt 137): großer Titel, Einsatzangaben, Kennzahlen, Lagekarte
+    /// und Sichtungskategorien im Verlauf – danach neue Seite.
+    static func coverBlocks(_ input: ReportInput, theme: ReportTheme, map: (image: CGImage, caption: String)?) -> [ReportBlock] {
+        let mission = input.mission
+        var blocks: [ReportBlock] = [.spacer(6)]
+        if mission.isExerciseMission { blocks.append(.paragraph("ÜBUNG", style: .emphasis)) }
+        blocks.append(.paragraph(mission.title, style: .title))
+        let line = [mission.displayNumber(), mission.location, ReportFormat.dateTime(mission.startedAt),
+                    "Dauer \(ReportFormat.duration(mission.duration(now: input.createdAt)))"]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
+        blocks.append(.paragraph(line, style: .subtitle))
+        blocks.append(.spacer(8))
+        blocks.append(.heading("Lage in Zahlen", level: 2))
+        blocks.append(.metrics(triageMetrics(input.patients, theme: theme)))
+        blocks.append(.paragraph(statusLine(input.patients), style: .muted))
+        if let map {
+            blocks.append(.image(map.image, caption: map.caption, maxHeight: 300))
+        }
+        if let chart = triageChart(input, theme: theme) {
+            blocks.append(.chart(chart))
+        }
+        blocks.append(.pageBreak)
+        return blocks
+    }
+
+    /// Sichtungskategorien im Verlauf; `nil` ohne gesichtete Patienten.
+    static func triageChart(_ input: ReportInput, theme: ReportTheme, height: CGFloat = 150) -> ReportChart? {
+        let metrics = MissionMetrics(mission: input.mission, patients: input.patients, journal: input.journal, now: input.createdAt)
+        guard let first = metrics.triageSeries.first else { return nil }
+        let order: [Sichtungskategorie] = [.sk1, .sk2, .sk3, .ungesichtet, .unverletzt, .verstorben]
+        let used = order.filter { triage in metrics.triageSeries.contains { $0.count(triage) > 0 } }
+        guard !used.isEmpty else { return nil }
+        let series = used.map { triage in
+            ReportChart.Series(
+                label: triage.shortName,
+                color: theme.showsTriageColors ? triage.color : RGBColor(hex: 0x333333),
+                points: metrics.triageSeries.map { ($0.date, $0.count(triage)) }
+            )
+        }
+        let end = metrics.end ?? metrics.now
+        return ReportChart(title: "Sichtungskategorien im Verlauf", start: min(first.date, metrics.start), end: end, series: series, height: height)
     }
 
     /// Verlauf (Schritt 86): Meilensteine mit Zeit ab Beginn, Wartezeiten je SK.

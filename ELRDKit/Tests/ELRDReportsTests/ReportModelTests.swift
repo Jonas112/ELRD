@@ -59,6 +59,31 @@ struct ReportModelTests {
         #expect(tables.allSatisfy { table in table.rows.allSatisfy { !$0[1].text.contains("Fahrzeug unbekannt") } })
     }
 
+    @Test func coverWithChartStartsReport() throws {
+        let store = try PreviewData.makeStore()
+        let report = input(store)
+        let blocks = ReportBuilder.blocks(for: .full, input: report)
+        guard case .spacer = blocks.first else {
+            Issue.record("Deckblatt erwartet")
+            return
+        }
+        let firstBreak = try #require(blocks.firstIndex { if case .pageBreak = $0 { return true } else { return false } })
+        let cover = blocks[..<firstBreak]
+        #expect(cover.contains { if case .paragraph(_, .title) = $0 { return true } else { return false } })
+        let chart = cover.compactMap { block -> ReportChart? in
+            if case let .chart(chart) = block { return chart }
+            return nil
+        }.first
+        #expect(chart?.series.isEmpty == false, "SK-Verlauf auf dem Deckblatt")
+        let pdf = try #require(PDFDocument(data: ReportBuilder.pdf(for: .full, input: report)))
+        #expect(pdf.pageCount >= 2)
+
+        var plain = ReportTemplate.full
+        plain.chapters[0].options.showsCover = false
+        let withoutCover = ReportBuilder.blocks(for: plain, input: report)
+        #expect(!withoutCover.contains { if case .paragraph(_, .title) = $0 { return true } else { return false } })
+    }
+
     @Test func metricsShowTriageAlwaysForSK1to3() {
         let metrics = MissionInfoChapter.triageMetrics([], theme: .standard)
         #expect(metrics.map(\.label) == ["Patienten", "SK 1", "SK 2", "SK 3"])

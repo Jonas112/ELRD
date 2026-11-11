@@ -18,6 +18,8 @@ struct NewMissionForm: Equatable {
     /// Übung (Schritt 88) und ggf. vorbereitete Lage.
     var isExercise = false
     var scenarioID: String?
+    /// Lernpfad (Schritt 139).
+    var isTutorial = false
 
     /// Einsatzarten in der Reihenfolge der Auswahl (häufige zuerst).
     static let typeOrder: [MissionType] = MissionType.defaultOrder
@@ -42,6 +44,7 @@ struct NewMissionForm: Equatable {
             alarmstichwort: alarmstichwort
         )
         request.isExercise = isExercise
+        request.isTutorial = isTutorial
         request.scenario = isExercise ? scenarioID.flatMap(ExerciseScenario.scenario(id:)) : nil
         return request
     }

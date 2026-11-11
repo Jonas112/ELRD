@@ -31,6 +31,19 @@ struct MissionTimelineView: View {
                 if state.mission.isExerciseMission, let evaluation = ExerciseEvaluation(patients: state.patients) {
                     exerciseCard(evaluation)
                 }
+                // Schritt 138: Punkte der Übung.
+                if let score = ExerciseScore(mission: state.mission, patients: state.patients,
+                                             situationReports: state.journal.active.filter { $0.category == .situationReport }.count,
+                                             now: context.date) {
+                    HStack(alignment: .firstTextBaseline, spacing: Spacing.m) {
+                        Label("Übungspunkte", systemImage: "rosette").font(.headline).foregroundStyle(.purple)
+                        Text("\(score.total) von \(score.maximum)").font(.title3.weight(.heavy).monospacedDigit())
+                        Text(score.rating).foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(Spacing.l)
+                    .background(Color.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                }
                 tiles(metrics)
                 if !metrics.waits.isEmpty { waits(metrics) }
                 if metrics.patientCount > 0 { triageChart(metrics) }

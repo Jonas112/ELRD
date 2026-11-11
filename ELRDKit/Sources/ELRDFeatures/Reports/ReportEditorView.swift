@@ -372,6 +372,7 @@ struct ReportChapterOptionsView: View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             switch kind {
             case .missionInfo:
+                Toggle("Deckblatt mit Karte und Verlauf", isOn: $options.showsCover)
                 Toggle("Lage in Zahlen", isOn: $options.showsSummary)
                 Toggle("Verlauf und Wartezeiten", isOn: $options.showsTimeline)
                 Toggle("Nachbesprechung", isOn: $options.showsDebrief)

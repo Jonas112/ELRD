@@ -34,7 +34,7 @@ struct SituationOverview: View {
 
     /// Werkzeuge der Lage (Schritte 67, 71, 73, 75, 76).
     enum Tool: String, Identifiable {
-        case report, checklist, handover, hospitals, leadership, phoneBook, communication
+        case report, checklist, handover, hospitals, leadership, phoneBook, communication, exercise
         var id: String { rawValue }
     }
 
@@ -91,6 +91,7 @@ struct SituationOverview: View {
                 case .leadership: LeadershipSheet(store: store)
                 case .phoneBook: PhoneBookSheet(store: store, settings: settings, hospitals: masterData?.hospitals ?? [])
                 case .communication: CommunicationPlanSheet(store: store)
+                case .exercise: ExerciseDirectorSheet(store: store)
                 }
             }
             .modifier(ToolSheetSizing(tool: tool))
@@ -105,6 +106,10 @@ struct SituationOverview: View {
         let last = store.state.lastSituationReportAt
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Spacing.m) {
+                // Schritt 138: nur bei Übungen.
+                if store.state.mission.isExerciseMission {
+                    toolButton("Übungsleitung", detail: exerciseDetail, symbol: "graduationcap.fill", tool: .exercise)
+                }
                 toolButton("Lagemeldung", detail: last.map { "zuletzt \($0.formatted(date: .omitted, time: .shortened))" } ?? "noch keine", symbol: "antenna.radiowaves.left.and.right", tool: .report, prominent: true)
                 toolButton("Checkliste", detail: "\(done) von \(template.items.count)", symbol: "checklist", tool: .checklist)
                 toolButton("Führung", detail: leadershipDetail, symbol: "person.3.sequence", tool: .leadership)
@@ -114,6 +119,12 @@ struct SituationOverview: View {
                 toolButton("Kommunikation", detail: communicationDetail, symbol: "antenna.radiowaves.left.and.right.circle", tool: .communication)
             }
         }
+    }
+
+    private var exerciseDetail: String {
+        let injects = store.state.mission.exerciseInjects ?? []
+        let open = injects.filter { !$0.isReleased }.count
+        return injects.isEmpty ? "Einlagen, Punkte" : "\(open) von \(injects.count) offen"
     }
 
     private var leadershipDetail: String {

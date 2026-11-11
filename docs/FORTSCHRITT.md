@@ -217,19 +217,19 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 124 | Zeichen verschieben, Nachbesserung: Bearbeitung nur noch über eigenen Tipp-Erkenner, nicht über MapKits Auswahl beim Berühren | ✅ |
 | 125 | GPX-Freigaben bei Einsatzende zuverlässig löschen: jede Datei einzeln, erneuter Versuch bei Fehler, Anzeige und „Alle jetzt löschen“ in den Einstellungen | ✅ |
 | 126 | Kommunikationsplan nach FwDV/DV 800: Formular (Anlage 1) und taktischer Organisations-/Kommunikationsplan als Organigramm, Telefon, Auftrag, benachbarte Kräfte und sonstige Stellen | ✅ |
-| 127 | Gestaltungssystem: Radien als Tokens überall, Bausteine (Haupt-/Zweitknopf, Status-Marke, Leerzustand), „Fortsetzen“ gefüllt, Seitenleiste beschriftet | 🧪 |
-| 128 | Blatt-Regel (E122): „Fertig“ rechts, „Abbrechen“ links; kleine Blätter als Formularblatt | 🧪 |
-| 129 | Lage-Cockpit: Kennzahlenzeile, gleichartige offene Punkte ab 3 zusammengefasst (SK 1 nie), dringendster Punkt hervorgehoben | 🧪 |
-| 130 | iPad quer (Inhalt ≥ 1050 pt): Patientenliste und Patient nebeneinander, gewählter Patient markiert | 🧪 |
-| 131 | Kontextmenü an Patientenzeilen und -kacheln: öffnen, SK ändern (Ziehen und Ablegen gab es schon in „Einheiten“) | 🧪 |
-| 132 | Karte aufräumen: Ebenen ein-/ausblenden (Abschnitte, Zeichen, Flächen, Pfeile, Fotos), Beschriftungen weichen einander aus | 🧪 |
-| 133 | „Rückgängig“-Hinweis für neue Patienten, SK-Änderung, Verschieben/Zuordnen per Ziehen; Haptik | 🧪 |
-| 134 | Globale Suche: Lupe in Seitenleiste bzw. Kopfzeile, ⌘K; Patienten, Einheiten, Abschnitte, Bereiche und Aktionen | 🧪 |
-| 135 | Lesbarkeit: kleinste Schrift im Organigramm größer, „Name unbekannt“ nicht kursiv, SK 3 ohne Einheit ohne Warnfarbe, Einsatztitel skaliert statt abzuschneiden | 🧪 |
-| 136 | Leerzustände mit nächster Aktion (Patienten, Einheiten, Tagebuch, Nachrichten); Einstellungen „Allgemein“ in drei Seiten | 🧪 |
-| 137 | Bericht: Deckblatt (Titel, Einsatzangaben, Kennzahlen, Lagekarte) und Diagramm „Sichtungskategorien im Verlauf“ | 🧪 |
-| 138 | Übungsleiter-Modus: Einlagen planen/einspielen (Patienten, Klinik voll, Verschlechterung, Einheit fällt aus, Meldung), Punkte bis 100 | 🧪 |
-| 139 | Lernpfad: geführte Übung in 10 Schritten mit Fortschrittskarte | 🧪 |
+| 127 | Gestaltungssystem: Radien als Tokens überall, Bausteine (Haupt-/Zweitknopf, Status-Marke, Leerzustand), „Fortsetzen“ gefüllt, Seitenleiste beschriftet | ✅ |
+| 128 | Blatt-Regel (E122): „Fertig“ rechts, „Abbrechen“ links; kleine Blätter als Formularblatt | ✅ |
+| 129 | Lage-Cockpit: Kennzahlenzeile, gleichartige offene Punkte ab 3 zusammengefasst (SK 1 nie), dringendster Punkt hervorgehoben | ✅ |
+| 130 | iPad quer (Inhalt ≥ 1050 pt): Patientenliste und Patient nebeneinander, gewählter Patient markiert | ✅ |
+| 131 | Kontextmenü an Patientenzeilen und -kacheln: öffnen, SK ändern (Ziehen und Ablegen gab es schon in „Einheiten“) | ✅ |
+| 132 | Karte aufräumen: Ebenen ein-/ausblenden (Abschnitte, Zeichen, Flächen, Pfeile, Fotos), Beschriftungen weichen einander aus | ✅ |
+| 133 | „Rückgängig“-Hinweis für neue Patienten, SK-Änderung, Verschieben/Zuordnen per Ziehen; Haptik | ✅ |
+| 134 | Globale Suche: Lupe in Seitenleiste bzw. Kopfzeile, ⌘K; Patienten, Einheiten, Abschnitte, Bereiche und Aktionen | ✅ |
+| 135 | Lesbarkeit: kleinste Schrift im Organigramm größer, „Name unbekannt“ nicht kursiv, SK 3 ohne Einheit ohne Warnfarbe, Einsatztitel skaliert statt abzuschneiden | ✅ |
+| 136 | Leerzustände mit nächster Aktion (Patienten, Einheiten, Tagebuch, Nachrichten); Einstellungen „Allgemein“ in drei Seiten | ✅ |
+| 137 | Bericht: Deckblatt (Titel, Einsatzangaben, Kennzahlen, Lagekarte) und Diagramm „Sichtungskategorien im Verlauf“ | ✅ |
+| 138 | Übungsleiter-Modus: Einlagen planen/einspielen (Patienten, Klinik voll, Verschlechterung, Einheit fällt aus, Meldung), Punkte bis 100 | ✅ |
+| 139 | Lernpfad: geführte Übung in 10 Schritten mit Fortschrittskarte | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

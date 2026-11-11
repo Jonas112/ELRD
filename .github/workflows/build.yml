@@ -207,7 +207,7 @@ jobs:
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP"
-          shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan mapSigns mapPath mapExport transportBoard handover}"
+          shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan communicationChart mapSigns mapPath mapExport transportBoard handover}"
           # Jedes Gerät nach seinen Fotos herunterfahren: mehrere laufende Simulatoren
           # bremsen den Runner so stark, dass der Lauf das Zeitlimit reißt.
           xcrun simctl shutdown "$DEVICE_ID" || true
@@ -225,7 +225,7 @@ jobs:
             xcrun simctl boot "$PHONE_ID" || true
             xcrun simctl bootstatus "$PHONE_ID" -b
             xcrun simctl install "$PHONE_ID" "$APP"
-            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail patientDetailPerson patientDetailCondition patientDetailTransport triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapObject mapDrawing mapSigns mapPath mapExport journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan transportBoard handover}"
+            shoot "$PHONE_ID" "phone-" "light" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail patientDetailPerson patientDetailCondition patientDetailTransport triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapObject mapDrawing mapSigns mapPath mapExport journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan communicationChart transportBoard handover}"
             xcrun simctl shutdown "$PHONE_ID" || true
           elif [ -n "$PHONE_ID" ] && want iphone; then
             echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPhone übersprungen"
@@ -244,7 +244,7 @@ jobs:
             xcrun simctl boot "$MINI_ID" || true
             xcrun simctl bootstatus "$MINI_ID" -b
             xcrun simctl install "$MINI_ID" "$APP"
-            shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan mapSigns mapPath mapExport transportBoard handover}"
+            shoot "$MINI_ID" "mini-" "dark" "${ONLY:-login missions workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan communicationChart mapSigns mapPath mapExport transportBoard handover}"
             xcrun simctl shutdown "$MINI_ID" || true
           elif [ -n "$MINI_ID" ] && want mini; then
             echo "::warning title=Bildschirmfotos::Zeitbudget erreicht, iPad mini übersprungen"

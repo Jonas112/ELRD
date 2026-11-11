@@ -354,12 +354,17 @@ public struct SetSectionLeader: MissionCommand {
     public let name: String
     public let callsign: String
     public let radioChannel: String
+    /// Schritt 126 (DV 800): `nil` = unverändert.
+    public let phone: String?
+    public let task: String?
 
-    public init(sectionID: SectionID, name: String, callsign: String, radioChannel: String) {
+    public init(sectionID: SectionID, name: String, callsign: String, radioChannel: String, phone: String? = nil, task: String? = nil) {
         self.sectionID = sectionID
         self.name = name
         self.callsign = callsign
         self.radioChannel = radioChannel
+        self.phone = phone
+        self.task = task
     }
 
     public func execute(_ draft: inout MissionDraft) throws {
@@ -368,8 +373,34 @@ public struct SetSectionLeader: MissionCommand {
             section.leaderName = values[0].isEmpty ? nil : values[0]
             section.leaderCallsign = values[1].isEmpty ? nil : values[1]
             section.radioChannel = values[2].isEmpty ? nil : values[2]
+            if let phone { section.leaderPhone = phone.trimmed.isEmpty ? nil : phone.trimmed }
+            if let task { section.task = task.trimmed.isEmpty ? nil : task.trimmed }
         }
-        draft.log(.section, "Leitung \(after.name): \(values.filter { !$0.isEmpty }.joined(separator: " · "))", subject: .section(after.id))
+        // Telefonnummern nicht ins Protokoll.
+        var parts = values.filter { !$0.isEmpty }
+        if let task = after.task { parts.append("Auftrag: \(task)") }
+        draft.log(.section, "Leitung \(after.name): \(parts.joined(separator: " · "))", subject: .section(after.id))
+    }
+}
+
+/// Sonstige Stellen und benachbarte Kräfte des Kommunikationsplans ersetzen (Schritt 126).
+public struct SetCommunicationContacts: MissionCommand {
+    public let contacts: [CommunicationContact]
+
+    public init(_ contacts: [CommunicationContact]) {
+        self.contacts = contacts
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        let cleaned = contacts.filter { !$0.isEmpty }
+        guard (draft.mission.communicationContacts ?? []) != cleaned else { return }
+        if let unnamed = cleaned.first(where: { $0.name.isEmpty }) {
+            throw CommandError.invalid("Bitte eine Bezeichnung eintragen (Rufname „\(unnamed.callsign)“).")
+        }
+        _ = try draft.updateMission { $0.communicationContacts = cleaned.isEmpty ? nil : cleaned }
+        let names = cleaned.map(\.name).joined(separator: ", ")
+        draft.log(.mission, cleaned.isEmpty ? "Kommunikationsplan: keine sonstigen Stellen" : "Kommunikationsplan: \(names)",
+                  subject: .mission(draft.missionID))
     }
 }
 

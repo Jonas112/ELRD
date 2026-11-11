@@ -89,16 +89,55 @@ public struct LeadershipPosition: Hashable, Codable, Sendable, Identifiable {
     public var name: String
     public var callsign: String
     public var radioChannel: String
+    /// Telefon/Mobil für den Kommunikationsplan nach DV 800 (Schritt 126); `nil` = keins.
+    public var phone: String?
 
-    public init(role: LeadershipRole, name: String = "", callsign: String = "", radioChannel: String = "") {
+    public init(role: LeadershipRole, name: String = "", callsign: String = "", radioChannel: String = "", phone: String = "") {
         self.role = role
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.callsign = callsign.trimmingCharacters(in: .whitespacesAndNewlines)
         self.radioChannel = radioChannel.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.phone = phone.isEmpty ? nil : phone
     }
 
     public var id: LeadershipRole { role }
-    public var isEmpty: Bool { name.isEmpty && callsign.isEmpty && radioChannel.isEmpty }
+    public var isEmpty: Bool { name.isEmpty && callsign.isEmpty && radioChannel.isEmpty && (phone ?? "").isEmpty }
+}
+
+// MARK: - Kommunikationsplan nach DV 800 (Schritt 126)
+
+/// „Sonstige Stellen“ und „Benachbarte Kräfte“ im Kommunikationsplan (DV 800,
+/// Anlage 1) – z. B. ILS, Polizei-Einsatzleitung, Feuerwehr-EL, Ordnungsamt.
+public struct CommunicationContact: Hashable, Codable, Sendable, Identifiable {
+    public var id: UUID
+    public var name: String
+    public var callsign: String
+    /// Rufgruppe bzw. Funkkanal.
+    public var channel: String
+    public var phone: String
+    public var email: String
+    /// Benachbarte Kräfte (Feuerwehr, Polizei, THW …) statt sonstiger Stelle.
+    public var isNeighbouringForce: Bool
+
+    public init(id: UUID = UUID(), name: String, callsign: String = "", channel: String = "", phone: String = "", email: String = "",
+                isNeighbouringForce: Bool = false) {
+        self.id = id
+        self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.callsign = callsign.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.channel = channel.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.phone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.isNeighbouringForce = isNeighbouringForce
+    }
+
+    public var isEmpty: Bool { name.isEmpty && callsign.isEmpty && channel.isEmpty && phone.isEmpty && email.isEmpty }
+
+    /// Vorschläge für schnelles Anlegen.
+    public static let suggestions: [(name: String, neighbour: Bool)] = [
+        ("Integrierte Leitstelle (ILS)", false), ("Feuerwehr – Einsatzleitung", true), ("Polizei – Einsatzleitung", true),
+        ("THW", true), ("Ordnungsamt", false), ("Krankenhaus-Koordination", false), ("Notfallseelsorge / PSNV", true),
+    ]
 }
 
 /// Führungskraft aus den Einstellungen (Schritt 81) – in „Führung und Kräfte“

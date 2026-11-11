@@ -48,6 +48,8 @@ public struct Mission: VersionedEntity, MissionScoped {
     public var debrief: MissionDebrief?
     /// Abgehakte offene Punkte („zur Kenntnis genommen“, Schritt 96).
     public var acknowledgedItems: [AcknowledgedOpenItem]?
+    /// Sonstige Stellen und benachbarte Kräfte für den Kommunikationsplan (Schritt 126).
+    public var communicationContacts: [CommunicationContact]?
 
     public init(
         id: MissionID = MissionID(),

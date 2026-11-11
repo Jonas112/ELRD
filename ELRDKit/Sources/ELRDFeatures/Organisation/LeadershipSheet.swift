@@ -37,7 +37,7 @@ struct LeadershipSheet: View {
                                 title: role.shortName,
                                 subtitle: role.displayName,
                                 name: position.name,
-                                reach: [position.callsign, position.radioChannel].filter { !$0.isEmpty },
+                                reach: [position.callsign, position.radioChannel, position.phone ?? ""].filter { !$0.isEmpty },
                                 footer: nil
                             ) { editing = .role(role) }
                         }
@@ -53,8 +53,8 @@ struct LeadershipSheet: View {
                                 title: section.name,
                                 subtitle: section.isInitial ? "Initialabschnitt" : "Abschnitt",
                                 name: section.leaderName ?? "",
-                                reach: [section.leaderCallsign, section.radioChannel].compactMap { $0 },
-                                footer: sectionFooter(force)
+                                reach: [section.leaderCallsign, section.radioChannel, section.leaderPhone].compactMap { $0 },
+                                footer: [section.task.map { "Auftrag: \($0)" }, sectionFooter(force)].compactMap { $0 }.joined(separator: "\n")
                             ) { editing = .section(section.id) }
                         }
                     }
@@ -137,39 +137,58 @@ struct LeadershipSheet: View {
         switch target {
         case .role(let role):
             let position = store.state.mission.position(role)
-            PositionEditor(title: role.displayName, role: role, name: position.name, callsign: position.callsign, channel: position.radioChannel) { name, callsign, channel in
-                try store.perform(SetLeadershipPosition(LeadershipPosition(role: role, name: name, callsign: callsign, radioChannel: channel)))
+            PositionEditor(title: role.displayName, role: role,
+                           values: .init(name: position.name, callsign: position.callsign, channel: position.radioChannel, phone: position.phone ?? "")) { values in
+                try store.perform(SetLeadershipPosition(LeadershipPosition(role: role, name: values.name, callsign: values.callsign,
+                                                                           radioChannel: values.channel, phone: values.phone)))
             }
         case .section(let id):
             if let section = store.state.activeSections.first(where: { $0.id == id }) {
-                PositionEditor(title: "Leitung \(section.name)", role: nil, name: section.leaderName ?? "", callsign: section.leaderCallsign ?? "", channel: section.radioChannel ?? "") { name, callsign, channel in
-                    try store.perform(SetSectionLeader(sectionID: id, name: name, callsign: callsign, radioChannel: channel))
+                PositionEditor(title: "Leitung \(section.name)", role: nil,
+                               values: .init(name: section.leaderName ?? "", callsign: section.leaderCallsign ?? "", channel: section.radioChannel ?? "",
+                                             phone: section.leaderPhone ?? "", task: section.task ?? "")) { values in
+                    try store.perform(SetSectionLeader(sectionID: id, name: values.name, callsign: values.callsign, radioChannel: values.channel,
+                                                       phone: values.phone, task: values.task))
                 }
             }
         }
     }
 }
 
-/// Name, Funkrufname und Kanal einer Funktion.
-private struct PositionEditor: View {
+/// Name, Funkrufname, Rufgruppe und Telefon einer Funktion; bei Abschnitten auch
+/// der Auftrag (DV 800, Schritt 126).
+struct PositionEditor: View {
+    struct Values: Equatable {
+        var name: String
+        var callsign: String
+        var channel: String
+        var phone: String
+        /// `nil` = kein Auftragsfeld (Funktionen der Einsatzleitung).
+        var task: String?
+
+        init(name: String, callsign: String, channel: String, phone: String, task: String? = nil) {
+            self.name = name
+            self.callsign = callsign
+            self.channel = channel
+            self.phone = phone
+            self.task = task
+        }
+    }
+
     let title: String
     /// Funktion (`nil` = Abschnittsleitung) – bestimmt, wer aus der Liste passt.
     let role: LeadershipRole?
-    @State var name: String
-    @State var callsign: String
-    @State var channel: String
-    let onSave: (String, String, String) throws -> Void
+    @State var values: Values
+    let onSave: (Values) throws -> Void
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @State private var errorMessage: String?
 
-    init(title: String, role: LeadershipRole?, name: String, callsign: String, channel: String, onSave: @escaping (String, String, String) throws -> Void) {
+    init(title: String, role: LeadershipRole?, values: Values, onSave: @escaping (Values) throws -> Void) {
         self.title = title
         self.role = role
-        _name = State(initialValue: name)
-        _callsign = State(initialValue: callsign)
-        _channel = State(initialValue: channel)
+        _values = State(initialValue: values)
         self.onSave = onSave
     }
 
@@ -181,9 +200,9 @@ private struct PositionEditor: View {
                     Section("Aus dem Führungspersonal") {
                         ForEach(people) { person in
                             Button {
-                                name = person.name
-                                callsign = person.callsign
-                                channel = person.radioChannel
+                                values.name = person.name
+                                values.callsign = person.callsign
+                                values.channel = person.radioChannel
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
@@ -192,7 +211,7 @@ private struct PositionEditor: View {
                                         if !reach.isEmpty { Text(reach).font(.subheadline).foregroundStyle(.secondary) }
                                     }
                                     Spacer()
-                                    if person.name == name { Image(systemName: "checkmark").foregroundStyle(.tint) }
+                                    if person.name == values.name { Image(systemName: "checkmark").foregroundStyle(.tint) }
                                 }
                                 .frame(minHeight: TouchTarget.minimum)
                             }
@@ -200,11 +219,22 @@ private struct PositionEditor: View {
                     }
                 }
                 Section {
-                    TextField("Name", text: $name).frame(minHeight: TouchTarget.minimum)
-                    TextField("Funkrufname", text: $callsign).frame(minHeight: TouchTarget.minimum)
-                    TextField("Funkkanal (z. B. TMO 312)", text: $channel).frame(minHeight: TouchTarget.minimum)
+                    TextField("Name", text: $values.name).frame(minHeight: TouchTarget.minimum)
+                    TextField("Funkrufname", text: $values.callsign).frame(minHeight: TouchTarget.minimum)
+                    TextField("Rufgruppe (z. B. TMO 312)", text: $values.channel).frame(minHeight: TouchTarget.minimum)
+                    TextField("Telefon / Mobil", text: $values.phone)
+                        .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                        .frame(minHeight: TouchTarget.minimum)
                 } footer: {
-                    Text("Alle Felder leeren, um die Funktion zu entfernen.")
+                    Text(values.task == nil ? "Alle Felder leeren, um die Funktion zu entfernen." : "Erscheint im Kommunikationsplan nach DV 800.")
+                }
+                if values.task != nil {
+                    Section("Auftrag") {
+                        TextField("z. B. Patientenablage betreiben", text: Binding(get: { values.task ?? "" }, set: { values.task = $0 }), axis: .vertical)
+                            .lineLimit(1...4)
+                            .frame(minHeight: TouchTarget.minimum)
+                    }
                 }
                 if let errorMessage {
                     Section { Text(errorMessage).foregroundStyle(.orange) }
@@ -217,7 +247,7 @@ private struct PositionEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Sichern") {
                         do {
-                            try onSave(name, callsign, channel)
+                            try onSave(values)
                             dismiss()
                         } catch {
                             errorMessage = ErrorText.message(for: error)

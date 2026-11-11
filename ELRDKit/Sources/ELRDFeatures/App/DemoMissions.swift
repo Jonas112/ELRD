@@ -220,8 +220,18 @@ enum DemoMissions {
         try running.perform(SetLeadershipPosition(LeadershipPosition(role: .einsatzleiter, name: user.displayName, callsign: "ELRD 1", radioChannel: "TMO 312")))
         try running.perform(SetLeadershipPosition(LeadershipPosition(role: .lna, name: "Dr. Weber", callsign: "LNA SW", radioChannel: "TMO 312")))
         try running.perform(SetLeadershipPosition(LeadershipPosition(role: .orgl, name: "M. Krause", callsign: "OrgL SW", radioChannel: "TMO 312")))
-        try running.perform(SetSectionLeader(sectionID: casualties.id, name: "S. Lang", callsign: "RK SWF 10/1", radioChannel: "TMO 313"))
-        try running.perform(SetSectionLeader(sectionID: staging.id, name: "T. Roth", callsign: "RK SWF 11/1", radioChannel: "TMO 314"))
+        try running.perform(SetSectionLeader(sectionID: casualties.id, name: "S. Lang", callsign: "RK SWF 10/1", radioChannel: "TMO 313",
+                                             phone: "0170 0000013", task: "Patientenablage betreiben, Sichtung nachführen"))
+        try running.perform(SetSectionLeader(sectionID: staging.id, name: "T. Roth", callsign: "RK SWF 11/1", radioChannel: "TMO 314",
+                                             phone: "0170 0000014", task: "Bereitstellungsraum führen, Kräfte zuweisen"))
+        // Schritt 126: Kommunikationsplan nach DV 800 (fiktive Nummern).
+        try running.perform(SetLeadershipPosition(LeadershipPosition(role: .fuehrungsassistenz, name: "J. Becker", callsign: "ELRD 1/1",
+                                                                     radioChannel: "TMO 312", phone: "0170 0000011")))
+        try running.perform(SetCommunicationContacts([
+            CommunicationContact(name: "Integrierte Leitstelle (ILS)", callsign: "Leitstelle Schweinfurt", channel: "TMO 312", phone: "09721 0000000"),
+            CommunicationContact(name: "Feuerwehr – Einsatzleitung", callsign: "Florian SW 1/10", channel: "TMO 312", isNeighbouringForce: true),
+            CommunicationContact(name: "Polizei – Einsatzleitung", phone: "09721 0000001", isNeighbouringForce: true),
+        ]))
         if let leo {
             try running.perform(SetHospitalQuota(HospitalQuota(masterHospitalID: leo.masterHospitalID, hospitalName: leo.name, sk1: 1, sk2: 2, sk3: 4)))
         }

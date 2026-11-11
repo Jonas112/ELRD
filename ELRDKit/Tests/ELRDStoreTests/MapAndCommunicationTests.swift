@@ -88,6 +88,53 @@ struct MapAndCommunicationTests {
         #expect(AddMapObject.withPath(MapPath(kind: .arrow, points: [point(50, 10), point(50.001, 10)])) != nil)
     }
 
+    // MARK: 126 Kommunikationsplan nach DV 800
+
+    @Test func communicationPlanFollowsDV800() throws {
+        let store = try fixture.newMission(sections: ["Patientenablage"])
+        try store.perform(SetLeadershipPosition(LeadershipPosition(role: .einsatzleiter, name: "E. Beispiel", callsign: "ELRD 1",
+                                                                   radioChannel: "TMO 312", phone: "0170 1111111")))
+        try store.perform(SetLeadershipPosition(LeadershipPosition(role: .fuehrungsassistenz, name: "J. Becker", callsign: "ELRD 1/1")))
+        let ablage = try #require(store.state.sections.active.first)
+        try store.perform(SetSectionLeader(sectionID: ablage.id, name: "S. Lang", callsign: "RK 10/1", radioChannel: "TMO 313",
+                                           phone: "0170 2222222", task: "Ablage betreiben"))
+        // Ohne Telefon/Auftrag bleiben beide erhalten.
+        try store.perform(SetSectionLeader(sectionID: ablage.id, name: "S. Lang", callsign: "RK 10/2", radioChannel: "TMO 313"))
+        try store.perform(SetCommunicationContacts([
+            CommunicationContact(name: "Polizei", channel: "TMO 315", phone: "110 0", isNeighbouringForce: true),
+            CommunicationContact(name: "Ordnungsamt", email: "amt@example.org"),
+            CommunicationContact(name: ""),
+        ]))
+
+        let plan = CommunicationPlan(store.state)
+        #expect(plan.leadership.map(\.function) == ["ELRD"])
+        #expect(plan.staff.map(\.function) == ["FüAss"])
+        let section = try #require(plan.sections.first)
+        #expect(section.phone == "0170 2222222")
+        #expect(section.task == "Ablage betreiben")
+        #expect(section.callsign == "RK 10/2")
+        #expect(plan.neighbouringForces.map(\.function) == ["Polizei"])
+        #expect(plan.otherOffices.map(\.function) == ["Ordnungsamt"])
+        #expect(plan.channels.map(\.name) == ["TMO 312", "TMO 313", "TMO 315"])
+
+        let form = plan.html(printedAt: "11.11.2026, 05:00", issuer: "BRK Schweinfurt")
+        #expect(form.contains("<h1>Kommunikationsplan</h1>"))
+        #expect(form.contains("BRK Schweinfurt"))
+        #expect(form.contains("<td>0170 2222222</td>"))
+        #expect(form.contains("Sonstige Stellen"))
+        #expect(form.contains("amt@example.org"))
+        let chart = plan.organisationChartHTML(printedAt: "11.11.2026, 05:00")
+        #expect(chart.contains("A4 landscape"))
+        #expect(chart.contains("EA Patientenablage"))
+        #expect(chart.contains("Führungsgruppe"))
+
+        // Telefonnummern stehen nicht im Einsatzprotokoll.
+        #expect(!store.state.logEntries.contains { $0.message.contains("0170") || $0.message.contains("110 0") })
+        #expect(throws: CommandError.self) {
+            try store.perform(SetCommunicationContacts([CommunicationContact(name: "", phone: "123")]))
+        }
+    }
+
     @Test func newAreasAreNumberedAutomatically() throws {
         let store = try fixture.newMission()
         let path = MapPath(kind: .polygon, points: [point(50.000, 10.000), point(50.002, 10.000), point(50.001, 10.003)])

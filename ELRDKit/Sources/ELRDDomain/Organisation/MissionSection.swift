@@ -21,6 +21,9 @@ public struct MissionSection: VersionedEntity, MissionScoped {
     public var leaderName: String?
     public var leaderCallsign: String?
     public var radioChannel: String?
+    /// Telefon/Mobil der Abschnittsleitung und Auftrag (DV 800, Schritt 126).
+    public var leaderPhone: String?
+    public var task: String?
 
     public init(
         id: SectionID = SectionID(),

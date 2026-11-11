@@ -22,7 +22,7 @@ struct SituationOverview: View {
         case .leadership?: .leadership
         case .hospitals?, .distribution?: .hospitals
         case .handover?: .handover
-        case .communicationPlan?: .communication
+        case .communicationPlan?, .communicationChart?: .communication
         default: nil
         }
     }

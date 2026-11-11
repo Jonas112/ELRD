@@ -211,9 +211,9 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 118 | Patientenseite und Knöpfe fürs iPhone: Kopf zweizeilig, SK-Knöpfe, Sichtungsknöpfe volle Breite, Geschlecht/Kind untereinander, Auswahlfelder zweizeilig, Liste und Sortierung | ✅ |
 | 119 | Formen als GPX teilen (Garmin): einzelne Form im Bearbeiten-Blatt, ganze Lagekarte im Menü „Ausschnitt“ | ✅ |
 | 120 | GPX für Hundeteams per iCloud-Link und QR-Code; bei Einsatzende automatisch gelöscht (Einstellung, Standard an) | ✅ |
-| 121 | Taktische Zeichen verschieben: kurz gedrückt halten, dann ziehen (Jonas); Tippen bearbeitet | 🧪 |
-| 122 | GPX-Export mehrerer Formen: Knopf „Export“ auf der Karte, Auswahl mit Haken, als Datei oder für Hundeteams | 🧪 |
-| 123 | Beschriftung der Suchgebiete: Flächen/Rechtecke automatisch „Suchgebiet N“, Nummer in der Markierung, Bezeichnung als GPX-Wegpunkt | 🧪 |
+| 121 | Taktische Zeichen verschieben: kurz gedrückt halten, dann ziehen (Jonas); Tippen bearbeitet | ✅ |
+| 122 | GPX-Export mehrerer Formen: Knopf „Export“ auf der Karte, Auswahl mit Haken, als Datei oder für Hundeteams | ✅ |
+| 123 | Beschriftung der Suchgebiete: Flächen/Rechtecke automatisch „Suchgebiet N“, Nummer in der Markierung, Bezeichnung als GPX-Wegpunkt | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

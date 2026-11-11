@@ -216,7 +216,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 123 | Beschriftung der Suchgebiete: Flächen/Rechtecke automatisch „Suchgebiet N“, Nummer in der Markierung, Bezeichnung als GPX-Wegpunkt | ✅ |
 | 124 | Zeichen verschieben, Nachbesserung: Bearbeitung nur noch über eigenen Tipp-Erkenner, nicht über MapKits Auswahl beim Berühren | ✅ |
 | 125 | GPX-Freigaben bei Einsatzende zuverlässig löschen: jede Datei einzeln, erneuter Versuch bei Fehler, Anzeige und „Alle jetzt löschen“ in den Einstellungen | ✅ |
-| 126 | Kommunikationsplan nach FwDV/DV 800: Formular (Anlage 1) und taktischer Organisations-/Kommunikationsplan als Organigramm, Telefon, Auftrag, benachbarte Kräfte und sonstige Stellen | 🧪 |
+| 126 | Kommunikationsplan nach FwDV/DV 800: Formular (Anlage 1) und taktischer Organisations-/Kommunikationsplan als Organigramm, Telefon, Auftrag, benachbarte Kräfte und sonstige Stellen | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

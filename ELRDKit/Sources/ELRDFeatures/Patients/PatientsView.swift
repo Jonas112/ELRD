@@ -10,12 +10,15 @@ struct PatientsView: View {
     let store: MissionStore
     @Binding var query: PatientListQuery
     let onQuickAdd: (Sichtungskategorie) -> Void
+    /// Schritt 130: geöffneter Patient in der geteilten Ansicht – dann öffnen Zeilen
+    /// direkt über `onOpen` (kein umgebender Navigationsstapel) und er ist markiert.
     var selectedID: PatientID? = nil
     /// Patient öffnen (Board, Kartenscan).
     var onOpen: (PatientID) -> Void = { _ in }
 
     @State private var showsScanner = false
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.undoCenter) private var undoCenter
     /// Verbleibsliste (Schritt 93).
     @State private var showsWhereabouts = AppLaunchOptions.current.demoScreen == .whereabouts
 
@@ -173,7 +176,7 @@ struct PatientsView: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(query.layout == layout ? Color.white : Color.primary)
                         .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum + 4)
-                        .background(query.layout == layout ? ActionFill.primary : Color.clear, in: RoundedRectangle(cornerRadius: Radius.card - 2, style: .continuous))
+                        .background(query.layout == layout ? ActionFill.primary : Color.clear, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(layout.title)
@@ -187,11 +190,17 @@ struct PatientsView: View {
 
     @ViewBuilder
     private func list(_ rows: [PatientRow], isWide: Bool) -> some View {
-        if rows.isEmpty {
+        if rows.isEmpty && store.state.activePatients.isEmpty {
+            // Schritt 136: Leerzustand – angelegt wird oben mit einem Tipp.
+            EmptyStateView(
+                systemImage: "person.2",
+                title: "Noch keine Patienten",
+                message: "Oben die Sichtungskategorie antippen – der Patient bekommt sofort die nächste Nummer. Alles Weitere später."
+            )
+            .cardStyle()
+        } else if rows.isEmpty {
             VStack(alignment: .leading, spacing: Spacing.m) {
-                Text(store.state.activePatients.isEmpty
-                     ? "Noch keine Patienten. Oben mit einem Tipp anlegen."
-                     : "Keine Patienten für diese Auswahl.")
+                Text("Keine Patienten für diese Auswahl.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
                 if query.isFiltered {
@@ -209,24 +218,82 @@ struct PatientsView: View {
         } else if query.layout == .tiles {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: isWide ? 230 : 200), spacing: Spacing.m)], spacing: Spacing.m) {
                 ForEach(rows) { row in
-                    NavigationLink(value: row.id) { PatientTile(row: row) }
-                        .buttonStyle(.plain)
+                    rowLink(row) { PatientTile(row: row) }
                 }
             }
         } else {
             LazyVStack(spacing: isWide ? 0 : Spacing.s) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                     if isWide && index > 0 { Divider() }
-                    NavigationLink(value: row.id) {
+                    rowLink(row) {
                         if isWide { WidePatientRow(row: row) } else { CompactPatientRow(row: row) }
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .background {
-                if isWide { RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Surface.card) }
+                if isWide { RoundedRectangle(cornerRadius: Radius.large, style: .continuous).fill(Surface.card) }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        }
+    }
+
+    /// Zeile öffnet den Patienten: im Stapel über den Pfad, in der geteilten Ansicht direkt.
+    /// Schritt 131: langes Drücken zeigt SK ändern und Öffnen.
+    private func rowLink<Label: View>(_ row: PatientRow, @ViewBuilder label: () -> Label) -> some View {
+        // Eingrenzung: Kontextmenü vorübergehend aus (Patientenliste hing beim Start).
+        rowLinkBase(row, label: label)
+    }
+
+    @ViewBuilder
+    private func rowMenu(_ row: PatientRow) -> some View {
+        Button { onOpen(row.id) } label: { Label("Patient \(row.number) öffnen", systemImage: "person.text.rectangle") }
+        if !store.state.mission.isClosed {
+            Section("Sichtung ändern") {
+                ForEach([Sichtungskategorie.sk1, .sk2, .sk3], id: \.self) { triage in
+                    Button {
+                        setTriage(row, triage)
+                    } label: {
+                        if row.triage == triage {
+                            Label(triage.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(triage.displayName)
+                        }
+                    }
+                    .disabled(row.triage == triage)
+                }
+            }
+        }
+    }
+
+    private func setTriage(_ row: PatientRow, _ triage: Sichtungskategorie) {
+        let before = row.triage
+        do {
+            try store.perform(SetTriage(patientID: row.id, triage: triage))
+            Haptics.success()
+            let id = row.id
+            undoCenter?.offer("\(row.number): \(before.shortName) → \(triage.shortName)", color: Color.triage(triage)) { [store] in
+                try store.perform(SetTriage(patientID: id, triage: before))
+            }
+        } catch {
+            Haptics.warning()
+        }
+    }
+
+    @ViewBuilder
+    private func rowLinkBase<Label: View>(_ row: PatientRow, @ViewBuilder label: () -> Label) -> some View {
+        if selectedID != nil {
+            Button { onOpen(row.id) } label: { label() }
+                .buttonStyle(.plain)
+                .overlay {
+                    if row.id == selectedID {
+                        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                            .strokeBorder(Color.accentColor, lineWidth: 3)
+                    }
+                }
+                .accessibilityAddTraits(row.id == selectedID ? .isSelected : [])
+        } else {
+            NavigationLink(value: row.id) { label() }
+                .buttonStyle(.plain)
         }
     }
 }
@@ -258,7 +325,7 @@ struct QuickAddBar: View {
                             .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.onTriage(category))
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.large + 4)
-                            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Patient \(category.displayName) anlegen")
@@ -267,7 +334,7 @@ struct QuickAddBar: View {
         }
         .padding(isWide ? Spacing.l : 0)
         .background {
-            if isWide { RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Surface.card) }
+            if isWide { RoundedRectangle(cornerRadius: Radius.large, style: .continuous).fill(Surface.card) }
         }
     }
 }
@@ -322,12 +389,12 @@ struct PatientTitle: View {
                 .monospacedDigit()
                 .padding(.horizontal, Spacing.s)
                 .padding(.vertical, 3)
-                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 .layoutPriority(1)
             if let name = row.name {
                 Text(name).font(.title3.weight(.bold)).lineLimit(1)
             } else {
-                Text("Name unbekannt").font(.title3.weight(.semibold)).italic().foregroundStyle(.secondary).lineLimit(1)
+                Text("Name unbekannt").font(.title3.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
             }
             if row.isDuplicateNumber {
                 Text("Nr. doppelt")
@@ -335,7 +402,7 @@ struct PatientTitle: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Color.orange, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .background(Color.orange, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                     .layoutPriority(1)
             }
         }
@@ -347,10 +414,13 @@ struct PatientUnitText: View {
     let row: PatientRow
 
     var body: some View {
-        if !row.hasUnit && row.status == .waiting {
+        if !row.hasUnit && row.status == .waiting && row.triage != .sk3 {
             Label(row.unitText, systemImage: "exclamationmark.circle")
                 .fontWeight(.semibold)
                 .foregroundStyle(.orange)
+        } else if !row.hasUnit && row.status == .waiting {
+            // Schritt 135: SK 3 ohne Einheit ist normal – nicht in jeder Zeile warnen.
+            Text(row.unitText).foregroundStyle(.secondary)
         } else {
             Text(row.unitText).foregroundStyle(row.status == .released ? .secondary : .primary)
         }
@@ -445,7 +515,7 @@ struct CompactPatientRow: View {
         .frame(minHeight: 92)
         .background(alignment: .leading) { TriageStripe(triage: row.triage, width: 64) }
         .background(Surface.card)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .contentShape(Rectangle())
     }
 }
@@ -494,7 +564,7 @@ struct PatientTile: View {
                 if let name = row.name {
                     Text(name).font(.headline).lineLimit(2)
                 } else {
-                    Text("Name unbekannt").font(.headline).italic().foregroundStyle(.secondary).lineLimit(1)
+                    Text("Name unbekannt").font(.headline).foregroundStyle(.secondary).lineLimit(1)
                 }
                 if !row.details.isEmpty {
                     Text(row.details).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
@@ -518,7 +588,7 @@ struct PatientTile: View {
         }
         .frame(height: 196)
         .background(Surface.card)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .opacity(row.status == .released ? 0.55 : 1)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

@@ -25,6 +25,8 @@ public struct MissionWorkspaceView: View {
     @State private var showsQuickAdd = false
     /// Schritt 134: globale Suche (⌘K).
     @State private var showsSearch = AppLaunchOptions.current.demoScreen == .search
+    /// Breite des Inhalts (Schritt 130, geteilte Ansicht ab 1050 pt).
+    @State private var contentWidth: CGFloat = 0
     /// Schritt 133: „Rückgängig“ nach schnellen Aktionen (ersetzt den Hinweis nur für neue Patienten).
     @State private var undoCenter = UndoCenter()
     @State private var errorMessage: String?
@@ -315,14 +317,23 @@ public struct MissionWorkspaceView: View {
 
     private var content: some View {
         // Schritt 130: Auf dem breiten iPad Patientenliste und Patient nebeneinander.
-        GeometryReader { proxy in
-            if selection == .patients, proxy.size.width >= Self.splitMinimumWidth, let current = path.last {
+        // Breite nur im Hintergrund messen – ein GeometryReader um den Navigationsstapel
+        // ließ die Patientenliste beim Start hängen.
+        Group {
+            if selection == .patients, contentWidth >= Self.splitMinimumWidth, let current = path.last {
                 splitView(current)
             } else {
                 stack
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { contentWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, width in contentWidth = width }
+            }
+        }
         // Bereichswechsel über die Leiste: zurück zur Übersicht des Bereichs.
         .onChange(of: selection) { path.removeAll() }
     }

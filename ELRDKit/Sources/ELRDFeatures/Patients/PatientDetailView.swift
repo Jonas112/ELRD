@@ -13,10 +13,13 @@ struct PatientDetailView: View {
     let order: [PatientID]
     let onNavigate: (PatientID) -> Void
     var catalogs: PatientCatalogs = .empty
+    /// Schritt 130: in der geteilten Ansicht (iPad quer) schließt dies den Patienten.
+    var onClose: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.undoCenter) private var undoCenter
     private var isCompact: Bool { sizeClass == .compact }
     @State private var form: PatientEditForm?
     @State private var saveState: SaveState = .saved
@@ -152,6 +155,19 @@ struct PatientDetailView: View {
 
     @ToolbarContentBuilder
     private func toolbar(_ patient: Patient) -> some ToolbarContent {
+        if let onClose {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: { save(); onClose() }) {
+                    Label("Schließen", systemImage: "sidebar.left")
+                }
+                .accessibilityLabel("Patient schließen, nur Liste zeigen")
+            }
+        }
+        patientToolbar(patient)
+    }
+
+    @ToolbarContentBuilder
+    private func patientToolbar(_ patient: Patient) -> some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
             saveIndicator
             let index = order.firstIndex(of: patientID)
@@ -819,7 +835,16 @@ struct PatientDetailView: View {
 
     private func setTriage(_ category: Sichtungskategorie) {
         do {
+            let before = patient?.triage
             try store.perform(SetTriage(patientID: patientID, triage: category))
+            // Schritt 133: spürbar und zurücknehmbar.
+            if let before, before != category, let number = patient?.number {
+                Haptics.success()
+                let id = patientID
+                undoCenter?.offer("\(number): \(before.shortName) → \(category.shortName)", color: Color.triage(category)) { [store] in
+                    try store.perform(SetTriage(patientID: id, triage: before))
+                }
+            }
         } catch {
             saveState = .failed(ErrorText.message(for: error))
         }
@@ -835,7 +860,7 @@ struct PatientDetailView: View {
         do {
             try store.perform(DeletePatient(patientID: patientID))
             form = nil
-            dismiss()
+            if let onClose { onClose() } else { dismiss() }
         } catch {
             saveState = .failed(ErrorText.message(for: error))
         }

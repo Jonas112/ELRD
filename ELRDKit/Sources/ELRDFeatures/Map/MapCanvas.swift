@@ -541,7 +541,10 @@ struct MapCanvas: UIViewRepresentable {
                     view.glyphImage = UIImage(systemName: "pencil")
                 }
                 view.titleVisibility = .visible
-                view.displayPriority = label.isNamed ? .required : .defaultHigh
+                // Schritt 132: Beschriftungen weichen einander aus, statt sich zu überdecken;
+                // die Nummer in der Markierung bleibt sichtbar.
+                view.displayPriority = label.isNamed ? .defaultHigh : .defaultLow
+                view.collisionMode = .circle
                 // Halten und Ziehen verschiebt die ganze Form (Schritt 60).
                 view.isDraggable = canEdit
                 return view

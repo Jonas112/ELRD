@@ -18,7 +18,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
         case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, unitPicker, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapCollapsed, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages, report, settings, masterData, onboarding
         /// Schritte 67–76.
-        case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise, whereabouts, statistics, debrief, distribution, communicationPlan, mapSigns, mapPath, patientDetailPerson, patientDetailCondition, patientDetailTransport, mapExport, communicationChart
+        case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise, whereabouts, statistics, debrief, distribution, communicationPlan, mapSigns, mapPath, patientDetailPerson, patientDetailCondition, patientDetailTransport, mapExport, communicationChart, search
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }

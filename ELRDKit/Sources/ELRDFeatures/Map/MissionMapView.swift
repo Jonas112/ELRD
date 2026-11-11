@@ -26,6 +26,12 @@ struct MissionMapView: View {
     @State private var showsSectionList = false
     /// Liste links eingeklappt – mehr Platz für die Karte (Jonas). Nur Komfort je Gerät.
     @AppStorage("map.sidePanelCollapsed") private var sidePanelCollapsed = false
+    /// Schritt 132: Ebenen ein-/ausblenden (je Gerät).
+    @AppStorage("map.layer.sections") private var showsSections = true
+    @AppStorage("map.layer.signs") private var showsSigns = true
+    @AppStorage("map.layer.areas") private var showsAreas = true
+    @AppStorage("map.layer.arrows") private var showsArrows = true
+    @AppStorage("map.layer.photos") private var showsPhotos = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var proxy = MapCanvasProxy()
     @State private var editing: EditingMapObject?
@@ -81,7 +87,7 @@ struct MissionMapView: View {
             NavigationStack {
                 MapSectionList(
                     pins: MapSectionPin.pins(for: store.state),
-                    objects: store.state.mapObjects.active,
+                    objects: visibleObjects,
                     canEdit: canEdit,
                     allowsDragging: false,
                     onSelect: { pin in showsSectionList = false; select(pin) },
@@ -177,7 +183,7 @@ struct MissionMapView: View {
             .padding(.vertical, Spacing.s)
             MapSectionList(
                 pins: MapSectionPin.pins(for: store.state),
-                objects: store.state.mapObjects.active,
+                objects: visibleObjects,
                 canEdit: canEdit,
                 allowsDragging: true,
                 onSelect: select,
@@ -254,12 +260,12 @@ struct MissionMapView: View {
                 missionTitle: mission.location.isEmpty ? "Einsatzort" : mission.location,
                 showsUserLocation: location.isAllowed,
                 focus: focus,
-                sections: MapSectionPin.pins(for: store.state),
+                sections: showsSections ? MapSectionPin.pins(for: store.state) : [],
                 canEdit: canEdit,
                 proxy: proxy,
                 onCenterChange: { center = $0 },
                 onMoveSection: { id, coordinate in perform(SetSectionCoordinate(sectionID: id, coordinate: coordinate)) },
-                objects: store.state.mapObjects.active,
+                objects: visibleObjects,
                 onSelectObject: { editing = EditingMapObject(id: $0) },
                 onMoveObject: { id, coordinate in moveObject(id, to: coordinate) },
                 onResizeObject: { id, handle in changeShape(id) { $0.resized(handle: handle) } },
@@ -268,7 +274,7 @@ struct MissionMapView: View {
                     if perform(SetMissionCoordinate(coordinate)) { show("Einsatzort verschoben") }
                 },
                 onRegionChanging: { if isDrawing { freehand.followMap(proxy) } },
-                photos: MapPhotoPin.pins(for: store.state),
+                photos: showsPhotos ? MapPhotoPin.pins(for: store.state) : [],
                 onSelectPhoto: { viewingPhoto = $0.file },
                 pathDraft: pathDraft,
                 onTapMap: pathDraft == nil ? nil : { addPathPoint($0) }
@@ -761,6 +767,19 @@ struct MissionMapView: View {
         editing = EditingMapObject(id: object.id)
     }
 
+    /// Kartenobjekte der eingeschalteten Ebenen (Schritt 132).
+    private var visibleObjects: [MapObject] {
+        store.state.mapObjects.active.filter { object in
+            if object.tacticalSign != nil { return showsSigns }
+            if object.path?.kind == .arrow { return showsArrows }
+            return showsAreas
+        }
+    }
+
+    private var hiddenLayerCount: Int {
+        [showsSections, showsSigns, showsAreas, showsArrows, showsPhotos].filter { !$0 }.count
+    }
+
     private var layerMenu: some View {
         Menu {
             Picker("Kartengrundlage", selection: $layer) {
@@ -768,10 +787,28 @@ struct MissionMapView: View {
                     Label(candidate.title, systemImage: candidate.systemImage).tag(candidate)
                 }
             }
+            // Schritt 132: Ebenen – bei voller Lage nur das Nötige zeigen.
+            Section("Anzeigen") {
+                Toggle(isOn: $showsSections) { Label("Abschnitte", systemImage: "square.stack.3d.up") }
+                Toggle(isOn: $showsSigns) { Label("Taktische Zeichen", systemImage: "flag.2.crossed") }
+                Toggle(isOn: $showsAreas) { Label("Flächen und Formen", systemImage: "pentagon") }
+                Toggle(isOn: $showsArrows) { Label("Pfeile", systemImage: "arrow.up.right") }
+                Toggle(isOn: $showsPhotos) { Label("Fotos", systemImage: "photo") }
+            }
         } label: {
             MapControlLabel(title: layer.shortTitle, systemImage: "square.3.layers.3d")
+                .overlay(alignment: .topTrailing) {
+                    if hiddenLayerCount > 0 {
+                        Image(systemName: "eye.slash.fill")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(4)
+                            .background(Color.orange, in: Circle())
+                            .offset(x: 4, y: -4)
+                    }
+                }
         }
-        .accessibilityLabel("Kartengrundlage: \(layer.title)")
+        .accessibilityLabel("Kartengrundlage und Ebenen: \(layer.title)\(hiddenLayerCount > 0 ? ", \(hiddenLayerCount) Ebenen ausgeblendet" : "")")
     }
 
     /// Einsatzort auf den eigenen Standort setzen; fragt bei Bedarf nach der Freigabe.

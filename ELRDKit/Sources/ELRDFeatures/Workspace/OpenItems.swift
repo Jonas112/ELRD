@@ -294,3 +294,91 @@ public extension OpenItem {
         return kind.settingsTitle
     }
 }
+
+// MARK: - Gruppen (Schritt 129, Lage-Cockpit)
+
+/// Eintrag der Liste „Offene Punkte“: einzeln oder als Gruppe gleicher Art.
+public enum OpenItemEntry: Identifiable, Equatable, Sendable {
+    case single(OpenItem)
+    case group(OpenItemGroup)
+
+    public var id: String {
+        switch self {
+        case .single(let item): item.id
+        case .group(let group): group.id
+        }
+    }
+}
+
+/// Mehrere Punkte derselben Art („4 × SK 3 wartet zu lange“) mit einer Sammelaktion.
+public struct OpenItemGroup: Identifiable, Equatable, Sendable {
+    public let kind: OpenItem.Kind
+    public let items: [OpenItem]
+
+    public var id: String { "group-\(kind.key)" }
+    public var triage: Sichtungskategorie? { items.first?.triage }
+    public var count: Int { items.count }
+
+    public var title: String {
+        let triage = items.first?.triage.map { " \($0.shortName)" } ?? ""
+        switch kind {
+        case .urgentWithoutTransport, .longWait: return "\(count) Patienten\(triage) warten auf ein Transportmittel"
+        case .notTriaged: return "\(count) Patienten noch ungesichtet"
+        case .retriageDue: return "\(count) Nachsichtungen fällig"
+        case .arrivalOverdue: return "\(count) Einheiten noch nicht eingetroffen"
+        default: return "\(count) × \(kind.settingsTitle)"
+        }
+    }
+
+    /// Nummern bzw. Namen kurz („A-6, A-7, A-8 …“).
+    public func detail(numbers: [String]) -> String {
+        let shown = numbers.prefix(5).joined(separator: ", ")
+        return numbers.count > 5 ? "\(shown) … (+\(numbers.count - 5))" : shown
+    }
+
+    public var actionTitle: String {
+        switch kind {
+        case .notTriaged: "Sichten"
+        case .arrivalOverdue: "Einheiten"
+        default: "Zur Liste"
+        }
+    }
+
+    public var target: OpenItem.Target {
+        switch kind {
+        case .arrivalOverdue: .section(.organisation)
+        default: .section(.patients)
+        }
+    }
+}
+
+public extension OpenItem {
+    /// Ab so vielen Punkten gleicher Art wird zusammengefasst.
+    static let groupThreshold = 3
+
+    /// SK 1 bleibt immer einzeln – nichts davon darf in einer Gruppe verschwinden.
+    var isGroupable: Bool {
+        switch kind {
+        case .urgentWithoutTransport, .longWait, .notTriaged, .retriageDue, .arrivalOverdue: true
+        default: false
+        }
+    }
+
+    /// Gleichartige Punkte zusammenfassen; Reihenfolge nach Dringlichkeit bleibt.
+    static func grouped(_ items: [OpenItem], threshold: Int = groupThreshold) -> [OpenItemEntry] {
+        var counts: [Kind: Int] = [:]
+        for item in items where item.isGroupable { counts[item.kind, default: 0] += 1 }
+        var emitted = Set<Kind>()
+        var entries: [OpenItemEntry] = []
+        for item in items {
+            if item.isGroupable, (counts[item.kind] ?? 0) >= threshold {
+                guard !emitted.contains(item.kind) else { continue }
+                emitted.insert(item.kind)
+                entries.append(.group(OpenItemGroup(kind: item.kind, items: items.filter { $0.kind == item.kind })))
+            } else {
+                entries.append(.single(item))
+            }
+        }
+        return entries
+    }
+}

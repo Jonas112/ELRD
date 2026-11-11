@@ -20,6 +20,7 @@ struct SectionsView: View {
     @State private var newName = ""
     @State private var deleting: MissionSection?
     @State private var errorMessage: String?
+    @Environment(\.undoCenter) private var undoCenter
 
     private var canEdit: Bool { !store.state.mission.isClosed && store.isEnabled(.missionEditing) }
 
@@ -214,13 +215,15 @@ struct SectionsView: View {
         }
     }
 
+    /// Schritt 136: Leerzustand mit nächster Aktion.
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: Spacing.s) {
-            Text("Noch keine Abschnitte und Einheiten.").font(.title3)
-            Text("Abschnitte gliedern die Einsatzstelle, z. B. Bereitstellungsraum oder Patientenablage. Neue Einheiten kommen in den Initialabschnitt. Einheiten oben über „+ Einheit“ aus den Stammdaten wählen oder neu anlegen.")
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        EmptyStateView(
+            systemImage: "box.truck",
+            title: "Noch keine Einheiten",
+            message: "Abschnitte gliedern die Einsatzstelle, z. B. Bereitstellungsraum oder Patientenablage. Neue Einheiten kommen in den Initialabschnitt.",
+            actionTitle: canEdit ? "Einheit hinzufügen" : nil,
+            action: canEdit ? { showsAddUnit = true } : nil
+        )
         .cardStyle()
     }
 
@@ -251,17 +254,38 @@ struct SectionsView: View {
     /// Führt ein Ablegen aus; bei einem Fehler bleibt der Rest ungetan.
     private func handleDrop(_ payload: DragPayload, onto target: DropTarget) -> Bool {
         let actions = DropAction.actions(for: payload, onto: target, in: store.state)
-        guard !actions.isEmpty else { return false }
+        guard !actions.isEmpty else {
+            Haptics.warning()
+            return false
+        }
+        // Schritt 133: Gegenaktionen für „Rückgängig“ (in umgekehrter Reihenfolge).
+        var inverses: [() throws -> Void] = []
+        var texts: [String] = []
+        let state = store.state
         do {
             for action in actions {
                 switch action {
                 case .moveUnit(let unitID, let sectionID):
+                    let before = state.units.first { $0.id == unitID }?.sectionID
                     try store.perform(MoveUnit(unitID: unitID, to: sectionID))
+                    let name = state.units.first { $0.id == unitID }?.displayName ?? "Einheit"
+                    texts.append("\(name) → \(sectionID.flatMap { id in state.sections.first { $0.id == id }?.name } ?? "ohne Abschnitt")")
+                    inverses.append { [store] in try store.perform(MoveUnit(unitID: unitID, to: before)) }
                 case .movePatient(let patientID, let sectionID):
+                    let before = state.patients.first { $0.id == patientID }?.sectionID
                     try store.perform(MovePatient(patientID: patientID, to: sectionID))
+                    inverses.append { [store] in try store.perform(MovePatient(patientID: patientID, to: before)) }
                 case .assign(let patientID, let unitID):
                     try store.perform(AssignUnit(patientID: patientID, unitID: unitID))
+                    let number = state.patients.first { $0.id == patientID }.map { "\($0.number)" } ?? "Patient"
+                    let unit = state.units.first { $0.id == unitID }?.displayName ?? "Einheit"
+                    texts.append("\(number) → \(unit)")
+                    inverses.append { [store] in try store.perform(UnassignUnit(patientID: patientID, unitID: unitID)) }
                 }
+            }
+            Haptics.tap()
+            undoCenter?.offer(texts.first ?? "Verschoben") {
+                for inverse in inverses.reversed() { try inverse() }
             }
             return true
         } catch {

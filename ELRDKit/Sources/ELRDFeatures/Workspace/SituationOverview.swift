@@ -28,6 +28,8 @@ struct SituationOverview: View {
     }
     @State private var journalText = ""
     @State private var journalError: String?
+    /// Aufgeklappte Gruppen offener Punkte (Schritt 129).
+    @State private var expandedGroups: Set<String> = []
     @FocusState private var journalFocused: Bool
 
     /// Werkzeuge der Lage (Schritte 67, 71, 73, 75, 76).
@@ -44,6 +46,7 @@ struct SituationOverview: View {
             let dashboard = SituationDashboard(state: store.state)
             ScrollView {
                 VStack(spacing: Spacing.l) {
+                    keyFigures(dashboard, items: items, now: context.date)
                     toolBar
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .top, spacing: Spacing.xl) {
@@ -180,9 +183,17 @@ struct SituationOverview: View {
                     .padding(.horizontal, Spacing.xl)
                     .padding(.bottom, Spacing.xl)
             } else {
-                ForEach(items) { item in
+                // Schritt 129: gleichartige Punkte zusammengefasst, der dringendste hervorgehoben.
+                let entries = OpenItem.grouped(items)
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                     Divider()
-                    OpenItemRow(item: item, onAcknowledge: store.state.mission.isClosed ? nil : { acknowledge(item) }) { handle(item.target) }
+                    switch entry {
+                    case .single(let item):
+                        OpenItemRow(item: item, onAcknowledge: store.state.mission.isClosed ? nil : { acknowledge(item) }) { handle(item.target) }
+                            .background(index == 0 ? Self.highlight(item.triage) : Color.clear)
+                    case .group(let group):
+                        groupRow(group, highlighted: index == 0)
+                    }
                 }
             }
             // Schritt 96: abgehakte Punkte wieder anzeigen.
@@ -204,6 +215,97 @@ struct SituationOverview: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+    }
+
+    /// Dringendster Punkt: zart in der SK-Farbe hinterlegt.
+    static func highlight(_ triage: Sichtungskategorie?) -> Color {
+        (triage.map { Color.triage($0) } ?? Color.accentColor).opacity(0.12)
+    }
+
+    @ViewBuilder
+    private func groupRow(_ group: OpenItemGroup, highlighted: Bool) -> some View {
+        let expanded = expandedGroups.contains(group.id)
+        let numbers = group.items.compactMap { item -> String? in
+            guard case .patient(let id) = item.target else { return nil }
+            return store.state.patients.first { $0.id == id }.map { "\($0.number)" }
+        }
+        let summary = OpenItem(id: group.id, kind: group.kind, triage: group.triage, title: group.title,
+                               detail: numbers.isEmpty ? group.items.first?.detail ?? "" : group.detail(numbers: numbers),
+                               actionTitle: group.actionTitle, target: group.target)
+        VStack(spacing: 0) {
+            OpenItemRow(item: summary, count: group.count, onAcknowledge: store.state.mission.isClosed ? nil : {
+                group.items.forEach(acknowledge)
+            }) { handle(group.target) }
+            Button {
+                withAnimation(.snappy) {
+                    if expanded { expandedGroups.remove(group.id) } else { expandedGroups.insert(group.id) }
+                }
+            } label: {
+                Label(expanded ? "Einzeln ausblenden" : "Einzeln zeigen (\(group.count))",
+                      systemImage: expanded ? "chevron.up" : "chevron.down")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum, alignment: .leading)
+                    .padding(.leading, Spacing.xl + 64 + Spacing.l)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.accentColor)
+            if expanded {
+                ForEach(group.items) { item in
+                    Divider().padding(.leading, Spacing.xl)
+                    OpenItemRow(item: item, onAcknowledge: store.state.mission.isClosed ? nil : { acknowledge(item) }) { handle(item.target) }
+                        .padding(.leading, Spacing.xl)
+                }
+            }
+        }
+        .background(highlighted ? Self.highlight(group.triage) : Color.clear)
+    }
+
+    // MARK: Kennzahlen (Schritt 129)
+
+    /// Eine Zeile mit dem Wichtigsten: Laufzeit, Patienten, wartend, freie Transportmittel,
+    /// nächste Lagemeldung.
+    private func keyFigures(_ dashboard: SituationDashboard, items: [OpenItem], now: Date) -> some View {
+        let state = store.state
+        let waiting = state.patients.active.filter { $0.outcome == nil && !$0.hasTransportUnit(in: state.units) }.count
+        let interval = settings.reminders.situationReportMinutes
+        let last = state.lastSituationReportAt ?? state.mission.startedAt
+        let due = interval > 0 ? interval - max(0, Int(now.timeIntervalSince(last) / 60)) : nil
+        let figures: [(String, String, Color?)] = [
+            (ElapsedTimeFormat.string(from: state.mission.startedAt, to: now), "Laufzeit", nil),
+            ("\(dashboard.patientTotal)", "Patienten", nil),
+            ("\(waiting)", "ohne Transport", waiting > 0 ? .orange : nil),
+            ("\(dashboard.freeTransport)", "Transportmittel frei", dashboard.freeTransport == 0 && waiting > 0 ? .orange : nil),
+            (due.map { $0 <= 0 ? "jetzt" : "\($0) min" } ?? "–", "nächste Lagemeldung", (due ?? 1) <= 0 ? .orange : nil),
+        ]
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.s) {
+                ForEach(figures, id: \.1) { figure in keyFigure(figure.0, figure.1, figure.2) }
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: Spacing.s)], spacing: Spacing.s) {
+                ForEach(figures, id: \.1) { figure in keyFigure(figure.0, figure.1, figure.2) }
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func keyFigure(_ value: String, _ label: String, _ color: Color?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.title2.weight(.heavy).monospacedDigit())
+                .foregroundStyle(color ?? Color.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.l)
+        .padding(.vertical, Spacing.m)
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 
     private func acknowledge(_ item: OpenItem) {
@@ -458,6 +560,8 @@ struct SituationOverview: View {
 /// Zeile „Offene Punkte“: Kennzeichen, Text, Knopf.
 struct OpenItemRow: View {
     let item: OpenItem
+    /// Schritt 129: Anzahl bei Gruppen (kleine Zahl am Kennzeichen).
+    var count: Int? = nil
     /// „Zur Kenntnis genommen“ (Schritt 96); `nil` = kein Abhaken.
     var onAcknowledge: (() -> Void)? = nil
     let action: () -> Void
@@ -539,6 +643,21 @@ struct OpenItemRow: View {
     }
 
     @ViewBuilder private var marker: some View {
+        markerBase
+            .overlay(alignment: .topTrailing) {
+                if let count {
+                    Text("\(count)")
+                        .font(.caption.weight(.heavy).monospacedDigit())
+                        .foregroundStyle(Color(uiColor: .systemBackground))
+                        .frame(minWidth: 22, minHeight: 22)
+                        .background(Color.primary.opacity(0.85), in: Circle())
+                        .offset(x: 8, y: -8)
+                        .accessibilityLabel("\(count) Punkte")
+                }
+            }
+    }
+
+    @ViewBuilder private var markerBase: some View {
         if let triage = item.triage {
             Text(triage.shortName)
                 .font(.headline.weight(.heavy))

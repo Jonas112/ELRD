@@ -23,7 +23,10 @@ public struct MissionWorkspaceView: View {
     @State private var showsReport = AppLaunchOptions.current.demoScreen == .report
     @State private var showsDetails: Bool
     @State private var showsQuickAdd = false
-    @State private var lastAdded: Patient?
+    /// Schritt 134: globale Suche (⌘K).
+    @State private var showsSearch = AppLaunchOptions.current.demoScreen == .search
+    /// Schritt 133: „Rückgängig“ nach schnellen Aktionen (ersetzt den Hinweis nur für neue Patienten).
+    @State private var undoCenter = UndoCenter()
     @State private var errorMessage: String?
     @State private var patientQuery = PatientListQuery()
     /// Geöffnete Patienten im Bereich (Navigation per Wert).
@@ -80,6 +83,7 @@ public struct MissionWorkspaceView: View {
                             account: account,
                             onMessages: { showsMessages = true },
                             onReport: { showsReport = true },
+                            onSearch: { showsSearch = true },
                             onClose: onClose
                         )
                         VStack(spacing: 0) {
@@ -100,18 +104,20 @@ public struct MissionWorkspaceView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                if let lastAdded {
+                if let item = undoCenter.current {
                     UndoToast(
-                        text: "\(lastAdded.number) · \(lastAdded.triage.shortName) angelegt",
-                        color: Color.triage(lastAdded.triage),
-                        undo: { undo(lastAdded) },
-                        show: { open(lastAdded.id); self.lastAdded = nil }
+                        text: item.text,
+                        color: item.color,
+                        undo: { undoCenter.performUndo() },
+                        show: item.open == nil ? nil : { undoCenter.performOpen() }
                     )
+                    .id(item.id)
                     .padding(.bottom, layout == .bottomBar ? 104 : Spacing.xxl)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .animation(reduceMotion ? nil : .snappy, value: lastAdded?.id)
+            .animation(reduceMotion ? nil : .snappy, value: undoCenter.current?.id)
+            .environment(\.undoCenter, undoCenter)
             // Schritt 83: neuer offener Punkt als Hinweis oben.
             .overlay(alignment: .top) {
                 if let item = notifier?.banner {
@@ -191,10 +197,29 @@ public struct MissionWorkspaceView: View {
                 handle(target)
             }
         }
-        .task(id: lastAdded?.id) {
-            guard lastAdded != nil else { return }
+        .task(id: undoCenter.current?.id) {
+            guard let id = undoCenter.current?.id else { return }
             try? await Task.sleep(for: .seconds(6))
-            if !Task.isCancelled { lastAdded = nil }
+            if !Task.isCancelled { undoCenter.dismiss(id) }
+        }
+        .alert("Rückgängig nicht möglich", isPresented: Binding(get: { undoCenter.errorMessage != nil }, set: { if !$0 { undoCenter.errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(undoCenter.errorMessage ?? "")
+        }
+        }
+        .sheet(isPresented: $showsSearch) {
+            GlobalSearchSheet(store: store, canAddPatients: !store.state.mission.isClosed && store.isEnabled(.missionEditing)) { kind in
+                handleSearch(kind)
+            }
+            .formSheet()
+        }
+        .background {
+            // ⌘K öffnet die Suche (Hardware-Tastatur).
+            Button("Suchen") { showsSearch = true }
+                .keyboardShortcut("k", modifiers: .command)
+                .opacity(0)
+                .accessibilityHidden(true)
         }
         .sheet(isPresented: $showsMessages) {
             MessagesView(store: store) { target in
@@ -230,6 +255,7 @@ public struct MissionWorkspaceView: View {
             onDetails: { showsDetails = true },
             onMessages: { showsMessages = true },
             onReport: { showsReport = true },
+            onSearch: { showsSearch = true },
             onTriage: { category in
                 // Tipp auf einen Zähler: Patienten dieser Kategorie zeigen.
                 patientQuery = PatientListQuery(triage: category, sort: patientQuery.sort, layout: patientQuery.layout)
@@ -289,31 +315,67 @@ public struct MissionWorkspaceView: View {
     }
 
     private var content: some View {
+        // Schritt 130: Auf dem breiten iPad Patientenliste und Patient nebeneinander.
+        GeometryReader { proxy in
+            if selection == .patients, proxy.size.width >= Self.splitMinimumWidth, let current = path.last {
+                splitView(current)
+            } else {
+                stack
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Bereichswechsel über die Leiste: zurück zur Übersicht des Bereichs.
+        .onChange(of: selection) { path.removeAll() }
+    }
+
+    /// Ab dieser Breite (iPad quer) stehen Liste und Patient nebeneinander.
+    static let splitMinimumWidth: CGFloat = 1050
+
+    private var stack: some View {
         NavigationStack(path: $path) {
             WorkspaceDetail(section: selection, store: store, masterData: masterData, journalTemplates: journalTemplates, people: people, patientQuery: $patientQuery, focusJournal: $focusJournal, onQuickAdd: addPatient) { target in
                 handle(target)
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: PatientID.self) { id in
-                PatientDetailView(
-                    store: store,
-                    patientID: id,
-                    order: patientQuery.apply(to: store.state.patients).map(\.id),
-                    onNavigate: { next in
-                        if !path.isEmpty { path[path.count - 1] = next }
-                    },
-                    catalogs: catalogs
-                )
-                // Neuer Zustand je Patient (Formular, Speicherstand).
-                .id(id)
+                patientDetail(id, onClose: nil)
             }
             // Der Stack bringt sonst seinen eigenen (im hellen Modus weißen) Hintergrund mit.
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Surface.canvas)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Bereichswechsel über die Leiste: zurück zur Übersicht des Bereichs.
-        .onChange(of: selection) { path.removeAll() }
+    }
+
+    private func splitView(_ current: PatientID) -> some View {
+        HStack(spacing: 0) {
+            PatientsView(store: store, query: $patientQuery, onQuickAdd: addPatient, selectedID: current) { open($0) }
+                // Schmale Spalte: Darstellung wie auf dem iPhone (Liste statt Tabelle).
+                .environment(\.horizontalSizeClass, .compact)
+                .frame(width: 400)
+                .background(Surface.canvas)
+            Divider()
+            NavigationStack {
+                patientDetail(current, onClose: { path.removeAll() })
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Surface.canvas)
+            }
+        }
+    }
+
+    private func patientDetail(_ id: PatientID, onClose: (() -> Void)?) -> some View {
+        PatientDetailView(
+            store: store,
+            patientID: id,
+            order: patientQuery.apply(to: store.state.patients).map(\.id),
+            onNavigate: { next in
+                if !path.isEmpty { path[path.count - 1] = next }
+            },
+            catalogs: catalogs,
+            onClose: onClose
+        )
+        // Neuer Zustand je Patient (Formular, Speicherstand).
+        .id(id)
     }
 
     /// Führt zu einem offenen Punkt (aus der Lage oder dem Hinweis oben).
@@ -358,6 +420,18 @@ public struct MissionWorkspaceView: View {
         }
     }
 
+    /// Treffer der globalen Suche öffnen (Schritt 134).
+    private func handleSearch(_ kind: GlobalSearchResult.Kind) {
+        switch kind {
+        case .patient(let id): open(id)
+        case .unit, .section: selection = .organisation
+        case .area(let area): selection = area
+        case .messages: showsMessages = true
+        case .report: showsReport = true
+        case .newPatient(let triage): addPatient(triage)
+        }
+    }
+
     /// Öffnet einen Patienten (z. B. aus „Offene Punkte“ oder der Schnellanlage).
     private func open(_ id: PatientID) {
         if selection != .patients {
@@ -373,7 +447,11 @@ public struct MissionWorkspaceView: View {
         showsQuickAdd = false
         do {
             let added = try store.perform(AddPatient(triage: triage))
-            lastAdded = added
+            Haptics.success()
+            undoCenter.offer("\(added.number) · \(added.triage.shortName) angelegt", color: Color.triage(added.triage),
+                             open: { open(added.id) }) { [store] in
+                _ = try store.perform(DeletePatient(patientID: added.id))
+            }
             // VoiceOver: der Hinweis unten verschwindet nach 6 s, daher ansagen.
             let announcement: String = "Patient \(added.number), \(added.triage.displayName) angelegt"
             AccessibilityNotification.Announcement(announcement).post()
@@ -382,14 +460,6 @@ public struct MissionWorkspaceView: View {
         }
     }
 
-    private func undo(_ patient: Patient) {
-        lastAdded = nil
-        do {
-            try store.perform(DeletePatient(patientID: patient.id))
-        } catch {
-            errorMessage = ErrorText.message(for: error)
-        }
-    }
 }
 
 // MARK: - Lageleiste
@@ -407,6 +477,7 @@ struct SituationBar: View {
     let onDetails: () -> Void
     let onMessages: () -> Void
     let onReport: () -> Void
+    let onSearch: () -> Void
     let onTriage: (Sichtungskategorie) -> Void
     let onQuickAdd: (Sichtungskategorie) -> Void
 
@@ -457,6 +528,14 @@ struct SituationBar: View {
             backButton(size: buttonSize)
             missionTitle
             Spacer(minLength: Spacing.xs)
+            Button(action: onSearch) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 22, weight: .semibold))
+                    .frame(width: buttonSize, height: buttonSize)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.primary.opacity(0.8))
+            .accessibilityLabel("Suchen")
             ReportButton(size: buttonSize, action: onReport)
             MessagesBellButton(unread: unreadMessages, size: buttonSize, action: onMessages)
             if let account { AccountAvatarMenu(account: account, size: buttonSize) }
@@ -486,6 +565,7 @@ struct SituationBar: View {
                     Text(mission.title)
                         .font(.title3.weight(.bold))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     TimelineView(.periodic(from: .now, by: 60)) { context in
                         Text(subtitle(now: context.date))
                             .font(.subheadline.monospacedDigit())
@@ -634,17 +714,18 @@ struct UndoToast: View {
     let text: String
     let color: Color
     let undo: () -> Void
-    let show: () -> Void
+    /// `nil` = kein „Öffnen“.
+    let show: (() -> Void)?
 
     var body: some View {
         HStack(spacing: Spacing.m) {
             Circle().fill(color).frame(width: 14, height: 14)
-            Text(text).font(.headline)
+            Text(text).font(.headline).lineLimit(2)
             Button("Rückgängig", action: undo)
                 .font(.headline)
                 .frame(minHeight: TouchTarget.comfortable)
                 .padding(.horizontal, Spacing.s)
-            Button(action: show) {
+            if let show { Button(action: show) {
                 Text("Öffnen")
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -652,7 +733,7 @@ struct UndoToast: View {
                     .frame(minHeight: TouchTarget.minimum + 4)
                     .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.plain) }
         }
         .padding(.leading, Spacing.xl)
         .padding(.trailing, Spacing.s)
@@ -672,6 +753,7 @@ struct WorkspaceRail: View {
     let account: AccountMenuModel?
     let onMessages: () -> Void
     let onReport: () -> Void
+    var onSearch: () -> Void = {}
     var onClose: (() -> Void)?
 
     var body: some View {
@@ -683,6 +765,13 @@ struct WorkspaceRail: View {
                 .frame(width: 80)
             }
             Spacer(minLength: Spacing.l)
+            Button(action: onSearch) {
+                RailIcon(systemImage: "magnifyingglass", title: "Suchen", showsLabel: true, size: TouchTarget.comfortable)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.primary.opacity(0.8))
+            .accessibilityLabel("Suchen")
+            .accessibilityHint("Tastatur: Befehl K")
             ReportButton(showsLabel: true, action: onReport)
             MessagesBellButton(unread: badges.unreadMessages, showsLabel: true, action: onMessages)
             if let account { AccountAvatarMenu(account: account) }

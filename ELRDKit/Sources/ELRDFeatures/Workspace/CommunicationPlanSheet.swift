@@ -456,7 +456,7 @@ private struct ChartBox: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 if let kind {
-                    Text(kind).font(.caption2.weight(.semibold)).opacity(0.8)
+                    Text(kind).font(.caption.weight(.semibold)).opacity(0.85)
                 }
                 Text(title).font(.subheadline.weight(.bold)).lineLimit(2)
             }
@@ -492,7 +492,7 @@ private struct ChartBox: View {
                         Text("Auftrag: \(entry.task)").font(.caption).italic().lineLimit(3)
                     }
                     if !entry.units.isEmpty {
-                        Text(entry.units.joined(separator: ", ")).font(.caption2).foregroundStyle(.secondary).lineLimit(3)
+                        Text(entry.units.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary).lineLimit(3)
                     }
                     if !compactRows, entry.isVacant, entry.channel.isEmpty {
                         Text("Leitung nicht besetzt").font(.caption).foregroundStyle(.secondary)

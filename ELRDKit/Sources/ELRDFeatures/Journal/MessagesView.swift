@@ -31,10 +31,12 @@ struct MessagesView: View {
                     Text("Nachrichten").font(.title3.weight(.bold))
                     if canEdit { composer }
                     if messages.isEmpty {
-                        Text("Noch keine Nachrichten. Sobald mehrere Geräte verbunden sind, erscheinen hier auch Nachrichten der anderen.")
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .cardStyle()
+                        EmptyStateView(
+                            systemImage: "bubble.left.and.bubble.right",
+                            title: "Noch keine Nachrichten",
+                            message: "Sobald mehrere Geräte verbunden sind, erscheinen hier auch Nachrichten der anderen."
+                        )
+                        .cardStyle()
                     }
                     LazyVStack(spacing: Spacing.s) {
                         ForEach(messages) { message in

@@ -117,9 +117,14 @@ struct JournalView: View {
     @ViewBuilder
     private func journalContent(_ entries: [JournalEntry]) -> some View {
         if entries.isEmpty {
-            Text(canEdit ? "Noch keine Einträge. Mit „+ Eintrag“ den ersten anlegen." : "Noch keine Einträge.").font(.title3).foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .cardStyle()
+            EmptyStateView(
+                systemImage: "book.pages",
+                title: "Noch keine Einträge",
+                message: "Lage, Maßnahmen und Absprachen mit Uhrzeit festhalten – auch als Foto oder Sprachnotiz. Alles landet im Bericht.",
+                actionTitle: canEdit ? "Ersten Eintrag schreiben" : nil,
+                action: canEdit ? { showsComposer = true } : nil
+            )
+            .cardStyle()
         }
         LazyVStack(spacing: Spacing.s) {
             ForEach(entries) { entry in

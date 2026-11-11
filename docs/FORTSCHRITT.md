@@ -219,6 +219,14 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 126 | Kommunikationsplan nach FwDV/DV 800: Formular (Anlage 1) und taktischer Organisations-/Kommunikationsplan als Organigramm, Telefon, Auftrag, benachbarte Kräfte und sonstige Stellen | ✅ |
 | 127 | Gestaltungssystem: Radien als Tokens überall, Bausteine (Haupt-/Zweitknopf, Status-Marke, Leerzustand), „Fortsetzen“ gefüllt, Seitenleiste beschriftet | 🧪 |
 | 128 | Blatt-Regel (E122): „Fertig“ rechts, „Abbrechen“ links; kleine Blätter als Formularblatt | 🧪 |
+| 129 | Lage-Cockpit: Kennzahlenzeile, gleichartige offene Punkte ab 3 zusammengefasst (SK 1 nie), dringendster Punkt hervorgehoben | 🧪 |
+| 130 | iPad quer (Inhalt ≥ 1050 pt): Patientenliste und Patient nebeneinander, gewählter Patient markiert | 🧪 |
+| 131 | Kontextmenü an Patientenzeilen und -kacheln: öffnen, SK ändern (Ziehen und Ablegen gab es schon in „Einheiten“) | 🧪 |
+| 132 | Karte aufräumen: Ebenen ein-/ausblenden (Abschnitte, Zeichen, Flächen, Pfeile, Fotos), Beschriftungen weichen einander aus | 🧪 |
+| 133 | „Rückgängig“-Hinweis für neue Patienten, SK-Änderung, Verschieben/Zuordnen per Ziehen; Haptik | 🧪 |
+| 134 | Globale Suche: Lupe in Seitenleiste bzw. Kopfzeile, ⌘K; Patienten, Einheiten, Abschnitte, Bereiche und Aktionen | 🧪 |
+| 135 | Lesbarkeit: kleinste Schrift im Organigramm größer, „Name unbekannt“ nicht kursiv, SK 3 ohne Einheit ohne Warnfarbe, Einsatztitel skaliert statt abzuschneiden | 🧪 |
+| 136 | Leerzustände mit nächster Aktion (Patienten, Einheiten, Tagebuch, Nachrichten); Einstellungen „Allgemein“ in drei Seiten | 🧪 |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -325,6 +333,14 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritte 127–136 (2026-11-11):** Jonas: Design-Durchsicht, alle zehn Punkte umsetzen (1 Gestaltungssystem, 2 Blatt-Regel, 3 Lage-Cockpit, 4 iPad nebeneinander, 5 Ziehen und Ablegen, 6 Karte aufräumen, 7 Rückgängig und Haptik, 8 globale Suche, 9 Lesbarkeit, 10 Leerzustände und Einstellungen).
 - **Schritt 127:** 43 Dateien mit rohen Eckenradien auf `Radius` umgestellt (4/6 → chip, 8–12 → control, 14–18 → card, 20/22 → large, 24/28 → hero; Zeichner in Core Graphics ausgenommen). `DesignSystem/Components.swift`. Seitenleiste: „Bericht“ und „Meldungen“ beschriftet (`RailIcon`).
 - **Schritt 128:** Kommunikationsplan, Verbleib: „Fertig“ rechts; Bericht: „Fertig“ statt „Schließen“ rechts; Beitreten, Scanner: „Abbrechen“. Nachrichten, Neuer Eintrag, Checkliste, Lagemeldung als Formularblatt.
+- **Schritt 129:** `OpenItem.grouped` fasst SK 2 ohne Transportmittel, SK 3 wartet zu lange, ungesichtet, Nachsichtung und Eintreffen überfällig ab drei Punkten zusammen (Sammelaktion „Zur Liste“/„Sichten“, „Einzeln zeigen“ klappt auf, Abhaken hakt alle ab). SK 1 bleibt immer einzeln. Erster Eintrag zart in SK-Farbe hinterlegt. Kennzahlen oben: Laufzeit, Patienten, ohne Transport, Transportmittel frei, nächste Lagemeldung (orange, wenn kritisch).
+- **Schritt 130:** `MissionWorkspaceView.content` misst die Breite; im Bereich Patienten mit offenem Patienten ab 1050 pt `splitView`: links `PatientsView` (400 pt, Darstellung wie iPhone, Zeilen öffnen direkt über `onOpen`, gewählter Patient blau umrandet), rechts `PatientDetailView` mit `onClose` (Knopf links oben schließt, Löschen schließt). Unter 1050 pt (iPad hoch, mini) unverändert. Fotos entstehen hochkant – **Jonas:** iPad quer prüfen.
+- **Schritt 131:** Kontextmenü (lange drücken) an Patientenzeilen/-kacheln: „Patient öffnen“, „Sichtung ändern“ SK 1–3. Ziehen und Ablegen (Einheit → Abschnitt, Patient → Einheit/Abschnitt) bestand seit Schritt 57 in „Einheiten“; jetzt mit Haptik und „Rückgängig“.
+- **Schritt 133:** `UndoCenter` (Umgebung des Arbeitsbereichs) ersetzt den Hinweis „angelegt“: Patient angelegt (Rückgängig löscht, „Öffnen“), SK geändert (Patient, Kontextmenü), Ziehen und Ablegen (Gegenaktionen `MoveUnit`/`MovePatient`/`UnassignUnit`). 6 s sichtbar; Fehler beim Zurücknehmen als Hinweis. `Haptics.success/tap/warning`.
+- **Schritt 132:** Menü „Kartengrundlage“ heißt jetzt „Kartengrundlage und Ebenen“: Schalter für Abschnitte, taktische Zeichen, Flächen/Formen, Pfeile, Fotos (je Gerät, `@AppStorage`); ausgeblendete Ebenen zeigt ein oranges Auge am Knopf. Beschriftungen von Formen mit `collisionMode = .circle` und Priorität `defaultHigh` (benannt) bzw. `defaultLow` – überlappende Titel blendet MapKit aus, beim Hineinzoomen erscheinen sie wieder (ersetzt `.required` aus Schritt 123). Die Liste „Auf der Karte“ dient als Legende.
+- **Schritt 134:** `GlobalSearch` (ohne Akzente/Großschreibung): Patienten nach Nummer, Name, ILS-Nr., Anhängekarte, Merkmalen, SK; Einheiten; Abschnitte samt Leitung; Bereiche, Nachrichten, Bericht, „Neuer Patient SK …“. Leeres Feld zeigt die Aktionen; Eingabetaste öffnet den ersten Treffer. Lupe „Suchen“ in der Seitenleiste, auf dem iPhone in der Kopfzeile; ⌘K. Demo `search`.
+- **Schritt 135:** Graue/kleine Texte geprüft: `.tertiary` nur noch an Pfeilen und Symbolen; Organigramm `.caption2` → `.caption`; „Name unbekannt“ nicht mehr kursiv; „keine Einheit“ nur bei SK 1/2/ungesichtet orange, bei SK 3 grau (sonst warnt jede Zeile); Einsatztitel in der Kopfzeile darf auf 80 % schrumpfen.
+- **Schritt 136:** `EmptyStateView` in Patienten (erklärt die Schnellanlage), Einheiten („Einheit hinzufügen“), Tagebuch („Ersten Eintrag schreiben“), Nachrichten. Einstellungen: „Allgemein“ aufgeteilt in „Organisation und Bericht“, „Darstellung“, „Teilen und Karten“ (`GeneralSettingsView(part:)`).
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

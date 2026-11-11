@@ -9,7 +9,7 @@ import ELRDEntitlements
 /// Einstellungen (Schritte 47–51): Allgemein, Fahrzeugbilder, Stammdaten, IVENA,
 /// Abo, Vereinbarungen. Stammdaten ändern nur Administratoren.
 struct SettingsView: View {
-    enum Page: Hashable { case general, missionAids, leadershipPeople, vehicleImages, masterData, ivena, subscription, agreements }
+    enum Page: Hashable { case general, display, sharing, missionAids, leadershipPeople, vehicleImages, masterData, ivena, subscription, agreements }
 
     let masterData: MasterDataEditor?
     let isAdmin: Bool
@@ -22,7 +22,9 @@ struct SettingsView: View {
         NavigationStack(path: $path) {
             List {
                 Section {
-                    row(.general, "Allgemein", "gearshape", "Organisation, Banner, ILS-Mail, Standardbericht")
+                    row(.general, "Organisation und Bericht", "building.2", "Organisation, Banner, ILS-Mail, Standardbericht")
+                    row(.display, "Darstellung", "circle.lefthalf.filled", "Handschuhmodus, Nachtmodus")
+                    row(.sharing, "Teilen und Karten", "icloud", "Beitritt genehmigen, GPX für Hundeteams, Offline-Karte")
                     row(.missionAids, "Erinnerungen, Einsatzarten, Checklisten", "checklist", "Lagemeldung im Takt, Wartezeiten, Checkliste je Einsatzart")
                     row(.leadershipPeople, "Führungspersonal", "person.3.sequence", "ELRD, LNA, OrgL, Abschnittsleiter zur Auswahl")
                     row(.vehicleImages, "Fahrzeugbilder", "car.2", "Eigene Bilder für RTW, KTW, NEF, RTH")
@@ -47,7 +49,9 @@ struct SettingsView: View {
             }
             .navigationDestination(for: Page.self) { page in
                 switch page {
-                case .general: GeneralSettingsView()
+                case .general: GeneralSettingsView(part: .organisation)
+                case .display: GeneralSettingsView(part: .display)
+                case .sharing: GeneralSettingsView(part: .sharing)
                 case .missionAids: MissionAidsSettingsView()
                 case .leadershipPeople: LeadershipPeopleSettingsView()
                 case .vehicleImages: VehicleImagesView()
@@ -105,6 +109,10 @@ extension View {
 // MARK: - Allgemein (Schritt 47)
 
 struct GeneralSettingsView: View {
+    /// Schritt 136: „Allgemein“ in drei Unterseiten aufgeteilt.
+    enum Part { case organisation, display, sharing }
+    var part: Part = .organisation
+
     @Environment(AppSettingsStore.self) private var store: AppSettingsStore?
     @Environment(ReportLibraryStore.self) private var library: ReportLibraryStore?
 
@@ -116,6 +124,34 @@ struct GeneralSettingsView: View {
     var body: some View {
         let settings = store?.settings ?? AppSettings()
         Form {
+            if part == .organisation { organisationSections(settings) }
+            if part == .display { displaySection(settings) }
+            if part == .sharing { sharingSections(settings) }
+        }
+        .navigationTitle(navigationTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            organisation = settings.organisationName
+            ilsEmail = settings.ilsEmail
+        }
+        .onDisappear(perform: commitText)
+        .onChange(of: bannerItem) { _, item in
+            guard let item else { return }
+            Task { await loadBanner(item) }
+        }
+        .settingsError($errorMessage)
+    }
+
+    private var navigationTitle: String {
+        switch part {
+        case .organisation: "Organisation und Bericht"
+        case .display: "Darstellung"
+        case .sharing: "Teilen und Karten"
+        }
+    }
+
+    @ViewBuilder
+    private func organisationSections(_ settings: AppSettings) -> some View {
             Section {
                 TextField("z. B. BRK Kreisverband Schweinfurt", text: $organisation)
                     .onSubmit(commitText)
@@ -155,6 +191,19 @@ struct GeneralSettingsView: View {
                 Text("Empfänger für „Bericht an ILS“.")
             }
 
+            Section("Standardbericht") {
+                Picker("Vorlage", selection: Binding(
+                    get: { settings.defaultReportTemplateID ?? ReportTemplateLibrary.fullID },
+                    set: { id in save { $0.defaultReportTemplateID = id } }
+                )) {
+                    ForEach(library?.library.all ?? ReportTemplateLibrary.standardTemplates) { template in
+                        Text(template.name).tag(template.id)
+                    }
+                }
+            }
+    }
+
+    private func displaySection(_ settings: AppSettings) -> some View {
             Section {
                 Toggle(isOn: Binding(get: { settings.gloveMode }, set: { on in save { $0.gloveMode = on } })) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -177,7 +226,10 @@ struct GeneralSettingsView: View {
             } footer: {
                 Text("Gilt für dieses Gerät.")
             }
+    }
 
+    @ViewBuilder
+    private func sharingSections(_ settings: AppSettings) -> some View {
             Section {
                 Toggle(isOn: Binding(get: { settings.requiresJoinApproval }, set: { on in save { $0.requiresJoinApproval = on } })) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -208,30 +260,6 @@ struct GeneralSettingsView: View {
             }
 
             MapCacheSection()
-
-            Section("Standardbericht") {
-                Picker("Vorlage", selection: Binding(
-                    get: { settings.defaultReportTemplateID ?? ReportTemplateLibrary.fullID },
-                    set: { id in save { $0.defaultReportTemplateID = id } }
-                )) {
-                    ForEach(library?.library.all ?? ReportTemplateLibrary.standardTemplates) { template in
-                        Text(template.name).tag(template.id)
-                    }
-                }
-            }
-        }
-        .navigationTitle("Allgemein")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            organisation = settings.organisationName
-            ilsEmail = settings.ilsEmail
-        }
-        .onDisappear(perform: commitText)
-        .onChange(of: bannerItem) { _, item in
-            guard let item else { return }
-            Task { await loadBanner(item) }
-        }
-        .settingsError($errorMessage)
     }
 
     private var draftEmailIsValid: Bool {

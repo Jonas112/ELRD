@@ -207,7 +207,6 @@ public struct MissionWorkspaceView: View {
         } message: {
             Text(undoCenter.errorMessage ?? "")
         }
-        }
         .sheet(isPresented: $showsSearch) {
             GlobalSearchSheet(store: store, canAddPatients: !store.state.mission.isClosed && store.isEnabled(.missionEditing)) { kind in
                 handleSearch(kind)

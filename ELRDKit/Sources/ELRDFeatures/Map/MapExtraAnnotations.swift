@@ -87,3 +87,97 @@ final class ArrowRenderer: MKPolylineRenderer {
         context.fillPath()
     }
 }
+
+/// Taktisches Zeichen, das sich direkt mit dem Finger verschieben lässt
+/// (Schritt 121). Während des Ziehens steht die Karte still; losgelassen wird
+/// die neue Position gespeichert. Tippen öffnet weiterhin die Bearbeitung.
+@MainActor
+final class TacticalSignAnnotationView: MKAnnotationView, UIGestureRecognizerDelegate {
+    var allowsMoving = false
+    var onMoved: ((MapObjectID, GeoCoordinate) -> Void)?
+
+    private lazy var pan: UIPanGestureRecognizer = {
+        let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        recognizer.delegate = self
+        recognizer.maximumNumberOfTouches = 1
+        return recognizer
+    }()
+    /// Abstand Finger → Ankerpunkt beim Greifen (Zeichen springt nicht unter den Finger).
+    private var grabOffset: CGPoint = .zero
+    private var startCoordinate: CLLocationCoordinate2D?
+    private weak var map: MKMapView?
+
+    override init(annotation: (any MKAnnotation)?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        addGestureRecognizer(pan)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        addGestureRecognizer(pan)
+    }
+
+    private func mapView() -> MKMapView? {
+        if let map { return map }
+        var current = superview
+        while let view = current {
+            if let found = view as? MKMapView {
+                map = found
+                return found
+            }
+            current = view.superview
+        }
+        return nil
+    }
+
+    override func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+        guard recognizer === pan else { return super.gestureRecognizerShouldBegin(recognizer) }
+        return allowsMoving && annotation is TacticalSignAnnotation
+    }
+
+    @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+        guard let map = mapView(), let sign = annotation as? TacticalSignAnnotation else { return }
+        let finger = recognizer.location(in: map)
+        switch recognizer.state {
+        case .began:
+            startCoordinate = sign.coordinate
+            let anchor = map.convert(sign.coordinate, toPointTo: map)
+            grabOffset = CGPoint(x: anchor.x - finger.x, y: anchor.y - finger.y)
+            map.isScrollEnabled = false
+            map.isZoomEnabled = false
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            UIView.animate(withDuration: 0.12) { self.transform = CGAffineTransform(scaleX: 1.15, y: 1.15) }
+        case .changed:
+            let point = CGPoint(x: finger.x + grabOffset.x, y: finger.y + grabOffset.y)
+            sign.coordinate = map.convert(point, toCoordinateFrom: map)
+        case .ended:
+            finish(map)
+            let coordinate = sign.coordinate
+            if let moved = GeoCoordinate(latitude: coordinate.latitude, longitude: coordinate.longitude) {
+                onMoved?(sign.objectID, moved)
+            }
+        case .cancelled, .failed:
+            finish(map)
+            if let startCoordinate { sign.coordinate = startCoordinate }
+        default:
+            break
+        }
+    }
+
+    private func finish(_ map: MKMapView) {
+        map.isScrollEnabled = true
+        map.isZoomEnabled = true
+        UIView.animate(withDuration: 0.12) { self.transform = .identity }
+    }
+
+    // Kartengesten nicht gleichzeitig: Wer das Zeichen greift, verschiebt nur das Zeichen.
+    func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        false
+    }
+
+    func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
+        // Die Kartengesten warten, bis klar ist, ob das Zeichen gezogen wird.
+        guard recognizer === pan, let map = mapView(), let view = other.view, !view.isDescendant(of: self) else { return false }
+        return view === map || view.isDescendant(of: map)
+    }
+}

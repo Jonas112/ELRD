@@ -485,14 +485,18 @@ struct MapCanvas: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
             if let sign = annotation as? TacticalSignAnnotation {
                 let identifier = "sign"
-                let view = mapView.dequeueReusableAnnotationView(withIdentifier: identifier)
-                    ?? MKAnnotationView(annotation: sign, reuseIdentifier: identifier)
+                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? TacticalSignAnnotationView)
+                    ?? TacticalSignAnnotationView(annotation: sign, reuseIdentifier: identifier)
                 view.annotation = sign
                 view.image = TacticalSignRenderer.image(for: sign.sign, height: 44)
                 view.displayPriority = .required
-                view.isDraggable = canEdit
+                // Schritt 121: direkt mit dem Finger ziehen (ohne langes Drücken).
+                view.isDraggable = false
+                view.allowsMoving = canEdit
+                view.onMoved = { [weak self] objectID, coordinate in self?.onMoveObject(objectID, coordinate) }
                 view.canShowCallout = false
                 view.accessibilityLabel = sign.title
+                view.accessibilityHint = canEdit ? "Antippen bearbeitet, mit dem Finger ziehen verschiebt" : nil
                 return view
             }
             if let photo = annotation as? PhotoAnnotation {

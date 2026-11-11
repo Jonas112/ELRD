@@ -39,10 +39,8 @@ struct MissionMapView: View {
     @State private var notice: String?
     /// Schritt 111: angetipptes Foto.
     @State private var viewingPhoto: FileAttachment?
-    /// Schritt 119: Lagekarte als GPX.
-    @State private var gpxFile: ExportedFile?
-    /// Schritt 120: Link/QR-Code für Hundeteams.
-    @State private var showsHandout = false
+    /// Schritt 122: Auswahl für den GPX-Export.
+    @State private var showsExport = AppLaunchOptions.current.demoScreen == .mapExport
     /// Schritt 114: Auswahl taktischer Zeichen.
     @State private var showsSignPicker = AppLaunchOptions.current.demoScreen == .mapSigns
     /// Schritt 115: Polygon oder Pfeil, der gerade Punkt für Punkt gesetzt wird.
@@ -98,12 +96,8 @@ struct MissionMapView: View {
             }
             .presentationDetents([.medium, .large])
         }
-        .sheet(item: $gpxFile) { file in
-            ActivityView(items: [file.url])
-        }
-        .sheet(isPresented: $showsHandout) {
-            GPXHandoutSheet(mission: store.missionID, title: gpxTitle, makeContents: gpxDocument)
-                .largeSheet()
+        .sheet(isPresented: $showsExport) {
+            GPXExportSheet(store: store).largeSheet()
         }
         .sheet(item: $viewingPhoto) { file in
             JournalImageViewer(file: file, attachments: attachments)
@@ -391,6 +385,11 @@ struct MissionMapView: View {
                 .accessibilityLabel("Mein Standort")
                 if canEdit { drawMenu }
                 snapshotMenu
+                // Schritt 122: Formen auswählen und als GPX teilen bzw. für Hundeteams freigeben.
+                MapControlButton(title: "Export", systemImage: "square.and.arrow.up.on.square") {
+                    showsExport = true
+                }
+                .accessibilityLabel("Formen als GPX exportieren")
                 if showsSectionButton {
                     MapControlButton(title: "Liste", systemImage: "list.bullet") {
                         showsSectionList = true
@@ -429,16 +428,11 @@ struct MissionMapView: View {
             Button(action: printSnapshot) {
                 Label("Drucken", systemImage: "printer")
             }
-            Button { showsHandout = true } label: {
-                Label("Für Hundeteams (Link/QR-Code)", systemImage: "qrcode")
-            }
-            Button(action: shareGPX) {
-                Label("Lagekarte als GPX-Datei (Garmin)", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
-            }
+
         } label: {
             MapControlLabel(title: "Ausschnitt", systemImage: "camera.viewfinder")
         }
-        .accessibilityLabel("Kartenausschnitt ins Tagebuch, drucken, als GPX teilen oder für Hundeteams freigeben")
+        .accessibilityLabel("Kartenausschnitt ins Tagebuch oder drucken")
     }
 
     private func saveSnapshotToJournal() {
@@ -462,30 +456,6 @@ struct MissionMapView: View {
     }
 
     /// Einsatzort, Abschnitte und alle Formen als GPX-Datei (Garmin).
-    private var gpxTitle: String {
-        let reason = store.state.mission.reason
-        return reason.isEmpty ? "Lagekarte" : "Lagekarte \(reason)"
-    }
-
-    private func gpxDocument() -> String {
-        let state = store.state
-        return GPXExport.document(
-            title: gpxTitle,
-            missionCoordinate: state.mission.coordinate,
-            sections: state.sections.active,
-            objects: state.mapObjects.active,
-            createdAt: Date()
-        )
-    }
-
-    private func shareGPX() {
-        do {
-            gpxFile = try GPXSharing.file(named: gpxTitle, contents: gpxDocument())
-        } catch {
-            errorMessage = ErrorText.message(for: error)
-        }
-    }
-
     private func printSnapshot() {
         guard let image = proxy.snapshot() else {
             errorMessage = "Der Kartenausschnitt ließ sich nicht erzeugen."

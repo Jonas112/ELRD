@@ -212,6 +212,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 119 | Formen als GPX teilen (Garmin): einzelne Form im Bearbeiten-Blatt, ganze Lagekarte im Menü „Ausschnitt“ | ✅ |
 | 120 | GPX für Hundeteams per iCloud-Link und QR-Code; bei Einsatzende automatisch gelöscht (Einstellung, Standard an) | ✅ |
 | 121 | Taktische Zeichen verschieben: kurz gedrückt halten, dann ziehen (Jonas); Tippen bearbeitet | 🧪 |
+| 122 | GPX-Export mehrerer Formen: Knopf „Export“ auf der Karte, Auswahl mit Haken, als Datei oder für Hundeteams | 🧪 |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -304,6 +305,8 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritt 120 (2026-11-10):** Jonas: Link/QR über iCloud, Löschen bei Einsatzende einstellbar. `GPXShareCenter` legt die Datei koordiniert in `iCloud.ELRD.App/Freigaben/<Einsatz>/` ab, wartet aufs Hochladen (bis ~60 s) und holt mit `url(forPublishingUbiquitousItemAt:expiration:)` den öffentlichen Link; `GPXShareRegistry` (Gerätedatei `gpx-freigaben.json`) merkt sich Freigaben je Einsatz. `GPXHandoutSheet`: Hinweis (keine Patientendaten, öffentlich mit Link), „Link erstellen“, QR-Code, Anleitung Garmin Explore, Ablaufdatum, „Neu freigeben“, „Freigabe beenden“, Ausweichweg AirDrop. Aufrufe: Karte › Ausschnitt › „Für Hundeteams (Link/QR-Code)“ und Bearbeiten-Blatt einer Form. Löschen: Einstellungen › Allgemein › „GPX-Freigaben bei Einsatzende löschen“ (Standard an) – im Arbeitsbereich beim Beenden, in der Einsatzliste beim Start und alle 30 s für alle beendeten Einsätze (auch wenn ein anderes Gerät beendet hat). Entitlement `CloudDocuments` + `ubiquity-container-identifiers`. **Jonas:** in Xcode/Developer-Portal „iCloud Documents“ für `iCloud.ELRD.App` aktivieren; auf dem Gerät prüfen: Link öffnet Download, Link nach Löschen tot, ob ein alter Link nach „Neu freigeben“ den neuen Stand zeigt. Tests: 2 Features.
 
 - **Schritt 121 (2026-11-11):** Jonas: Halten-und-Ziehen ging nicht – MapKit öffnete beim Berühren sofort die Bearbeitung. Jonas wünscht langes Drücken. `TacticalSignAnnotationView` mit eigenem `UILongPressGestureRecognizer` (0,35 s): Zeichen wird größer, vibriert, folgt dem Finger (Karte steht still, Griffversatz bleibt); loslassen speichert über `EditMapObject`, abgebrochen springt zurück. Ein einfacher Tipp öffnet weiter die Bearbeitung, nach dem Verschieben nicht (`suppressesSelection`). Nur bei Bearbeitungsrecht. **Jonas:** auf dem Gerät prüfen, dass Kartenverschieben neben den Zeichen normal bleibt.
+
+- **Schritt 122 (2026-11-11):** Karte: neuer Knopf „Export“ (Knopfspalte) → `GPXExportSheet`: Dateiname, Einsatzort und Abschnitte an/aus, alle Formen und Zeichen mit Haken (anfangs alle; „Alle/Keine“), unten „Als Datei teilen“ und „Für Hundeteams (QR)“ (`GPXHandoutSheet` mit der Auswahl). Die GPX-Einträge im Menü „Ausschnitt“ entfallen dafür; das Bearbeiten-Blatt einer einzelnen Form behält seine Knöpfe. Demo `mapExport`.
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

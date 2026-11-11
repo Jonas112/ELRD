@@ -18,7 +18,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
     public enum DemoScreen: String, Sendable, CaseIterable {
         case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, unitPicker, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapCollapsed, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages, report, settings, masterData, onboarding
         /// Schritte 67–76.
-        case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise, whereabouts, statistics, debrief, distribution, communicationPlan, mapSigns, mapPath, patientDetailPerson, patientDetailCondition, patientDetailTransport
+        case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise, whereabouts, statistics, debrief, distribution, communicationPlan, mapSigns, mapPath, patientDetailPerson, patientDetailCondition, patientDetailTransport, mapExport
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
@@ -29,7 +29,7 @@ public struct AppLaunchOptions: Equatable, Sendable {
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {
             if [.patients, .patientTiles, .transportBoard, .whereabouts].contains(self) || opensPatient { return .patients }
-            if [.map, .mapCollapsed, .mapTopo, .mapObject, .mapDrawing, .mapSigns, .mapPath].contains(self) { return .map }
+            if [.map, .mapCollapsed, .mapTopo, .mapObject, .mapDrawing, .mapSigns, .mapPath, .mapExport].contains(self) { return .map }
             if [.journal, .journalEntry, .journalNew, .protocolLog, .missionTimeline, .debrief].contains(self) { return .journal }
             return [.sections, .addUnit, .addPlaceholder, .replacePlaceholder].contains(self) ? .organisation : .overview
         }

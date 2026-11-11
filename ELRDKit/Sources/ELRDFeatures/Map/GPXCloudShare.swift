@@ -118,33 +118,64 @@ final class GPXShareCenter {
         return publication
     }
 
+    /// Letzter Fehler beim Löschen (für die Einstellungen; ohne Datei- oder Einsatznamen).
+    private(set) var lastDeleteError: String?
+
     /// Eine Freigabe beenden (Datei in iCloud löschen).
     func remove(_ publication: GPXPublication, mission: MissionID) async {
         let folderName = mission.rawValue.uuidString
         let fileName = publication.fileName
-        await Task.detached(priority: .userInitiated) {
-            guard let container = FileManager.default.url(forUbiquityContainerIdentifier: nil) else { return }
-            let file = container.appendingPathComponent("Freigaben", isDirectory: true)
-                .appendingPathComponent(folderName, isDirectory: true)
-                .appendingPathComponent(fileName)
-            GPXShareCenter.coordinatedDelete(file)
+        let deleted = await Task.detached(priority: .userInitiated) { () -> Bool in
+            guard let folder = GPXShareCenter.folder(named: folderName) else { return false }
+            return GPXShareCenter.coordinatedDelete(folder.appendingPathComponent(fileName))
         }.value
+        guard deleted else {
+            lastDeleteError = "Die Freigabe konnte nicht gelöscht werden (iCloud nicht erreichbar). Neuer Versuch folgt automatisch."
+            return
+        }
+        lastDeleteError = nil
         registry.remove(fileName: fileName, for: mission)
         persist()
     }
 
     /// Alle Freigaben eines Einsatzes löschen (Einsatzende).
-    func removeAll(for mission: MissionID) async {
-        guard !registry.publications(for: mission).isEmpty else { return }
+    ///
+    /// Schritt 125: Jede Datei wird einzeln gelöscht – nur `removeItem` auf der Datei
+    /// selbst macht laut Apple die veröffentlichten Links ungültig. Erst wenn alles
+    /// gelöscht ist, verschwindet der Einsatz aus der Liste; sonst wird es beim
+    /// nächsten Aufräumen (Einsatzliste, alle 30 s) erneut versucht.
+    @discardableResult
+    func removeAll(for mission: MissionID) async -> Bool {
+        let fileNames = registry.publications(for: mission).map(\.fileName)
+        guard !fileNames.isEmpty else { return true }
         let folderName = mission.rawValue.uuidString
-        await Task.detached(priority: .utility) {
-            guard let container = FileManager.default.url(forUbiquityContainerIdentifier: nil) else { return }
-            let folder = container.appendingPathComponent("Freigaben", isDirectory: true)
-                .appendingPathComponent(folderName, isDirectory: true)
-            GPXShareCenter.coordinatedDelete(folder)
+        let deleted = await Task.detached(priority: .utility) { () -> Bool in
+            guard let folder = GPXShareCenter.folder(named: folderName) else { return false }
+            let present = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+            let files = Set(present + fileNames.map { folder.appendingPathComponent($0) })
+            var allDeleted = true
+            for file in files where !GPXShareCenter.coordinatedDelete(file) { allDeleted = false }
+            if allDeleted { _ = GPXShareCenter.coordinatedDelete(folder) }
+            return allDeleted
         }.value
+        guard deleted else {
+            lastDeleteError = "GPX-Freigaben konnten nicht gelöscht werden (iCloud nicht erreichbar). Neuer Versuch folgt automatisch."
+            return false
+        }
+        lastDeleteError = nil
         registry.removeAll(for: mission)
         persist()
+        return true
+    }
+
+    /// Anzahl aller Freigaben auf diesem Gerät.
+    var publicationCount: Int {
+        registry.missions.reduce(0) { $0 + registry.publications(for: $1).count }
+    }
+
+    /// Alle Freigaben aller Einsätze löschen (Einstellungen).
+    func removeEverything() async {
+        for mission in registry.missions { await removeAll(for: mission) }
     }
 
     /// Beendete Einsätze aufräumen (beim Start, in der Einsatzliste, bei Einsatzende).
@@ -169,10 +200,26 @@ final class GPXShareCenter {
         if let error = coordinationError ?? (writeError as NSError?) { throw error }
     }
 
-    nonisolated private static func coordinatedDelete(_ url: URL) {
+    nonisolated private static func folder(named name: String) -> URL? {
+        FileManager.default.url(forUbiquityContainerIdentifier: nil)?
+            .appendingPathComponent("Freigaben", isDirectory: true)
+            .appendingPathComponent(name, isDirectory: true)
+    }
+
+    /// Löscht koordiniert; `true`, wenn die Datei danach nicht mehr existiert.
+    nonisolated private static func coordinatedDelete(_ url: URL) -> Bool {
         var coordinationError: NSError?
+        var deleteError: (any Error)?
         NSFileCoordinator().coordinate(writingItemAt: url, options: .forDeleting, error: &coordinationError) { target in
-            try? FileManager.default.removeItem(at: target)
+            do {
+                try FileManager.default.removeItem(at: target)
+            } catch let error as CocoaError where error.code == .fileNoSuchFile {
+                // Schon weg – gilt als gelöscht.
+            } catch {
+                deleteError = error
+            }
         }
+        if coordinationError == nil, deleteError == nil { return true }
+        return !FileManager.default.fileExists(atPath: url.path)
     }
 }

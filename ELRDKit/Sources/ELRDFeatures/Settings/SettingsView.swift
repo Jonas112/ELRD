@@ -202,6 +202,7 @@ struct GeneralSettingsView: View {
                     }
                 }
                 .frame(minHeight: TouchTarget.comfortable)
+                GPXSharesStatusRow()
             } header: {
                 Text("Karten für Hundeteams (GPX)")
             }
@@ -1079,5 +1080,45 @@ private struct PhoneEntryRow: View {
         updated.name = name
         updated.number = number
         onChange(updated)
+    }
+}
+
+/// Schritt 125: aktive GPX-Freigaben dieses Geräts, sofort löschbar.
+private struct GPXSharesStatusRow: View {
+    @State private var center = GPXShareCenter.shared
+    @State private var isDeleting = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            HStack {
+                Text(center.publicationCount == 0 ? "Keine aktiven Freigaben auf diesem Gerät"
+                     : center.publicationCount == 1 ? "1 aktive Freigabe" : "\(center.publicationCount) aktive Freigaben")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if isDeleting { ProgressView() }
+            }
+            if center.publicationCount > 0 {
+                Button(role: .destructive) {
+                    isDeleting = true
+                    Task {
+                        await center.removeEverything()
+                        isDeleting = false
+                    }
+                } label: {
+                    Label("Alle Freigaben jetzt löschen", systemImage: "link.badge.minus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum)
+                }
+                .buttonStyle(.bordered)
+                .disabled(isDeleting)
+            }
+            if let error = center.lastDeleteError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(.vertical, Spacing.xs)
     }
 }

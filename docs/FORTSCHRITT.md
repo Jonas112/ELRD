@@ -214,7 +214,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 121 | Taktische Zeichen verschieben: kurz gedrückt halten, dann ziehen (Jonas); Tippen bearbeitet | ✅ |
 | 122 | GPX-Export mehrerer Formen: Knopf „Export“ auf der Karte, Auswahl mit Haken, als Datei oder für Hundeteams | ✅ |
 | 123 | Beschriftung der Suchgebiete: Flächen/Rechtecke automatisch „Suchgebiet N“, Nummer in der Markierung, Bezeichnung als GPX-Wegpunkt | ✅ |
-| 124 | Zeichen verschieben, Nachbesserung: Bearbeitung nur noch über eigenen Tipp-Erkenner, nicht über MapKits Auswahl beim Berühren | 🧪 |
+| 124 | Zeichen verschieben, Nachbesserung: Bearbeitung nur noch über eigenen Tipp-Erkenner, nicht über MapKits Auswahl beim Berühren | ✅ |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).

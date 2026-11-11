@@ -190,6 +190,15 @@ enum DemoMissions {
             GeoCoordinate(latitude: 50.1010, longitude: 10.1800),
         ].compactMap { $0 })
         if let command = AddMapObject.withPath(route, title: "Zufahrt", color: RGBColor(hex: 0x1976D2)) { _ = try running.perform(command) }
+        // Schritt 123: Suchgebiete werden automatisch durchnummeriert.
+        let searchAreas: [[(Double, Double)]] = [
+            [(50.1050, 10.1700), (50.1062, 10.1712), (50.1056, 10.1732), (50.1044, 10.1724)],
+            [(50.0992, 10.1790), (50.1000, 10.1808), (50.0990, 10.1820), (50.0982, 10.1802)],
+        ]
+        for corners in searchAreas {
+            let area = MapPath(kind: .polygon, points: corners.compactMap { GeoCoordinate(latitude: $0.0, longitude: $0.1) })
+            if let command = AddMapObject.withPath(area, color: RGBColor(hex: 0x388E3C)) { _ = try running.perform(command) }
+        }
         // Schritt 109: automatisches Lagebild (Text; das Kartenbild braucht MapKit).
         _ = try running.perform(AddSituationSnapshot(text: SituationSnapshot.text(running.state, openItemCount: 3, now: time.date)))
         if rtws.count >= 2 { try running.perform(MoveUnit(unitID: rtws[0].id, to: scene.id)) }

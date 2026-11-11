@@ -57,6 +57,11 @@ public struct AddMapObject: MissionCommand {
         if let path, !object.setPath(path) {
             throw CommandError.invalid(path.kind == .polygon ? "Eine Fläche braucht mindestens drei Punkte." : "Ein Pfeil braucht mindestens zwei Punkte.")
         }
+        // Schritt 123: Flächen und Rechtecke ohne Bezeichnung werden durchnummeriert
+        // („Suchgebiet 3“), damit Hundeteams sie auf Karte und Gerät zuordnen können.
+        if object.title.isEmpty, object.isSearchAreaCandidate {
+            object.title = MapObject.nextSearchAreaTitle(existing: draft.active(MapObject.self))
+        }
         try draft.insert(object)
         draft.log(.map, "„\(object.displayName)“ auf der Karte angelegt (\(object.sizeText))", subject: .mapObject(object.id))
         return object

@@ -48,17 +48,42 @@ public enum GPXExport {
         if object.tacticalSign != nil {
             return ([Waypoint(name: name, coordinate: object.shape.center, description: description, symbol: "Flag, Red")], [])
         }
+        let track: Track
         if let path = object.path {
             var points = path.points
             if path.kind == .polygon, let first = points.first { points.append(first) }
-            return ([], [Track(name: name, points: points, description: description)])
+            track = Track(name: name, points: points, description: description ?? object.sizeText)
+        } else {
+            switch object.shape {
+            case let .circle(center, radius):
+                track = Track(name: name, points: circle(center: center, radiusMeters: radius), description: description ?? object.sizeText)
+            case let .rectangle(bounds), let .drawing(bounds, _):
+                track = Track(name: name, points: rectangle(bounds), description: description ?? object.sizeText)
+            }
         }
-        switch object.shape {
-        case let .circle(center, radius):
-            return ([], [Track(name: name, points: circle(center: center, radiusMeters: radius), description: description)])
-        case let .rectangle(bounds), let .drawing(bounds, _):
-            return ([], [Track(name: name, points: rectangle(bounds), description: description)])
+        // Schritt 123: Beschriftung zusätzlich als Wegpunkt in der Mitte – Garmin-Geräte
+        // zeigen Wegpunktnamen auf der Karte, Tracknamen meist nicht.
+        let title = object.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return ([], [track]) }
+        let label = Waypoint(name: title, coordinate: labelPoint(for: object), description: description ?? object.sizeText, symbol: "Flag, Green")
+        return ([label], [track])
+    }
+
+    /// Stelle der Beschriftung: Schwerpunkt der Fläche, Mitte von Kreis/Rechteck,
+    /// beim Pfeil der Startpunkt.
+    static func labelPoint(for object: MapObject) -> GeoCoordinate {
+        if let path = object.path {
+            switch path.kind {
+            case .polygon:
+                let count = Double(path.points.count)
+                let latitude = path.points.map(\.latitude).reduce(0, +) / count
+                let longitude = path.points.map(\.longitude).reduce(0, +) / count
+                return GeoCoordinate(latitude: latitude, longitude: longitude) ?? object.shape.center
+            case .arrow:
+                return path.points.first ?? object.shape.center
+            }
         }
+        return object.shape.center
     }
 
     /// Ganze Lagekarte: Einsatzort, Abschnitte und alle Kartenobjekte.

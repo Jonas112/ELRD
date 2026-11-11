@@ -530,9 +530,16 @@ struct MapCanvas: UIViewRepresentable {
                     ?? MKMarkerAnnotationView(annotation: label, reuseIdentifier: identifier)
                 view.annotation = label
                 view.markerTintColor = UIColor(label.color)
-                view.glyphImage = UIImage(systemName: "pencil")
+                // Schritt 123: Nummer des Suchgebiets in der Markierung, Bezeichnung immer sichtbar.
+                if let number = label.number {
+                    view.glyphImage = nil
+                    view.glyphText = number
+                } else {
+                    view.glyphText = nil
+                    view.glyphImage = UIImage(systemName: "pencil")
+                }
                 view.titleVisibility = .visible
-                view.displayPriority = .defaultHigh
+                view.displayPriority = label.isNamed ? .required : .defaultHigh
                 // Halten und Ziehen verschiebt die ganze Form (Schritt 60).
                 view.isDraggable = canEdit
                 return view

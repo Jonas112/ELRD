@@ -213,6 +213,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 120 | GPX für Hundeteams per iCloud-Link und QR-Code; bei Einsatzende automatisch gelöscht (Einstellung, Standard an) | ✅ |
 | 121 | Taktische Zeichen verschieben: kurz gedrückt halten, dann ziehen (Jonas); Tippen bearbeitet | 🧪 |
 | 122 | GPX-Export mehrerer Formen: Knopf „Export“ auf der Karte, Auswahl mit Haken, als Datei oder für Hundeteams | 🧪 |
+| 123 | Beschriftung der Suchgebiete: Flächen/Rechtecke automatisch „Suchgebiet N“, Nummer in der Markierung, Bezeichnung als GPX-Wegpunkt | 🧪 |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -307,6 +308,8 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritt 121 (2026-11-11):** Jonas: Halten-und-Ziehen ging nicht – MapKit öffnete beim Berühren sofort die Bearbeitung. Jonas wünscht langes Drücken. `TacticalSignAnnotationView` mit eigenem `UILongPressGestureRecognizer` (0,35 s): Zeichen wird größer, vibriert, folgt dem Finger (Karte steht still, Griffversatz bleibt); loslassen speichert über `EditMapObject`, abgebrochen springt zurück. Ein einfacher Tipp öffnet weiter die Bearbeitung, nach dem Verschieben nicht (`suppressesSelection`). Nur bei Bearbeitungsrecht. **Jonas:** auf dem Gerät prüfen, dass Kartenverschieben neben den Zeichen normal bleibt.
 
 - **Schritt 122 (2026-11-11):** Karte: neuer Knopf „Export“ (Knopfspalte) → `GPXExportSheet`: Dateiname, Einsatzort und Abschnitte an/aus, alle Formen und Zeichen mit Haken (anfangs alle; „Alle/Keine“), unten „Als Datei teilen“ und „Für Hundeteams (QR)“ (`GPXHandoutSheet` mit der Auswahl). Die GPX-Einträge im Menü „Ausschnitt“ entfallen dafür; das Bearbeiten-Blatt einer einzelnen Form behält seine Knöpfe. Demo `mapExport`.
+
+- **Schritt 123 (2026-11-11):** Jonas: Formen brauchen eine Beschriftung, um Suchgebiete zu erkennen – auch in der GPX-Datei. Neue Flächen und Rechtecke ohne Bezeichnung heißen automatisch „Suchgebiet N“ (nächste freie Nummer, änderbar im Feld „Bezeichnung“; Vorschlag „Suchgebiet“ ergänzt). Kreise, Pfeile, Zeichnungen und Zeichen bleiben unverändert. Auf der Karte zeigt die Markierung die Nummer, benannte Formen haben feste Beschriftung (`displayPriority .required`). GPX: Track heißt wie die Form (Beschreibung = Notiz, sonst Größe) und zusätzlich ein grüner Wegpunkt „Suchgebiet N“ im Schwerpunkt der Fläche (Pfeil: Startpunkt) – Garmin-Geräte zeigen Wegpunktnamen auf der Karte, Tracknamen meist nicht. Demo: zwei Suchgebiete.
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

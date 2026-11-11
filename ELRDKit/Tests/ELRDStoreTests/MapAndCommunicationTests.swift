@@ -88,6 +88,22 @@ struct MapAndCommunicationTests {
         #expect(AddMapObject.withPath(MapPath(kind: .arrow, points: [point(50, 10), point(50.001, 10)])) != nil)
     }
 
+    @Test func newAreasAreNumberedAutomatically() throws {
+        let store = try fixture.newMission()
+        let path = MapPath(kind: .polygon, points: [point(50.000, 10.000), point(50.002, 10.000), point(50.001, 10.003)])
+        let first = try store.perform(try #require(AddMapObject.withPath(path)))
+        let bounds = try #require(GeoBounds(north: 50.01, south: 50, east: 10.01, west: 10))
+        let second = try store.perform(AddMapObject(shape: .rectangle(bounds: bounds)))
+        let circle = try store.perform(AddMapObject(shape: .circle(center: point(50, 10), radiusMeters: 50)))
+        let arrow = try store.perform(try #require(AddMapObject.withPath(MapPath(kind: .arrow, points: [point(50, 10), point(50.001, 10)]))))
+        let named = try store.perform(try #require(AddMapObject.withPath(path, title: "Sperrzone")))
+        #expect(first.title == "Suchgebiet 1")
+        #expect(second.title == "Suchgebiet 2")
+        #expect(circle.title.isEmpty, "Kreise bleiben ohne automatische Bezeichnung")
+        #expect(arrow.title.isEmpty)
+        #expect(named.title == "Sperrzone")
+    }
+
     @Test func polygonStoresBoundingRectangleAndMovesAsWhole() throws {
         let store = try fixture.newMission()
         let path = MapPath(kind: .polygon, points: [point(50.000, 10.000), point(50.002, 10.000), point(50.001, 10.003)])

@@ -116,12 +116,23 @@ final class MapObjectAnnotation: NSObject, MKAnnotation {
     @objc dynamic var coordinate: CLLocationCoordinate2D
     var title: String?
     var color: RGBColor
+    /// Schritt 123: Nummer am Ende der Bezeichnung („Suchgebiet 3“ → „3“) für die Markierung.
+    let number: String?
+    /// Selbst vergebene Bezeichnung (nicht nur „Fläche, 4 Ecken“) – dann immer sichtbar.
+    let isNamed: Bool
 
     init(object: MapObject) {
         objectID = object.id
         coordinate = object.shape.center.clLocation
         title = object.displayName
         color = object.color
+        let name = object.title.trimmingCharacters(in: .whitespaces)
+        isNamed = !name.isEmpty
+        if let last = name.split(separator: " ").last, last.count <= 3, Int(last) != nil {
+            number = String(last)
+        } else {
+            number = nil
+        }
         super.init()
     }
 }
@@ -162,7 +173,7 @@ enum MapObjectPalette {
     ]
 
     /// Häufige Bezeichnungen zum Antippen.
-    static let titles = ["Gefahrenbereich", "Sperrzone", "Landeplatz RTH", "Sammelstelle", "Behandlungsplatz", "Bereitstellungsraum"]
+    static let titles = ["Suchgebiet", "Gefahrenbereich", "Sperrzone", "Landeplatz RTH", "Sammelstelle", "Behandlungsplatz", "Bereitstellungsraum"]
 
     /// Radien zum Antippen (Meter).
     static let radii: [Double] = [25, 50, 100, 250, 500, 1000]

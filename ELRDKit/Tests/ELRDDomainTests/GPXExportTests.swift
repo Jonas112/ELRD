@@ -61,6 +61,42 @@ struct GPXExportTests {
         #expect(points.first == points.last)
     }
 
+    // MARK: Schritt 123: Beschriftung
+
+    @Test func labelBecomesWaypointAtCentroid() throws {
+        var area = try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(), title: "Suchgebiet 2",
+                                          shape: .circle(center: point(50, 10), radiusMeters: 10)))
+        let isSet = area.setPath(MapPath(kind: .polygon, points: [point(50, 10), point(50.003, 10), point(50, 10.003)]))
+        #expect(isSet)
+        let items = GPXExport.items(for: area)
+        let label = try #require(items.waypoints.first)
+        #expect(label.name == "Suchgebiet 2")
+        #expect(abs(label.coordinate.latitude - 50.001) < 1e-9)
+        #expect(abs(label.coordinate.longitude - 10.001) < 1e-9)
+        #expect(items.tracks.first?.name == "Suchgebiet 2")
+        #expect(items.tracks.first?.description == "Fläche, 3 Ecken")
+        let xml = GPXExport.document(for: area, createdAt: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(xml.contains("<wpt "))
+        #expect(xml.contains("<sym>Flag, Green</sym>"))
+        #expect(xml.components(separatedBy: "<name>Suchgebiet 2</name>").count == 4, "Metadaten, Wegpunkt und Track")
+    }
+
+    @Test func unnamedShapeHasNoLabelWaypoint() throws {
+        let bounds = try #require(GeoBounds(north: 50.01, south: 50, east: 10.01, west: 10))
+        let object = try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(), shape: .rectangle(bounds: bounds)))
+        #expect(GPXExport.items(for: object).waypoints.isEmpty)
+    }
+
+    @Test func nextSearchAreaNumber() throws {
+        func object(_ title: String) throws -> MapObject {
+            try #require(MapObject(missionID: GPXSample.missionID, metadata: GPXSample.meta(), title: title,
+                                   shape: .circle(center: point(50, 10), radiusMeters: 10)))
+        }
+        #expect(MapObject.nextSearchAreaTitle(existing: []) == "Suchgebiet 1")
+        let existing = [try object("Suchgebiet 1"), try object("Suchgebiet 4"), try object("Sperrzone"), try object("Suchgebiet Nord")]
+        #expect(MapObject.nextSearchAreaTitle(existing: existing) == "Suchgebiet 5")
+    }
+
     @Test func fileNameIsSafe() {
         #expect(GPXExport.fileName("Lagekarte VU/B 19") == "Lagekarte_VU-B_19.gpx")
         #expect(GPXExport.fileName("  ") == "Lagekarte.gpx")

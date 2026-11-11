@@ -76,6 +76,26 @@ public struct MapObject: VersionedEntity, MissionScoped {
         return path?.summary ?? shape.sizeText
     }
 
+    /// Fläche oder Rechteck – bekommt ohne Bezeichnung automatisch „Suchgebiet N“ (Schritt 123).
+    public var isSearchAreaCandidate: Bool {
+        guard tacticalSign == nil else { return false }
+        if let path { return path.kind == .polygon }
+        if case .rectangle = shape { return true }
+        return false
+    }
+
+    public static let searchAreaPrefix = "Suchgebiet"
+
+    /// Nächste freie Nummer: „Suchgebiet 1“, „Suchgebiet 2“ … (Lücken werden nicht gefüllt).
+    public static func nextSearchAreaTitle(existing: [MapObject]) -> String {
+        let numbers = existing.compactMap { object -> Int? in
+            let parts = object.title.split(separator: " ")
+            guard parts.count == 2, parts[0] == searchAreaPrefix else { return nil }
+            return Int(parts[1])
+        }
+        return "\(searchAreaPrefix) \((numbers.max() ?? 0) + 1)"
+    }
+
     /// Ob sich die Größe über einen Griff ändern lässt (nicht bei Zeichen und Linienzügen).
     public var isResizable: Bool { tacticalSign == nil && path == nil }
 }

@@ -281,6 +281,8 @@ struct MapCanvas: UIViewRepresentable {
             }
             if let sign = view.annotation as? TacticalSignAnnotation {
                 mapView.deselectAnnotation(sign, animated: false)
+                // Nach dem Verschieben (gedrückt halten) keine Bearbeitung öffnen.
+                if let signView = view as? TacticalSignAnnotationView, signView.suppressesSelection { return }
                 onSelectObject(sign.objectID)
                 return
             }
@@ -490,13 +492,13 @@ struct MapCanvas: UIViewRepresentable {
                 view.annotation = sign
                 view.image = TacticalSignRenderer.image(for: sign.sign, height: 44)
                 view.displayPriority = .required
-                // Schritt 121: direkt mit dem Finger ziehen (ohne langes Drücken).
+                // Schritte 121/122: gedrückt halten, dann ziehen.
                 view.isDraggable = false
                 view.allowsMoving = canEdit
                 view.onMoved = { [weak self] objectID, coordinate in self?.onMoveObject(objectID, coordinate) }
                 view.canShowCallout = false
                 view.accessibilityLabel = sign.title
-                view.accessibilityHint = canEdit ? "Antippen bearbeitet, mit dem Finger ziehen verschiebt" : nil
+                view.accessibilityHint = canEdit ? "Antippen bearbeitet, gedrückt halten und ziehen verschiebt" : nil
                 return view
             }
             if let photo = annotation as? PhotoAnnotation {

@@ -126,7 +126,7 @@ struct LeadershipSheet: View {
             }
             .padding(Spacing.l)
             .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(store.state.mission.isClosed)
@@ -293,7 +293,7 @@ private struct ParticipantsSection: View {
                 }
                 .padding(Spacing.l)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             Text(isCommander
                  ? "Jeder wählt seinen Abschnitt selbst. Rechte: „Eigener Abschnitt“ erlaubt Patienten und Einheiten nur dort, „Nur lesen“ nur Nachrichten."

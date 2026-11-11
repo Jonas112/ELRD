@@ -52,7 +52,7 @@ struct JournalView: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, Spacing.l)
                                 .frame(minHeight: TouchTarget.comfortable)
-                                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .keyboardShortcut("n", modifiers: .command)
@@ -87,7 +87,7 @@ struct JournalView: View {
         }
         .sheet(isPresented: $showsComposer) {
             JournalComposerSheet(store: store, templates: templates)
-                .largeSheet()
+                .formSheet()
         }
         .task(id: focusComposer.wrappedValue) {
             guard focusComposer.wrappedValue else { return }
@@ -241,7 +241,7 @@ struct JournalComposerSheet: View {
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)
                         .background(trimmed.isEmpty ? Surface.elevated : ActionFill.primary,
-                                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(trimmed.isEmpty)
@@ -292,7 +292,7 @@ struct JournalComposerSheet: View {
             .font(.headline)
             .padding(.horizontal, Spacing.m)
             .frame(minHeight: TouchTarget.comfortable)
-            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     /// Während der Aufnahme: Zeit, Abbrechen, großes „Fertig“.
@@ -315,12 +315,12 @@ struct JournalComposerSheet: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, Spacing.l)
                     .frame(minHeight: TouchTarget.comfortable)
-                    .background(Color.red, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Color.red, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
         }
         .padding(Spacing.s)
-        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Aufnahme läuft")
     }
@@ -533,7 +533,7 @@ struct JournalEntryRow: View {
             }
         }
         .padding(Spacing.m)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 }
@@ -560,7 +560,7 @@ struct AttachmentThumbnail: View {
         }
         .frame(maxWidth: 360, minHeight: height ?? 120, maxHeight: height ?? 200)
         .background(Surface.elevated)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         .task(id: file.id) {
             image = attachments.data(for: file).flatMap(UIImage.init(data:))
         }
@@ -588,7 +588,7 @@ struct JournalImageViewer: View {
             .navigationTitle(file.kind.displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Schließen") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.fontWeight(.bold) }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         if let image { MapPrinting.print(image, jobName: "ELRD \(file.kind.displayName)") }
@@ -655,7 +655,7 @@ struct JournalEntryEditor: View {
                             .font(.headline)
                             .foregroundStyle(.red)
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }

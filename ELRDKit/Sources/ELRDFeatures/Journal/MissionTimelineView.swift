@@ -59,7 +59,7 @@ struct MissionTimelineView: View {
             }
             .padding(Spacing.l)
             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -82,7 +82,7 @@ struct MissionTimelineView: View {
             }
             .padding(Spacing.l)
             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(snapshotState == .working)
@@ -135,7 +135,7 @@ struct MissionTimelineView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.l)
-        .background(Color.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     // MARK: Kennzahlen
@@ -170,7 +170,7 @@ struct MissionTimelineView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.m)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -303,6 +303,6 @@ private struct TriageBadgeLabel: View {
             .font(.subheadline.weight(.bold))
             .foregroundStyle(Color(category.color.contrastingTextColor))
             .frame(width: 52, height: 30)
-            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
     }
 }

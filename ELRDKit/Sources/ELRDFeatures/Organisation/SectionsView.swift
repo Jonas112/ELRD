@@ -170,7 +170,7 @@ struct SectionsView: View {
                         .fixedSize()
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Abschnitt hinzufügen")
@@ -182,7 +182,7 @@ struct SectionsView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)
-                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Einheit hinzufügen")
@@ -313,7 +313,7 @@ struct SectionCard: View {
                         ForEach(column.loosePatients) { badge in
                             PatientBadgeButton(badge: badge) { onOpenPatient(badge.id) }
                                 .organisationDraggable(canEdit ? .patient(badge.id) : nil) { PatientBadgeView(badge: badge) }
-                                .organisationDrop(isEnabled: canEdit, cornerRadius: 10) {
+                                .organisationDrop(isEnabled: canEdit, cornerRadius: Radius.control) {
                                     onDrop($0, .loosePatient(badge.id, section: column.section?.id))
                                 }
                         }
@@ -323,14 +323,14 @@ struct SectionCard: View {
         }
         .padding(Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .overlay {
             if column.section == nil {
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     .strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
             }
         }
-        .organisationDrop(isEnabled: canEdit, cornerRadius: 22) { onDrop($0, .section(column.section?.id)) }
+        .organisationDrop(isEnabled: canEdit, cornerRadius: Radius.large) { onDrop($0, .section(column.section?.id)) }
     }
 
     private var head: some View {
@@ -386,7 +386,7 @@ struct SectionCard: View {
             .organisationDraggable(canEdit ? .unit(entry.unit.id) : nil) {
                 UnitRowLabel(entry: entry, showsMoveHint: false).frame(width: 300)
             }
-            .organisationDrop(isEnabled: canEdit, cornerRadius: 14) { onDrop($0, .unit(entry.unit.id)) }
+            .organisationDrop(isEnabled: canEdit, cornerRadius: Radius.card) { onDrop($0, .unit(entry.unit.id)) }
     }
 
     /// Tipp öffnet „Verschieben nach …“ (Platzhalter: gleich „Fahrzeug eintragen“).
@@ -511,8 +511,8 @@ struct UnitRowLabel: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(width: 52, height: 36)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Surface.separator, lineWidth: 1))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(Surface.separator, lineWidth: 1))
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.unit.displayName)
                     .font(.headline)
@@ -546,10 +546,10 @@ struct UnitRowLabel: View {
         }
         .padding(.horizontal, Spacing.m)
         .frame(minHeight: 60)
-        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay {
             if entry.unit.isPlaceholder {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                     .strokeBorder(Color.secondary.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
             }
         }
@@ -569,7 +569,7 @@ struct PatientBadgeView: View {
             .foregroundStyle(Color.onTriage(badge.triage))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.triage(badge.triage), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .background(Color.triage(badge.triage), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
             .accessibilityLabel("Patient \(badge.number), \(badge.triage.displayName)")
     }
 }
@@ -587,7 +587,7 @@ struct PatientBadgeButton: View {
                 .foregroundStyle(Color.onTriage(badge.triage))
                 .padding(.horizontal, Spacing.m)
                 .frame(minHeight: TouchTarget.minimum)
-                .background(Color.triage(badge.triage), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.triage(badge.triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Patient \(badge.number), \(badge.triage.displayName) öffnen")
@@ -629,8 +629,8 @@ struct ArrivalBadge: View {
                 .foregroundStyle(unit.expectedArrival == nil ? Color.secondary : .white)
                 .frame(width: 56, height: 40)
                 .background(unit.expectedArrival == nil ? Surface.card : (overdue ? Color.red : Color.orange),
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                     .strokeBorder(Surface.separator, lineWidth: unit.expectedArrival == nil ? 1 : 0))
         }
     }

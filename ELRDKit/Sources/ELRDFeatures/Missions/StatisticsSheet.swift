@@ -41,7 +41,7 @@ struct StatisticsSheet: View {
                                         }
                                         .foregroundStyle(Color.onTriage(triage))
                                         .frame(maxWidth: .infinity, minHeight: 56)
-                                        .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                                     }
                                 }
                             }
@@ -95,7 +95,7 @@ struct StatisticsSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.m)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
@@ -129,7 +129,7 @@ struct PersonSearchSheet: View {
                                     .font(.caption.weight(.heavy))
                                     .foregroundStyle(Color.onTriage(hit.whereabouts.triage))
                                     .padding(.horizontal, 6).padding(.vertical, 2)
-                                    .background(Color.triage(hit.whereabouts.triage), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                                    .background(Color.triage(hit.whereabouts.triage), in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                                 Text(hit.whereabouts.name.isEmpty ? "Name unbekannt" : hit.whereabouts.name).font(.headline)
                                 Text(hit.whereabouts.number).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
                             }

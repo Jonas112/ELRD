@@ -37,10 +37,10 @@ public struct ChoiceChip: View {
                 .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: minHeight)
                 .background(
                     isSelected ? ActionFill.selected : background,
-                    in: RoundedRectangle(cornerRadius: Radius.card + 4, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                 )
                 .overlay {
-                    RoundedRectangle(cornerRadius: Radius.card + 4, style: .continuous)
+                    RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                         .strokeBorder(Color.accentColor, lineWidth: isSelected ? 3 : 0)
                 }
                 .contentShape(Rectangle())

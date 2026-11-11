@@ -140,7 +140,7 @@ struct MapObjectEditor: View {
                         Label("In die Kartenmitte", systemImage: "scope")
                             .font(.headline)
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .disabled(mapCenter == nil)
@@ -149,7 +149,7 @@ struct MapObjectEditor: View {
                             .font(.headline)
                             .foregroundStyle(.red)
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
@@ -167,7 +167,7 @@ struct MapObjectEditor: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint("Form als GPX-Datei zum Import in Garmin-Geräte")
@@ -177,7 +177,7 @@ struct MapObjectEditor: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
 
@@ -298,7 +298,7 @@ struct MapObjectEditor: View {
             Label(label, systemImage: systemImage)
                 .font(.headline)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
     }

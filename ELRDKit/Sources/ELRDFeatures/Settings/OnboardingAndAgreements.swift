@@ -128,7 +128,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(Spacing.l)
             }
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             Toggle(isOn: $accepted) {
                 Text("Ich habe die Bedingungen gelesen und akzeptiere diese.").font(.headline)
             }
@@ -149,7 +149,7 @@ struct OnboardingView: View {
                         .font(.title3.weight(.semibold))
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.large)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
             }
@@ -179,7 +179,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, Spacing.xl)
                     .frame(minHeight: TouchTarget.large)
-                    .background(canContinue ? ActionFill.primary : Color.secondary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(canContinue ? ActionFill.primary : Color.secondary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!canContinue)

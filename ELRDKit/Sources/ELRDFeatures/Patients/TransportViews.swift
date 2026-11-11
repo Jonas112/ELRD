@@ -100,9 +100,9 @@ struct HospitalRow: View {
         }
         .padding(.horizontal, Spacing.l)
         .frame(minHeight: 64)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(Color.accentColor, lineWidth: isSelected ? 3 : 0)
         }
         .contentShape(Rectangle())

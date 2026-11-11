@@ -297,7 +297,7 @@ struct MissionListView: View {
             }
             .frame(maxWidth: .infinity, minHeight: 200, alignment: .leading)
             .padding(Spacing.xl)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         } else {
             VStack(spacing: Spacing.l) {
                 ForEach(running) { summary in
@@ -356,7 +356,7 @@ struct MissionListView: View {
                             }
                     }
                 }
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             }
         }
     }
@@ -391,7 +391,7 @@ struct MissionListView: View {
                     .frame(minHeight: TouchTarget.comfortable)
                 }
             }
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .padding(.top, Spacing.s)
         } label: {
             Label("Gelöscht (\(model.deletedMissions.count))", systemImage: "trash")
@@ -549,7 +549,7 @@ struct NewMissionButton: View {
             }
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -629,7 +629,7 @@ struct RunningMissionCard: View {
         }
         .padding(Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 
@@ -662,10 +662,8 @@ struct RunningMissionCard: View {
                 .padding(.horizontal, Spacing.xl)
                 .frame(minHeight: TouchTarget.comfortable)
         }
-        // Grau statt Blau: Blau bleibt der einen Hauptaktion „Neuer Einsatz“ vorbehalten.
-        .buttonStyle(.bordered)
-        .tint(.primary)
-        .buttonBorderShape(.roundedRectangle(radius: 16))
+        // Schritt 127: Läuft ein Einsatz, ist Fortsetzen die wahrscheinlichste Aktion – gefüllt.
+        .buttonStyle(PrimaryActionStyle())
         .accessibilityLabel("Einsatz \(summary.title) fortsetzen")
     }
 }

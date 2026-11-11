@@ -46,7 +46,7 @@ struct CommunicationPlanSheet: View {
             .navigationTitle("Kommunikationsplan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Fertig") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.fontWeight(.bold) }
                 ToolbarItemGroup(placement: .primaryAction) {
                     if canEdit {
                         Button { editingLeadership = true } label: {
@@ -504,9 +504,9 @@ private struct ChartBox: View {
         }
         .frame(width: width, alignment: .topLeading)
         .background(Surface.card)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                 .stroke(Color.primary.opacity(style == .dashed ? 0.7 : 1),
                         style: StrokeStyle(lineWidth: style == .lead ? 2.5 : 1.2, dash: style == .dashed ? [5, 3] : []))
         }

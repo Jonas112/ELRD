@@ -172,7 +172,7 @@ struct PatientsView: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(query.layout == layout ? Color.white : Color.primary)
                         .frame(width: TouchTarget.minimum + 8, height: TouchTarget.minimum + 4)
-                        .background(query.layout == layout ? ActionFill.primary : Color.clear, in: RoundedRectangle(cornerRadius: Radius.card - 2, style: .continuous))
+                        .background(query.layout == layout ? ActionFill.primary : Color.clear, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(layout.title)
@@ -223,9 +223,9 @@ struct PatientsView: View {
                 }
             }
             .background {
-                if isWide { RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Surface.card) }
+                if isWide { RoundedRectangle(cornerRadius: Radius.large, style: .continuous).fill(Surface.card) }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         }
     }
 }
@@ -257,7 +257,7 @@ struct QuickAddBar: View {
                             .minimumScaleFactor(0.7)
                             .foregroundStyle(Color.onTriage(category))
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.large + 4)
-                            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Patient \(category.displayName) anlegen")
@@ -266,7 +266,7 @@ struct QuickAddBar: View {
         }
         .padding(isWide ? Spacing.l : 0)
         .background {
-            if isWide { RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Surface.card) }
+            if isWide { RoundedRectangle(cornerRadius: Radius.large, style: .continuous).fill(Surface.card) }
         }
     }
 }
@@ -321,7 +321,7 @@ struct PatientTitle: View {
                 .monospacedDigit()
                 .padding(.horizontal, Spacing.s)
                 .padding(.vertical, 3)
-                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 .layoutPriority(1)
             if let name = row.name {
                 Text(name).font(.title3.weight(.bold)).lineLimit(1)
@@ -334,7 +334,7 @@ struct PatientTitle: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Color.orange, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .background(Color.orange, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                     .layoutPriority(1)
             }
         }
@@ -444,7 +444,7 @@ struct CompactPatientRow: View {
         .frame(minHeight: 92)
         .background(alignment: .leading) { TriageStripe(triage: row.triage, width: 64) }
         .background(Surface.card)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .contentShape(Rectangle())
     }
 }
@@ -517,7 +517,7 @@ struct PatientTile: View {
         }
         .frame(height: 196)
         .background(Surface.card)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .opacity(row.status == .released ? 0.55 : 1)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

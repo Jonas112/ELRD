@@ -58,7 +58,7 @@ struct ProtocolList: View {
                     Divider()
                 }
             }
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
     }
 

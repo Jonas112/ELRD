@@ -58,7 +58,7 @@ struct RegionImportSheet: View {
             }
             .padding(.horizontal, Spacing.m)
             .frame(minHeight: 64)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -93,7 +93,7 @@ struct LoadRegionHint: View {
                     .font(.headline)
                     .padding(.horizontal, Spacing.l)
                     .frame(minHeight: TouchTarget.comfortable)
-                    .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
         }

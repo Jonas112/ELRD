@@ -64,7 +64,7 @@ struct ReplacePlaceholderSheet: View {
                             }
                             .padding(.horizontal, Spacing.m)
                             .frame(minHeight: TouchTarget.large)
-                            .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         }
                         .buttonStyle(.plain)
                     }

@@ -51,8 +51,8 @@ struct TacticalSignPicker: View {
             }
             .padding(Spacing.m)
             .frame(maxWidth: .infinity, minHeight: TouchTarget.large * 1.6)
-            .background(Color.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Surface.separator))
+            .background(Color.white.opacity(0.92), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous).stroke(Surface.separator))
             .foregroundStyle(.black)
         }
         .buttonStyle(.plain)

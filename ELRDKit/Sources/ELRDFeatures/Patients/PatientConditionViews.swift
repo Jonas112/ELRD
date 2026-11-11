@@ -32,7 +32,7 @@ struct RMIField: View {
                 .padding(.leading, Spacing.m)
                 .padding(.trailing, Spacing.xs)
                 .frame(minHeight: TouchTarget.comfortable)
-                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             HStack(spacing: Spacing.s) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
@@ -63,7 +63,7 @@ struct RMIField: View {
                             }
                             .padding(.horizontal, Spacing.m)
                             .frame(minHeight: TouchTarget.comfortable)
-                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -137,9 +137,9 @@ struct ABCDPicker: View {
         }
         .foregroundStyle(level == nil ? Color.accentColor : Color.primary)
         .frame(maxWidth: .infinity, minHeight: 64)
-        .background(level == nil ? Color.clear : Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(level == nil ? Color.clear : Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(Surface.separator, style: StrokeStyle(lineWidth: level == nil ? 2 : 0, dash: [6, 4]))
         }
     }

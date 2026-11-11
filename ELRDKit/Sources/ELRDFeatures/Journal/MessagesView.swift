@@ -103,8 +103,8 @@ struct MessagesView: View {
                     }
                     .padding(Spacing.m)
                     .frame(minHeight: TouchTarget.comfortable)
-                    .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                         .strokeBorder(Color.orange, lineWidth: record.isRead ? 0 : 2))
                 }
                 .buttonStyle(.plain)
@@ -154,7 +154,7 @@ struct MessagesView: View {
                 .padding(.horizontal, Spacing.l)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
                 .background(trimmed.isEmpty ? Surface.elevated : (isWarning ? Color.orange : ActionFill.primary),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 .fixedSize(horizontal: true, vertical: false)
         }
         .buttonStyle(.plain)
@@ -216,10 +216,10 @@ struct MessageRow: View {
             }
         }
         .padding(Spacing.m)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay {
             if !message.isAcknowledged {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                     .strokeBorder(message.kind == .warning ? Color.orange : ActionFill.primary, lineWidth: 2)
             }
         }

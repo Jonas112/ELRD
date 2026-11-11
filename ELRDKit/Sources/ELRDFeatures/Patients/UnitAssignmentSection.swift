@@ -105,8 +105,8 @@ struct UnitChoiceTile: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .frame(width: 52, height: 36)
-                    .background(Surface.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Surface.separator, lineWidth: 1))
+                    .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(Surface.separator, lineWidth: 1))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(choice.unit.displayName)
                         .font(.headline)
@@ -126,7 +126,7 @@ struct UnitChoiceTile: View {
             .padding(.horizontal, Spacing.m)
             .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
             .background(style == .assigned ? ActionFill.primary : Surface.elevated,
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

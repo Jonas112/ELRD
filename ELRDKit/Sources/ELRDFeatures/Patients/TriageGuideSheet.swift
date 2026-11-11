@@ -105,7 +105,7 @@ struct TriageGuideSheet: View {
                     .foregroundStyle(Color(suggestion.triage.color.contrastingTextColor))
                     .frame(minWidth: 140, minHeight: 96)
                     .padding(.horizontal, Spacing.m)
-                    .background(Color.triage(suggestion.triage), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .background(Color.triage(suggestion.triage), in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
                 VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text(suggestion.triage.displayName).font(.title2.weight(.bold))
                     Text(suggestion.reason).font(.title3).foregroundStyle(.secondary)
@@ -151,7 +151,7 @@ struct TriageGuideSheet: View {
                 }
             }
             .padding(Spacing.m)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
     }
 

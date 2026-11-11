@@ -63,7 +63,7 @@ struct WhereaboutsSheet: View {
             .navigationTitle("Verbleib")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Fertig") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() }.fontWeight(.bold) }
                 ToolbarItem(placement: .primaryAction) {
                     if let shareURL {
                         ShareLink(item: shareURL) { Label("Als PDF teilen", systemImage: "square.and.arrow.up") }
@@ -80,7 +80,7 @@ struct WhereaboutsSheet: View {
                 .font(.subheadline.weight(.heavy))
                 .foregroundStyle(Color.onTriage(entry.triage))
                 .frame(width: 52, height: 32)
-                .background(Color.triage(entry.triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Color.triage(entry.triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: Spacing.s) {
                     Text(entry.number).font(.headline.monospacedDigit())

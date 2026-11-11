@@ -140,7 +140,7 @@ struct DistributionSheet: View {
             .font(.subheadline.weight(.heavy))
             .foregroundStyle(Color.onTriage(triage))
             .frame(width: 52, height: 30)
-            .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
     }
 
     private func apply(_ selected: [DistributionProposal]) {

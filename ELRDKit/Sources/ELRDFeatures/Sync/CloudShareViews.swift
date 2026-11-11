@@ -365,7 +365,7 @@ struct JoinCloudMissionSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Schließen") { dismiss() }
+                    Button("Abbrechen") { dismiss() }
                 }
             }
             .onAppear { if requestName.isEmpty { requestName = displayName } }
@@ -481,7 +481,7 @@ struct JoinRequestBanner: View {
                     }
                     .controlSize(.large)
                     .padding(Spacing.m)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     .accessibilityElement(children: .contain)
                 }
                 if let errorMessage {

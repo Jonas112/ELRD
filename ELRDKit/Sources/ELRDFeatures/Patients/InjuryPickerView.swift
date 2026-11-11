@@ -170,6 +170,6 @@ struct InjuryRow: View {
         .padding(.leading, Spacing.m)
         .padding(.trailing, Spacing.xs)
         .frame(minHeight: TouchTarget.comfortable)
-        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }

@@ -121,7 +121,7 @@ struct UnitPickerSheet: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, Spacing.l)
                     .frame(minHeight: TouchTarget.comfortable)
-                    .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
         }
@@ -142,7 +142,7 @@ struct UnitPickerSheet: View {
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                                 .frame(width: 52, height: 36)
-                                .background(Surface.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(unit.callsign).font(.headline).foregroundStyle(.primary).lineLimit(1).minimumScaleFactor(0.8)
                                 Text("hinzufügen").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
@@ -152,7 +152,7 @@ struct UnitPickerSheet: View {
                         }
                         .padding(.horizontal, Spacing.m)
                         .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
-                        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

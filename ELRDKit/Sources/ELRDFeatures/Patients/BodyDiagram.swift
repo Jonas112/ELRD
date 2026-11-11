@@ -81,7 +81,7 @@ struct BodyDiagramView: View {
             let size = CGSize(width: BodyPart.canvas.width * scale, height: BodyPart.canvas.height * scale)
             ZStack(alignment: .topLeading) {
                 // Hals (nicht antippbar).
-                RoundedRectangle(cornerRadius: 4 * scale)
+                RoundedRectangle(cornerRadius: Radius.chip * scale)
                     .fill(Self.baseFill)
                     .frame(width: 20 * scale, height: 20 * scale)
                     .offset(x: 90 * scale, y: 60 * scale)
@@ -153,11 +153,11 @@ struct BodyDiagramView: View {
         case .spine:
             VStack(spacing: 3 * scale) {
                 ForEach(0..<9, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 4 * scale, style: .continuous).fill(fill)
+                    RoundedRectangle(cornerRadius: Radius.chip * scale, style: .continuous).fill(fill)
                 }
             }
             .padding(isSelected ? 3 : 0)
-            .overlay(RoundedRectangle(cornerRadius: 8 * scale).strokeBorder(stroke, lineWidth: 3))
+            .overlay(RoundedRectangle(cornerRadius: Radius.control * scale).strokeBorder(stroke, lineWidth: 3))
         }
     }
 

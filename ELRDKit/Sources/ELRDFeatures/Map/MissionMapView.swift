@@ -408,7 +408,7 @@ struct MissionMapView: View {
                     .foregroundStyle(.primary)
                     .padding(.horizontal, Spacing.s)
                     .padding(.vertical, 4)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                     .padding(.trailing, Spacing.s)
                     .padding(.bottom, 32)
                     .accessibilityLabel("Quelle: \(attribution)")
@@ -570,7 +570,7 @@ struct MissionMapView: View {
                     Button("Abbrechen") { placing = nil }
                         .font(.headline)
                         .frame(minWidth: 120, minHeight: TouchTarget.comfortable)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         .buttonStyle(.plain)
                 }
                 if target == .mission {
@@ -581,7 +581,7 @@ struct MissionMapView: View {
                             .lineLimit(1)
                             .padding(.horizontal, Spacing.m)
                             .frame(minHeight: TouchTarget.comfortable)
-                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .disabled(location.isLocating)
@@ -594,14 +594,14 @@ struct MissionMapView: View {
                         .lineLimit(1)
                         .padding(.horizontal, Spacing.l)
                         .frame(minHeight: TouchTarget.comfortable)
-                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(center == nil)
             }
         }
         .padding(Spacing.m)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .padding(.horizontal, Spacing.l)
         .padding(.bottom, 44)
         .frame(maxWidth: 560)
@@ -741,7 +741,7 @@ struct MissionMapView: View {
         .controlSize(.large)
         .frame(minHeight: TouchTarget.comfortable)
         .padding(Spacing.m)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .padding(.bottom, Spacing.xl)
         .padding(.horizontal, Spacing.m)
     }
@@ -869,7 +869,7 @@ struct MapSectionList: View {
             }
             .padding(.horizontal, Spacing.m)
             .frame(minHeight: 60)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -903,7 +903,7 @@ struct MapSectionList: View {
             }
             .padding(.horizontal, Spacing.m)
             .frame(minHeight: 60)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -918,7 +918,7 @@ struct MapSectionList: View {
             Label(pin.name, systemImage: "square.stack.3d.up.fill")
                 .font(.headline)
                 .padding(Spacing.m)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         }
         .accessibilityHint(pin.coordinate == nil ? "Setzt den Abschnitt über das Fadenkreuz." : "Zeigt den Abschnitt auf der Karte.")
     }
@@ -950,7 +950,7 @@ struct MapControlLabel: View {
         }
         .foregroundStyle(isEnabled ? Color.primary : Color.secondary)
         .frame(width: 68, height: 64)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .shadow(color: .black.opacity(0.15), radius: 4, y: 1)
     }
 }

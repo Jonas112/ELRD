@@ -304,13 +304,13 @@ struct FreehandToolbar: View {
                 Button(action: onCancel) {
                     Text("Abbrechen").font(.headline)
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 Button(action: onUndo) {
                     Label("Zurück", systemImage: "arrow.uturn.backward").font(.headline)
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(strokeCount == 0)
@@ -319,14 +319,14 @@ struct FreehandToolbar: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
                         .background(strokeCount == 0 ? Color.secondary : ActionFill.primary,
-                                    in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(strokeCount == 0)
             }
         }
         .padding(Spacing.m)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .padding(.horizontal, Spacing.l)
         .padding(.bottom, 36)
         .frame(maxWidth: 680)

@@ -34,7 +34,7 @@ struct TagScannerSheet: View {
                                 scanned = Patient.normalizedTag(code)
                             }
                             .frame(height: 320)
-                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                             .accessibilityLabel("Kamera: Barcode der Anhängekarte ins Bild halten")
                         } else {
                             Label("Kamera zum Scannen hier nicht verfügbar – Nummer eintippen.", systemImage: "barcode.viewfinder")
@@ -74,7 +74,7 @@ struct TagScannerSheet: View {
             .navigationTitle("Anhängekarte")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Schließen") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
             }
         }
     }
@@ -114,7 +114,7 @@ struct TagScannerSheet: View {
                         .font(.headline.weight(.heavy))
                         .foregroundStyle(Color.onTriage(patient.triage))
                         .frame(minWidth: 56, minHeight: 40)
-                        .background(Color.triage(patient.triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .background(Color.triage(patient.triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                     VStack(alignment: .leading) {
                         Text(patient.displayName).font(.headline)
                         Text(patient.status.displayName).font(.subheadline).foregroundStyle(.secondary)
@@ -124,7 +124,7 @@ struct TagScannerSheet: View {
                 }
                 .padding(Spacing.l)
                 .frame(minHeight: TouchTarget.large)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
         } else if store.state.mission.isClosed {
@@ -140,7 +140,7 @@ struct TagScannerSheet: View {
                             .font(.title3.weight(.heavy))
                             .foregroundStyle(Color.onTriage(triage))
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
-                            .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Patient \(triage.displayName) anlegen")

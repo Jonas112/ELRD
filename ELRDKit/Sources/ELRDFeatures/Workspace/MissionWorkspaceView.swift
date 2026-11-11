@@ -202,7 +202,7 @@ public struct MissionWorkspaceView: View {
                 path = []
                 handle(target)
             }
-            .largeSheet()
+            .formSheet()
         }
         .fullScreenCover(isPresented: $showsReport) {
             ReportEditorView(store: store, people: people, hospitals: catalogs.hospitals) { showsReport = false }
@@ -469,7 +469,7 @@ struct SituationBar: View {
                 Image(systemName: "chevron.left")
                     .font(.title2.weight(.semibold))
                     .frame(width: size, height: size)
-                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Zurück zur Einsatzliste")
@@ -513,9 +513,9 @@ struct SituationBar: View {
             .padding(.leading, Spacing.m)
             .padding(.trailing, Spacing.s)
             .frame(minHeight: TouchTarget.comfortable, alignment: .leading)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                     .strokeBorder(ActionFill.primary.opacity(0.35), lineWidth: 1)
             }
             .contentShape(Rectangle())
@@ -561,7 +561,7 @@ struct SituationBar: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, iconOnly ? Spacing.m : Spacing.l)
                 .frame(minHeight: layout == .rail ? 64 : TouchTarget.comfortable)
-                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .disabled(!canAddPatients)
@@ -595,7 +595,7 @@ struct TriageCounterButton: View {
             }
             .foregroundStyle(Color.onTriage(category))
             .frame(minWidth: minWidth, maxWidth: fillsWidth ? .infinity : 88, minHeight: fillsWidth ? TouchTarget.comfortable : 64)
-            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(category.displayName): \(count)")
@@ -617,7 +617,7 @@ struct QuickAddPanel: View {
                             .font(.title3.weight(.heavy))
                             .foregroundStyle(Color.onTriage(category))
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
-                            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Patient \(category.displayName) anlegen")
@@ -650,14 +650,14 @@ struct UndoToast: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, Spacing.l)
                     .frame(minHeight: TouchTarget.minimum + 4)
-                    .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
         }
         .padding(.leading, Spacing.xl)
         .padding(.trailing, Spacing.s)
         .padding(.vertical, Spacing.s)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .shadow(color: .black.opacity(0.35), radius: 20, y: 8)
         .accessibilityElement(children: .contain)
     }
@@ -683,8 +683,8 @@ struct WorkspaceRail: View {
                 .frame(width: 80)
             }
             Spacer(minLength: Spacing.l)
-            ReportButton(action: onReport)
-            MessagesBellButton(unread: badges.unreadMessages, action: onMessages)
+            ReportButton(showsLabel: true, action: onReport)
+            MessagesBellButton(unread: badges.unreadMessages, showsLabel: true, action: onMessages)
             if let account { AccountAvatarMenu(account: account) }
             if let onClose {
                 Divider().frame(width: 64).padding(.vertical, Spacing.xs)
@@ -696,7 +696,7 @@ struct WorkspaceRail: View {
                         Text("Einsätze").font(.caption.weight(.semibold))
                     }
                     .frame(width: 80, height: 56)
-                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.primary.opacity(0.85))
@@ -752,7 +752,7 @@ struct SectionButton: View {
             }
             .foregroundStyle(isSelected ? Color.accentColor : Color.primary.opacity(0.75))
             .frame(maxWidth: .infinity, minHeight: height)
-            .background(isSelected ? ActionFill.selected : .clear, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(isSelected ? ActionFill.selected : .clear, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay(alignment: .topTrailing) {
                 if badge > 0 {
                     Text("\(badge)")
@@ -777,13 +777,13 @@ struct SectionButton: View {
 /// Bericht erstellen (Schritt 44).
 struct ReportButton: View {
     var size: CGFloat = TouchTarget.comfortable
+    /// Schritt 127: in der Seitenleiste mit Beschriftung.
+    var showsLabel = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "doc.richtext")
-                .font(.system(size: 22, weight: .semibold))
-                .frame(width: size, height: size)
+            RailIcon(systemImage: "doc.richtext", title: "Bericht", showsLabel: showsLabel, size: size)
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.primary.opacity(0.8))
@@ -794,13 +794,12 @@ struct ReportButton: View {
 struct MessagesBellButton: View {
     let unread: Int
     var size: CGFloat = TouchTarget.comfortable
+    var showsLabel = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: unread > 0 ? "bell.badge" : "bell")
-                .font(.system(size: 22, weight: .semibold))
-                .frame(width: size, height: size)
+            RailIcon(systemImage: unread > 0 ? "bell.badge" : "bell", title: "Meldungen", showsLabel: showsLabel, size: size)
                 .overlay(alignment: .topTrailing) {
                     if unread > 0 {
                         Text("\(unread)")
@@ -851,5 +850,27 @@ struct WorkspaceDetail: View {
 #Preview("Arbeitsbereich") {
     if let store = try? PreviewData.makeStore() {
         MissionWorkspaceView(store: store, account: AccountMenuModel(displayName: "Erika Beispiel", detail: "ELRD 1", signOut: {}), onClose: {})
+    }
+}
+
+/// Symbol der Seitenleiste, wahlweise mit Beschriftung darunter (Schritt 127).
+struct RailIcon: View {
+    let systemImage: String
+    let title: String
+    let showsLabel: Bool
+    let size: CGFloat
+
+    var body: some View {
+        if showsLabel {
+            VStack(spacing: 4) {
+                Image(systemName: systemImage).font(.system(size: 22, weight: .semibold))
+                Text(title).font(.caption.weight(.semibold))
+            }
+            .frame(width: 80, height: 56)
+        } else {
+            Image(systemName: systemImage)
+                .font(.system(size: 22, weight: .semibold))
+                .frame(width: size, height: size)
+        }
     }
 }

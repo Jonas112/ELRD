@@ -47,7 +47,7 @@ struct SituationReportSheet: View {
                         .lineSpacing(4)
                         .frame(minHeight: 320)
                         .padding(Spacing.s)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         .accessibilityLabel("Text der Lagemeldung")
                     ShareLink(item: text) {
                         Label("Teilen oder kopieren", systemImage: "square.and.arrow.up")
@@ -154,7 +154,7 @@ struct DemandCard: View {
                         .font(.headline)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .confirmationDialog("Nachfordern: \(demand.missingSummary)?", isPresented: $confirms, titleVisibility: .visible) {
@@ -184,7 +184,7 @@ struct DemandCard: View {
         }
         .padding(Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
     }
 
     private func request(_ demand: ResourceDemand) {
@@ -474,7 +474,7 @@ struct HospitalQuotaSheet: View {
                 .font(.headline.weight(.heavy))
                 .foregroundStyle(Color.onTriage(triage))
                 .frame(minWidth: 52, minHeight: 32)
-                .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(limit.map { "\(count) von \($0)" } ?? "\(count) Patienten")
                     .font(.body.weight(.semibold).monospacedDigit())

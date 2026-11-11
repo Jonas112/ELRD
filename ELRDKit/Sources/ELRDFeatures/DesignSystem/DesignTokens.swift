@@ -14,11 +14,18 @@ public enum Spacing {
     public static let xxl: CGFloat = 32
 }
 
-/// Eckenradien.
+/// Eckenradien – nur diese Werte verwenden (Schritt 127, E121).
 public enum Radius {
+    /// Kleine Marken (SK-Badge, Kürzel).
     public static let chip: CGFloat = 6
+    /// Eingabefelder, kleine Knöpfe, Zeilen.
     public static let control: CGFloat = 10
+    /// Karten und Listenblöcke.
     public static let card: CGFloat = 14
+    /// Große Knöpfe und Auswahlkacheln.
+    public static let large: CGFloat = 20
+    /// Startkacheln (Neuer Einsatz, Anmelden).
+    public static let hero: CGFloat = 28
 }
 
 /// Mindestgröße für Tippflächen (Apple HIG: 44 pt; im Einsatz mit Handschuhen eher mehr).
@@ -114,6 +121,17 @@ public extension View {
 }
 
 public extension View {
+    /// Schritt 128 (E122): kleines Blatt für wenig Inhalt (Nachrichten, Neuer
+    /// Eintrag, Checkliste) – auf dem iPad als Formularblatt statt Seitengröße.
+    @ViewBuilder
+    func formSheet() -> some View {
+        if #available(iOS 18.0, *) {
+            presentationSizing(.form)
+        } else {
+            self
+        }
+    }
+
     /// Blatt in Seitengröße statt kleinem Formularblatt (iPadOS 18+); weniger Scrollen.
     @ViewBuilder
     func largeSheet() -> some View {

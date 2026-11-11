@@ -24,7 +24,7 @@ struct ShareTextSheet: View {
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(Spacing.l)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     ViewThatFits(in: .horizontal) {
                         HStack(spacing: Spacing.m) { buttons }
                         VStack(alignment: .leading, spacing: Spacing.m) { buttons }

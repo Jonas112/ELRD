@@ -304,7 +304,7 @@ struct VehicleImagesView: View {
                             }
                         }
                         .frame(width: 88, height: 56)
-                        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                         Text(type.displayName).font(.headline)
                         Spacer()
                         if settings.image(for: type) != nil {

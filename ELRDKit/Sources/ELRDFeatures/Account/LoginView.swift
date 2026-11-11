@@ -34,7 +34,7 @@ struct LoginView: View {
                         .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 64, height: 64)
-                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         .accessibilityHidden(true)
                     Text("Anmelden").font(.largeTitle.weight(.heavy))
                 }
@@ -57,7 +57,7 @@ struct LoginView: View {
                                 UserRow(user: user) { select(user) }
                             }
                         }
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
                     }
                 }
             }
@@ -91,9 +91,9 @@ struct LoginView: View {
                     .onSubmit(login)
                     .padding(.horizontal, Spacing.l)
                     .frame(minHeight: 64)
-                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                             .strokeBorder(Color.accentColor, lineWidth: passwordFocused ? 2 : 0)
                     }
                     .accessibilityLabel("Passwort für \(user.displayName)")
@@ -112,14 +112,14 @@ struct LoginView: View {
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
-                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(isLoggingIn || (user.hasPassword && password.isEmpty))
             .opacity(isLoggingIn || (user.hasPassword && password.isEmpty) ? 0.5 : 1)
         }
         .padding(Spacing.xxl)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.hero, style: .continuous))
     }
 
     private func detail(for user: UserAccount) -> String {

@@ -49,7 +49,7 @@ struct InitialSetupView: View {
                             .font(.system(size: 30, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(width: 64, height: 64)
-                            .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                             .accessibilityHidden(true)
                         Text("Willkommen bei ELRD")
                             .font(.title2.weight(.bold))

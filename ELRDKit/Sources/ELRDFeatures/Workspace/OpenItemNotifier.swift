@@ -305,7 +305,7 @@ struct OpenItemBanner: View {
         }
         .padding(.horizontal, Spacing.l)
         .padding(.vertical, Spacing.s)
-        .background(Color.orange.gradient, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.orange.gradient, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .shadow(radius: 8, y: 4)
         .padding(.horizontal, Spacing.l)
         .frame(maxWidth: 720)

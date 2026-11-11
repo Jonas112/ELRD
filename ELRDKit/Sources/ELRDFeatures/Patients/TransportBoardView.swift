@@ -73,7 +73,7 @@ struct TransportBoardView: View {
         }
         .padding(Spacing.m)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .dropDestination(for: String.self) { items, _ in
             guard let raw = items.first, let id = PatientID(uuidString: raw) else { return false }
             move(id, to: stage)
@@ -102,7 +102,7 @@ struct TransportBoardView: View {
                 .font(.headline.weight(.heavy))
                 .foregroundStyle(Color.onTriage(patient.triage))
                 .frame(minWidth: 52, minHeight: 36)
-                .background(Color.triage(patient.triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Color.triage(patient.triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(patient.fullName.isEmpty ? patient.number.description : "\(patient.number) – \(patient.fullName)")
                     .font(.headline)
@@ -116,7 +116,7 @@ struct TransportBoardView: View {
             action(patient, stage: stage)
         }
         .padding(Spacing.s)
-        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture { onOpen(patient.id) }
         .accessibilityElement(children: .combine)

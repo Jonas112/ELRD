@@ -59,7 +59,7 @@ struct ReportEditorView: View {
             .navigationTitle("Bericht")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Schließen", action: onClose) }
+                ToolbarItem(placement: .confirmationAction) { Button("Fertig", action: onClose).fontWeight(.bold) }
                 ToolbarItemGroup(placement: .primaryAction) { outputButtons }
             }
         }
@@ -126,7 +126,7 @@ struct ReportEditorView: View {
                 }
                 .padding(.horizontal, Spacing.m)
                 .frame(minHeight: TouchTarget.comfortable)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             HStack(spacing: Spacing.s) {
                 if !isStandard {
@@ -191,7 +191,7 @@ struct ReportEditorView: View {
             }
         }
         .padding(Spacing.m)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .opacity(chapter.isEnabled ? 1 : 0.6)
     }
 

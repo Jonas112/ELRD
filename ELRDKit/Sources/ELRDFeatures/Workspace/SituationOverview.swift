@@ -90,7 +90,7 @@ struct SituationOverview: View {
                 case .communication: CommunicationPlanSheet(store: store)
                 }
             }
-            .largeSheet()
+            .modifier(ToolSheetSizing(tool: tool))
         }
     }
 
@@ -143,7 +143,7 @@ struct SituationOverview: View {
             .foregroundStyle(prominent ? Color.white : Color.primary)
             .padding(.horizontal, Spacing.l)
             .frame(minHeight: TouchTarget.large)
-            .background(prominent ? AnyShapeStyle(ActionFill.primary) : AnyShapeStyle(Surface.card), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(prominent ? AnyShapeStyle(ActionFill.primary) : AnyShapeStyle(Surface.card), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(title), \(detail)")
@@ -203,7 +203,7 @@ struct SituationOverview: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
     }
 
     private func acknowledge(_ item: OpenItem) {
@@ -230,7 +230,7 @@ struct SituationOverview: View {
             }
             .padding(Spacing.xl)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityHint("Öffnet die Patientenliste.")
@@ -260,7 +260,7 @@ struct SituationOverview: View {
         }
         .padding(Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
     }
 
     private func countTile(_ count: Int, _ label: String, target: WorkspaceSection, highlight: Bool = false) -> some View {
@@ -278,7 +278,7 @@ struct SituationOverview: View {
             }
             .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
             .padding(.horizontal, Spacing.l)
-            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(count) \(label)")
@@ -320,9 +320,9 @@ struct SituationOverview: View {
                                         .foregroundStyle(Color.onTriage(triage))
                                         .frame(minWidth: 48, minHeight: 32)
                                         .padding(.horizontal, Spacing.xs)
-                                        .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                        .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                                         .overlay {
-                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                            RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                                                 .strokeBorder(Color.orange, lineWidth: load.isOverloaded(triage) ? 3 : 0)
                                         }
                                         .accessibilityLabel(limit.map { "\(triage.displayName): \(count) von \($0)" } ?? "\(count) \(triage.displayName)")
@@ -337,7 +337,7 @@ struct SituationOverview: View {
                 }
                 .padding(.bottom, Spacing.s)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             }
             .buttonStyle(.plain)
         }
@@ -362,7 +362,7 @@ struct SituationOverview: View {
         }
         .padding(Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
     }
 
     private func statusTile(_ count: Int, _ label: String) -> some View {
@@ -379,7 +379,7 @@ struct SituationOverview: View {
             }
             .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
             .padding(.horizontal, Spacing.l)
-            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(count) \(label)")
@@ -414,13 +414,13 @@ struct SituationOverview: View {
                     .draftSync($journalText, field: .journal, mission: store.missionID)
                     .padding(.horizontal, Spacing.m)
                     .frame(minHeight: TouchTarget.comfortable)
-                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 Button(action: addJournalEntry) {
                     Image(systemName: "arrow.up")
                         .font(.title3.weight(.bold))
                         .foregroundStyle(.white)
                         .frame(width: TouchTarget.comfortable, height: TouchTarget.comfortable)
-                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(trimmedJournalText.isEmpty)
@@ -435,7 +435,7 @@ struct SituationOverview: View {
         }
         .padding(Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
     }
 
     private var trimmedJournalText: String {
@@ -544,15 +544,27 @@ struct OpenItemRow: View {
                 .font(.headline.weight(.heavy))
                 .foregroundStyle(Color.onTriage(triage))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.triage(triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 .accessibilityLabel(triage.displayName)
         } else {
             Image(systemName: item.kind == .unreadMessages ? "bell" : "box.truck")
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Schritt 128: Checkliste und Lagemeldung als Formularblatt, alles andere in Seitengröße.
+private struct ToolSheetSizing: ViewModifier {
+    let tool: SituationOverview.Tool
+
+    func body(content: Content) -> some View {
+        switch tool {
+        case .checklist, .report: content.formSheet()
+        default: content.largeSheet()
         }
     }
 }

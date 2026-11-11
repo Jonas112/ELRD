@@ -212,7 +212,7 @@ struct PatientDetailView: View {
                 .foregroundStyle(Color.onTriage(patient.triage))
                 .padding(.horizontal, Spacing.m)
                 .padding(.vertical, Spacing.xs)
-                .background(Color.triage(patient.triage), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.triage(patient.triage), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(patient.fullName.isEmpty ? "Name unbekannt" : patient.fullName)
                     .font((isCompact ? Font.title2 : Font.title).weight(.heavy))
@@ -659,7 +659,7 @@ struct PatientDetailView: View {
                 }
                 .foregroundStyle(canStart ? Color.white : Color.secondary)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
-                .background(canStart ? ActionFill.primary : Surface.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(canStart ? ActionFill.primary : Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!canStart)
@@ -758,10 +758,10 @@ struct PatientDetailView: View {
             }
             .padding(.horizontal, Spacing.m)
             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable, alignment: .leading)
-            .background(value == nil ? Surface.elevated : ActionFill.selected, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(value == nil ? Surface.elevated : ActionFill.selected, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .overlay {
                 if let accent {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(accent, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(accent, lineWidth: 2)
                 }
             }
         }
@@ -856,7 +856,7 @@ struct DetailCard<Content: View>: View {
         }
         .padding(Spacing.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
     }
 }
 
@@ -890,7 +890,7 @@ struct SegmentedChoice<Value: Hashable>: View {
             }
         }
         .padding(Spacing.xs)
-        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     @ViewBuilder
@@ -909,7 +909,7 @@ struct SegmentedChoice<Value: Hashable>: View {
             }
             .foregroundStyle(isSelected ? Color.white : color)
             .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum + 4)
-            .background(isSelected ? color : color.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(isSelected ? color : color.opacity(0.1), in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         } else {
             Text(title)
                 .font(.subheadline.weight(isSelected ? .heavy : .semibold))
@@ -918,7 +918,7 @@ struct SegmentedChoice<Value: Hashable>: View {
                 .minimumScaleFactor(0.75)
                 .foregroundStyle(isSelected ? .primary : .secondary)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum + 4)
-                .background(isSelected ? Surface.card : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(isSelected ? Surface.card : .clear, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
         }
     }
 }
@@ -929,7 +929,7 @@ extension View {
         padding(.horizontal, Spacing.m)
             .padding(.vertical, Spacing.s)
             .frame(minHeight: TouchTarget.comfortable)
-            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }
 
@@ -953,9 +953,9 @@ struct TriageChoiceButton: View {
                 .padding(.horizontal, Spacing.xs)
                 .foregroundStyle(Color.onTriage(category))
                 .frame(maxWidth: .infinity, minHeight: 64)
-                .background(Color.triage(category), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                         .strokeBorder(Color.primary, lineWidth: isSelected ? 5 : (TriageBadge.needsOutline(category) ? 1 : 0))
                 }
                 // Farben immer kräftig (lesbar); gewählt = dicker Rand + Häkchen.

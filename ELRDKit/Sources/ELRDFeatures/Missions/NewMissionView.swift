@@ -171,7 +171,7 @@ struct NewMissionView: View {
             }
         }
         .padding(Spacing.l)
-        .background(Color.purple.opacity(form.isExercise ? 0.10 : 0), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.purple.opacity(form.isExercise ? 0.10 : 0), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private func choose(_ scenario: ExerciseScenario) {
@@ -209,7 +209,7 @@ struct NewMissionView: View {
                     .font(.title2.weight(.heavy))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: TouchTarget.large + 8)
-                    .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.return, modifiers: .command)
@@ -238,7 +238,7 @@ struct NewMissionView: View {
             .font(.title3)
             .padding(.horizontal, Spacing.l)
             .frame(minHeight: TouchTarget.comfortable + 8)
-            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card + 2, style: .continuous))
+            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private func startMission() {

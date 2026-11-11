@@ -88,7 +88,7 @@ struct AddSectionSheet: View {
                                 .foregroundStyle(trimmed.isEmpty ? Color.secondary : Color.white)
                                 .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
                                 .background(trimmed.isEmpty ? Surface.elevated : ActionFill.primary,
-                                            in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                            in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                         }
                         .buttonStyle(.plain)
                         .disabled(trimmed.isEmpty)

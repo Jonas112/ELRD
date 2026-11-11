@@ -163,7 +163,7 @@ struct AddUnitSheet: View {
                     .foregroundStyle(trimmedCallsign.isEmpty ? Color.secondary : Color.white)
                     .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
                     .background(trimmedCallsign.isEmpty ? Surface.elevated : ActionFill.primary,
-                                in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                                in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(trimmedCallsign.isEmpty)
@@ -185,7 +185,7 @@ struct AddUnitSheet: View {
                         Label(candidate.shortName, systemImage: "plus")
                             .font(.title3.weight(.heavy))
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.large)
-                            .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(candidate.displayName) als Platzhalter")
@@ -205,7 +205,7 @@ struct AddUnitSheet: View {
                                 .minimumScaleFactor(0.7)
                         }
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.large + 8)
-                        .background(Surface.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(stichwort.rawValue): \(stichwort.summary) als Platzhalter")
@@ -276,7 +276,7 @@ struct MasterUnitRow: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(width: 60, height: 36)
-                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             Text(unit.callsign)
                 .font(.headline)
                 .foregroundStyle(.primary)
@@ -289,7 +289,7 @@ struct MasterUnitRow: View {
         }
         .padding(.horizontal, Spacing.m)
         .frame(minHeight: 60)
-        .background(Surface.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(unit.typeDisplayName) \(unit.callsign) hinzufügen")

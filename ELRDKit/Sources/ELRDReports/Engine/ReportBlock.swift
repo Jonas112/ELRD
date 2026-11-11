@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import ELRDDomain
 
 /// Baustein eines Berichts. Kapitel liefern Bausteine, die Engine verteilt sie auf

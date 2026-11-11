@@ -214,6 +214,7 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 | 121 | Taktische Zeichen verschieben: kurz gedrückt halten, dann ziehen (Jonas); Tippen bearbeitet | ✅ |
 | 122 | GPX-Export mehrerer Formen: Knopf „Export“ auf der Karte, Auswahl mit Haken, als Datei oder für Hundeteams | ✅ |
 | 123 | Beschriftung der Suchgebiete: Flächen/Rechtecke automatisch „Suchgebiet N“, Nummer in der Markierung, Bezeichnung als GPX-Wegpunkt | ✅ |
+| 124 | Zeichen verschieben, Nachbesserung: Bearbeitung nur noch über eigenen Tipp-Erkenner, nicht über MapKits Auswahl beim Berühren | 🧪 |
 
 ## Übergabenotizen
 - **Schritt 1 (2026-10-17):** Altes Repo analysiert, Inventar in `FUNKTIONEN.md`, Zielbild in `ARCHITEKTUR.md`, Beschlüsse in `ENTSCHEIDUNGEN.md`. Noch kein Code. Für Schritt 2 offen: Xcode-Version auf Jonas' Mac (für das Projektformat).
@@ -310,6 +311,8 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 - **Schritt 122 (2026-11-11):** Karte: neuer Knopf „Export“ (Knopfspalte) → `GPXExportSheet`: Dateiname, Einsatzort und Abschnitte an/aus, alle Formen und Zeichen mit Haken (anfangs alle; „Alle/Keine“), unten „Als Datei teilen“ und „Für Hundeteams (QR)“ (`GPXHandoutSheet` mit der Auswahl). Die GPX-Einträge im Menü „Ausschnitt“ entfallen dafür; das Bearbeiten-Blatt einer einzelnen Form behält seine Knöpfe. Demo `mapExport`.
 
 - **Schritt 123 (2026-11-11):** Jonas: Formen brauchen eine Beschriftung, um Suchgebiete zu erkennen – auch in der GPX-Datei. Neue Flächen und Rechtecke ohne Bezeichnung heißen automatisch „Suchgebiet N“ (nächste freie Nummer, änderbar im Feld „Bezeichnung“; Vorschlag „Suchgebiet“ ergänzt). Kreise, Pfeile, Zeichnungen und Zeichen bleiben unverändert. Auf der Karte zeigt die Markierung die Nummer, benannte Formen haben feste Beschriftung (`displayPriority .required`). GPX: Track heißt wie die Form (Beschreibung = Notiz, sonst Größe) und zusätzlich ein grüner Wegpunkt „Suchgebiet N“ im Schwerpunkt der Fläche (Pfeil: Startpunkt) – Garmin-Geräte zeigen Wegpunktnamen auf der Karte, Tracknamen meist nicht. Demo: zwei Suchgebiete.
+
+- **Schritt 124 (2026-11-11):** Jonas: Verschieben ging auf dem Gerät weiterhin nicht, die Bearbeitung öffnete sofort. Ursache: MapKit wählt Anmerkungen schon beim Berühren aus, das Blatt verdrängte das Gedrückthalten. Jetzt ignoriert `didSelect` die Zeichen (nur abwählen); `TacticalSignAnnotationView` hat einen eigenen `UITapGestureRecognizer`, der erst feuert, wenn das Gedrückthalten scheitert (`require(toFail:)`), und öffnet darüber die Bearbeitung. Das Gedrückthalten läuft gleichzeitig mit MapKits Erkennern. VoiceOver: `accessibilityActivate` öffnet die Bearbeitung. **Jonas:** auf dem Gerät prüfen.
 
 ## Offene Fragen an Jonas
 0. ~~Nachforderungs-Rechner (68)~~ geklärt (E87, E92).

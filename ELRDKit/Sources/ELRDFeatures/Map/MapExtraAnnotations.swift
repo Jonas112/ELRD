@@ -88,13 +88,15 @@ final class ArrowRenderer: MKPolylineRenderer {
     }
 }
 
-/// Taktisches Zeichen, das sich verschieben lässt (Schritte 121/122): kurz gedrückt
-/// halten, dann ziehen. Ein einfacher Tipp öffnet weiterhin die Bearbeitung; nach
-/// dem Verschieben öffnet sie sich nicht. Während des Ziehens steht die Karte still.
+/// Taktisches Zeichen, das sich verschieben lässt (Schritte 121/122/124): kurz gedrückt
+/// halten, dann ziehen. Ein einfacher Tipp (eigener Erkenner, erst wenn das Halten
+/// scheitert) öffnet die Bearbeitung; nach dem Verschieben nicht. Während des Ziehens steht die Karte still.
 @MainActor
 final class TacticalSignAnnotationView: MKAnnotationView, UIGestureRecognizerDelegate {
     var allowsMoving = false
     var onMoved: ((MapObjectID, GeoCoordinate) -> Void)?
+    /// Schritt 124: einfacher Tipp öffnet die Bearbeitung (nicht MapKits Auswahl).
+    var onTap: ((MapObjectID) -> Void)?
     /// Gerade gezogen bzw. eben losgelassen – dann keine Bearbeitung öffnen.
     private(set) var isMoving = false
     private var movedAt: Date?
@@ -115,14 +117,37 @@ final class TacticalSignAnnotationView: MKAnnotationView, UIGestureRecognizerDel
     private var startCoordinate: CLLocationCoordinate2D?
     private weak var map: MKMapView?
 
+    private lazy var tap: UITapGestureRecognizer = {
+        let recognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        recognizer.delegate = self
+        recognizer.require(toFail: press)
+        return recognizer
+    }()
+
     override init(annotation: (any MKAnnotation)?, reuseIdentifier: String?) {
         super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
-        addGestureRecognizer(press)
+        setUpGestures()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        setUpGestures()
+    }
+
+    private func setUpGestures() {
         addGestureRecognizer(press)
+        addGestureRecognizer(tap)
+    }
+
+    @objc private func handleTap(_ recognizer: UITapGestureRecognizer) {
+        guard recognizer.state == .ended, !suppressesSelection, let sign = annotation as? TacticalSignAnnotation else { return }
+        onTap?(sign.objectID)
+    }
+
+    override func accessibilityActivate() -> Bool {
+        guard let sign = annotation as? TacticalSignAnnotation, let onTap else { return false }
+        onTap(sign.objectID)
+        return true
     }
 
     private func mapView() -> MKMapView? {
@@ -139,6 +164,7 @@ final class TacticalSignAnnotationView: MKAnnotationView, UIGestureRecognizerDel
     }
 
     override func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+        if recognizer === tap { return annotation is TacticalSignAnnotation }
         guard recognizer === press else { return super.gestureRecognizerShouldBegin(recognizer) }
         return allowsMoving && annotation is TacticalSignAnnotation
     }
@@ -188,7 +214,9 @@ final class TacticalSignAnnotationView: MKAnnotationView, UIGestureRecognizerDel
         }
     }
 
+    /// Neben MapKits eigenen Erkennern (Auswahl, Doppeltipp-Zoom) laufen lassen, damit
+    /// sie das Gedrückthalten nicht verdrängen. Während des Ziehens steht die Karte still.
     func gestureRecognizer(_ recognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
-        false
+        other.view !== self
     }
 }

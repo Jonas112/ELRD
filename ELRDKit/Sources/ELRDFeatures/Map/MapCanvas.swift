@@ -280,10 +280,11 @@ struct MapCanvas: UIViewRepresentable {
                 return
             }
             if let sign = view.annotation as? TacticalSignAnnotation {
+                // Schritt 124: MapKit wählt schon beim Berühren aus – dann öffnete sich die
+                // Bearbeitung, bevor das Gedrückthalten greifen konnte. Zeichen öffnen die
+                // Bearbeitung deshalb nur über ihren eigenen Tipp-Erkenner.
                 mapView.deselectAnnotation(sign, animated: false)
-                // Nach dem Verschieben (gedrückt halten) keine Bearbeitung öffnen.
-                if let signView = view as? TacticalSignAnnotationView, signView.suppressesSelection { return }
-                onSelectObject(sign.objectID)
+                if !(view is TacticalSignAnnotationView) { onSelectObject(sign.objectID) }
                 return
             }
             guard let label = view.annotation as? MapObjectAnnotation else { return }
@@ -496,6 +497,7 @@ struct MapCanvas: UIViewRepresentable {
                 view.isDraggable = false
                 view.allowsMoving = canEdit
                 view.onMoved = { [weak self] objectID, coordinate in self?.onMoveObject(objectID, coordinate) }
+                view.onTap = { [weak self] objectID in self?.onSelectObject(objectID) }
                 view.canShowCallout = false
                 view.accessibilityLabel = sign.title
                 view.accessibilityHint = canEdit ? "Antippen bearbeitet, gedrückt halten und ziehen verschiebt" : nil

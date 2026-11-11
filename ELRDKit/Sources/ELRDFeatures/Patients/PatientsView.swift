@@ -240,8 +240,8 @@ struct PatientsView: View {
     /// Zeile öffnet den Patienten: im Stapel über den Pfad, in der geteilten Ansicht direkt.
     /// Schritt 131: langes Drücken zeigt SK ändern und Öffnen.
     private func rowLink<Label: View>(_ row: PatientRow, @ViewBuilder label: () -> Label) -> some View {
-        // Eingrenzung: Kontextmenü vorübergehend aus (Patientenliste hing beim Start).
         rowLinkBase(row, label: label)
+            .contextMenu { rowMenu(row) }
     }
 
     @ViewBuilder

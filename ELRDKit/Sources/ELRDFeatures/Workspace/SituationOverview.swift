@@ -93,7 +93,7 @@ struct SituationOverview: View {
                 case .communication: CommunicationPlanSheet(store: store)
                 }
             }
-            .largeSheet()
+            .modifier(ToolSheetSizing(tool: tool))
         }
     }
 

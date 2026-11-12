@@ -1,0 +1,35 @@
+# Entwicklung auf dem eigenen Rechner: Broker ohne TLS auf Port 1883,
+# Backend mit Debug-Seite auf http://localhost:8080 (Admin-Schlüssel siehe unten).
+#
+#   ./mosquitto/dev-passwd.sh          # einmal: Passwortdatei für die Testbenutzer
+#   docker compose -f docker-compose.dev.yml up --build
+services:
+  backend:
+    build: .
+    environment:
+      Elrd__Mqtt__Enabled: "true"
+      Elrd__Mqtt__Host: mosquitto
+      Elrd__Mqtt__Port: "1883"
+      Elrd__Mqtt__UseTls: "false"
+      Elrd__Mqtt__Username: elrd-backend
+      Elrd__Mqtt__Password: entwicklung-backend
+      Elrd__Admin__Key: entwicklung-admin-schluessel
+      Elrd__Debug__Enabled: "true"
+    volumes:
+      - elrd-dev-data:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./mosquitto/mosquitto.dev.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+    ports:
+      - "1883:1883"
+
+volumes:
+  elrd-dev-data:

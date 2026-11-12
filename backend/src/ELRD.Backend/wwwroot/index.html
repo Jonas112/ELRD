@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>ELRD-Backend</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header>
+    <h1>ELRD-Backend</h1>
+    <span class="subtitle">Datenschublade Alamos FE2 → ELRD</span>
+    <span id="version" class="pill"></span>
+    <button id="logout" class="link" hidden>Abmelden</button>
+  </header>
+
+  <main>
+    <!-- Anmeldung -->
+    <section id="login" class="card">
+      <h2>Anmelden</h2>
+      <p>Admin-Schlüssel aus <code>Elrd:Admin:Key</code>. Er bleibt nur in diesem Browser-Tab.</p>
+      <form id="loginForm" class="row">
+        <input id="adminKey" type="password" autocomplete="current-password" placeholder="Admin-Schlüssel" required>
+        <button type="submit">Anmelden</button>
+      </form>
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <div id="app" hidden>
+      <!-- Status -->
+      <section class="card">
+        <h2>Status</h2>
+        <dl id="status" class="grid"></dl>
+      </section>
+
+      <!-- Organisationen -->
+      <section class="card">
+        <h2>Organisationen</h2>
+        <p class="hint">Jede Organisation bekommt einen App-Schlüssel und ein eigenes MQTT-Topic. Der Schlüssel wird nur einmal angezeigt – in der App unter Einstellungen › Alamos FE2 eintragen.</p>
+        <table>
+          <thead><tr><th>Kennung</th><th>Name</th><th>MQTT-Topic (FE2)</th><th>Schlüssel</th><th>Einsätze</th><th></th></tr></thead>
+          <tbody id="organisations"></tbody>
+        </table>
+        <form id="orgForm" class="row">
+          <input id="orgId" placeholder="Kennung, z. B. brk-schweinfurt" pattern="[a-z0-9][a-z0-9\-]{1,39}" required>
+          <input id="orgName" placeholder="Name, z. B. BRK Schweinfurt" required>
+          <button type="submit">Anlegen</button>
+        </form>
+        <div id="newKey" class="notice" hidden></div>
+      </section>
+
+      <!-- Debug -->
+      <section id="debug" class="card">
+        <h2>Testeinsätze</h2>
+        <p id="debugOff" class="hint" hidden>Debug ist ausgeschaltet (<code>Elrd:Debug:Enabled</code>).</p>
+        <div id="debugOn">
+          <div class="row">
+            <label>Organisation <select id="debugOrg"></select></label>
+            <label>Weg
+              <select id="via">
+                <option value="direct">direkt in die Schublade</option>
+                <option value="mqtt">über den MQTT-Broker (ganze Kette)</option>
+              </select>
+            </label>
+          </div>
+          <div class="row" id="samples"></div>
+          <details>
+            <summary>Eigenes JSON (V2) einspielen</summary>
+            <textarea id="rawJson" rows="10" spellcheck="false" placeholder='{"type":"ALARM","sender":"Test","data":{"externalId":"123","keyword":"RD 2", ...}}'></textarea>
+            <button id="sendRaw">Einspielen</button>
+          </details>
+          <p id="debugMessage" class="notice" hidden></p>
+
+          <h3>Einsätze in der Schublade <button id="refresh" class="link">aktualisieren</button>
+            <button id="clearAll" class="link danger">alle löschen</button></h3>
+          <div id="alarms"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <template id="alarmTemplate">
+    <article class="alarm">
+      <div class="alarm-head">
+        <strong class="keyword"></strong>
+        <span class="description"></span>
+        <span class="badges"></span>
+      </div>
+      <div class="meta"></div>
+      <div class="address"></div>
+      <div class="detail"></div>
+      <div class="actions"></div>
+      <details><summary>JSON</summary><pre class="json"></pre></details>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

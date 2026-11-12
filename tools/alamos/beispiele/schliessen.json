@@ -1,0 +1,8 @@
+{
+  "type": "CLOSE",
+  "timestamp": "{{TIMESTAMP}}",
+  "sender": "Testskript",
+  "data": {
+    "externalId": "{{ID}}"
+  }
+}

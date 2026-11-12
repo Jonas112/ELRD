@@ -1,0 +1,8 @@
+# Zugriffsregeln für Mosquitto (ELRD).
+# Backend: liest alle Alarm-Topics, darf für die Debug-Seite auch senden.
+user elrd-backend
+topic readwrite elrd/#
+
+# FE2 je Organisation: Benutzername = Kennung der Organisation, darf nur
+# auf das eigene Alarm-Topic schreiben (z. B. brk-schweinfurt → elrd/brk-schweinfurt/alarm).
+pattern write elrd/%u/alarm

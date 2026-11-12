@@ -207,7 +207,7 @@ jobs:
           xcrun simctl boot "$DEVICE_ID" || true
           xcrun simctl bootstatus "$DEVICE_ID" -b
           xcrun simctl install "$DEVICE_ID" "$APP"
-          shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan communicationChart search tutorial mapSigns mapPath mapExport transportBoard handover}"
+          shoot "$DEVICE_ID" "" "light dark" "${ONLY:-setup login missions statistics newMission newExercise workspace missionDetails patients patientTiles patientDetail triageGuide whereabouts injuries unitPicker sections addUnit addPlaceholder replacePlaceholder map mapCollapsed mapTopo mapObject mapDrawing journal journalEntry journalNew missionTimeline debrief protocolLog messages report settings masterData onboarding situationReport checklist leadership hospitals distribution communicationPlan communicationChart search tutorial mapSigns mapPath mapExport transportBoard handover alamosInbox alamosAlarm alamosImport alamosSettings}"
           # Jedes Gerät nach seinen Fotos herunterfahren: mehrere laufende Simulatoren
           # bremsen den Runner so stark, dass der Lauf das Zeitlimit reißt.
           xcrun simctl shutdown "$DEVICE_ID" || true

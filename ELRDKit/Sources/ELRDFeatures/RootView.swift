@@ -28,6 +28,7 @@ public struct RootView: View {
                     .environment(environment.cloud)
                     .environment(environment.notifier)
                     .environment(environment.liveActivity)
+                    .environment(environment.alamos)
                     .modifier(DisplayModeModifier(settings: environment.settings))
                     // Schritt 116: neue Freigaben nur für zugelassene Personen.
                     .onChange(of: environment.settings.settings.requiresJoinApproval, initial: true) { _, required in
@@ -57,6 +58,7 @@ public struct RootView: View {
             do {
                 let made = try await AppEnvironment.make(options: options)
                 environment = made
+                if scenePhase == .active { made.alamos.start() }
                 await made.startCloud()
             } catch {
                 startupError = ErrorText.message(for: error)
@@ -67,6 +69,8 @@ public struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { environment?.drafts.flush() }
             if phase == .active, let cloud = environment?.cloud, cloud.hasLinks { cloud.syncAll() }
+            // Schritt 140: Alamos FE2 nur im Vordergrund abfragen.
+            if phase == .active { environment?.alamos.start() } else { environment?.alamos.stop() }
         }
     }
 }
@@ -127,7 +131,9 @@ struct SignedInView: View {
                     masterData: masterData,
                     isAdmin: user.role == .admin,
                     showsNewMissionInitially: environment.demoScreen == .newMission || environment.demoScreen == .newExercise,
-                    initialSettingsPage: environment.demoScreen == .settings ? .general : environment.demoScreen == .masterData ? .masterData : nil
+                    initialSettingsPage: environment.demoScreen == .settings ? .general
+                        : environment.demoScreen == .masterData ? .masterData
+                        : environment.demoScreen == .alamosSettings ? .alamos : nil
                 ) { store in
                     openStore = store
                 }

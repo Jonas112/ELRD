@@ -95,3 +95,13 @@ Ziel: modernes, ruhiges Layout und **vom Benutzer frei steuerbarer Inhalt**.
 - Damit bleibt ein späterer Wechsel (z. B. zu SQLite/GRDB, falls SwiftData unter iPadOS 17 Probleme macht) auf `ELRDPersistence` begrenzt.
 - Binärdaten (Fotos, Audio, Zeichnungen) als Dateien im App-Container, in der Datenbank nur Referenz + Prüfsumme.
 - Datenschutz: Dateischutz `completeUntilFirstUserAuthentication` für Datenbank und Anhänge.
+
+## Alamos FE2 und ELRD-Backend (Schritt 140)
+
+```
+Alamos FE2 ──JSON-Plugin (V2) + MQTT-Plugin──▶ Mosquitto ──▶ ELRD-Backend (backend/, .NET 10) ◀──HTTPS── App (AlamosInbox)
+```
+
+- Das Backend ist nur eine **Datenschublade** (E123): nimmt FE2-Einsätze an, hält sie 24 h, liefert sie per `GET /api/v1/alarms` an die App. Kein Abgleich von ELRD-Einsätzen (der bleibt bei iCloud, E88).
+- App: `AlamosAlarm`/`AlamosSettings` (Domäne), `AlarmImport` (Store, Teil von `NewMissionRequest`), `AlamosInbox`/`AlamosBackendClient` und Oberflächen in `ELRDFeatures/Alamos`. App-Schlüssel in der Keychain.
+- Einrichtung, Hosting und Schnittstelle: `backend/README.md`; Testalarme: `tools/alamos/`.

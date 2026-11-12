@@ -1,0 +1,45 @@
+{
+  "type": "ALARM",
+  "timestamp": "{{TIMESTAMP}}",
+  "sender": "Testskript",
+  "data": {
+    "externalId": "{{ID}}",
+    "keyword": "RD 1",
+    "keyword_description": "Bewusstlose Person",
+    "message": [
+      "Person liegt bewusstlos im Treppenhaus, Atmung vorhanden."
+    ],
+    "location": {
+      "coordinate": [
+        10.2341,
+        50.0494
+      ],
+      "street": "Markt",
+      "postalCode": "97421",
+      "city": "Schweinfurt",
+      "house": "1"
+    },
+    "caller": {
+      "name": "Testanrufer",
+      "contact": "0000 000000"
+    },
+    "units": [
+      {
+        "address": "ELRD"
+      }
+    ],
+    "vehicles": [
+      {
+        "id": "RKSWFT71-2",
+        "name": "RK SWFT 71/2",
+        "radioName": "RK SWFT 71/2",
+        "unitType": "RTW",
+        "station": "SWFT",
+        "alarmedTime": 0
+      }
+    ],
+    "custom": {
+      "elrdTest": "true"
+    }
+  }
+}

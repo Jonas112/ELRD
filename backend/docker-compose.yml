@@ -1,0 +1,41 @@
+# ELRD-Backend mit eigenem MQTT-Broker (Mosquitto) auf einem Server.
+#
+#   1. .env aus .env.beispiel anlegen und ausfüllen
+#   2. Passwörter für den Broker anlegen (siehe README, Abschnitt „Broker“)
+#   3. TLS-Zertifikat nach mosquitto/certs (fullchain.pem, privkey.pem)
+#   4. docker compose up -d --build
+#
+# Für die Entwicklung ohne TLS: docker compose -f docker-compose.dev.yml up --build
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      Elrd__Mqtt__Enabled: "true"
+      # Im Docker-Netz direkt zum Broker, ohne Umweg über das Internet.
+      Elrd__Mqtt__Host: mosquitto
+      Elrd__Mqtt__Port: "1883"
+      Elrd__Mqtt__UseTls: "false"
+    volumes:
+      - elrd-data:/data
+    ports:
+      # Davor gehört ein Reverse Proxy mit HTTPS (z. B. Caddy, siehe README).
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - mosquitto
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/certs:/mosquitto/certs:ro
+    ports:
+      # Nur TLS nach außen; 1883 bleibt im Docker-Netz.
+      - "8883:8883"
+
+volumes:
+  elrd-data:

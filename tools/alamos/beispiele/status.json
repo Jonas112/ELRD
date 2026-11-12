@@ -1,0 +1,10 @@
+{
+  "type": "STATUS",
+  "timestamp": "{{TIMESTAMP}}",
+  "sender": "Testskript",
+  "data": {
+    "status": "3",
+    "event": "Einsatz übernommen",
+    "radioName": "RK SWFT 71/1"
+  }
+}

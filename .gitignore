@@ -19,3 +19,6 @@ Package.resolved.bak
 
 # macOS
 .DS_Store
+
+# Testskript Alamos (Zustand gesendeter Einsätze)
+tools/alamos/.zustand.json

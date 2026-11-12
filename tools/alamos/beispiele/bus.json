@@ -1,0 +1,94 @@
+{
+  "type": "ALARM",
+  "timestamp": "{{TIMESTAMP}}",
+  "sender": "Testskript",
+  "data": {
+    "externalId": "{{ID}}",
+    "keyword": "RD 4",
+    "keyword_description": "VU Reisebus, mehrere Verletzte (MANV)",
+    "message": [
+      "Reisebus auf Seite, ca. 20 Insassen.",
+      "Zufahrt über AS Schweinfurt/Werneck."
+    ],
+    "location": {
+      "coordinate": [
+        10.1003,
+        49.9811
+      ],
+      "street": "A 70",
+      "postalCode": "97440",
+      "city": "Werneck"
+    },
+    "caller": {
+      "name": "Testanrufer",
+      "contact": "0000 000000"
+    },
+    "units": [
+      {
+        "address": "ELRD"
+      }
+    ],
+    "vehicles": [
+      {
+        "id": "RKSWFT71-1",
+        "name": "RK SWFT 71/1",
+        "radioName": "RK SWFT 71/1",
+        "unitType": "RTW",
+        "station": "SWFT",
+        "alarmedTime": 0
+      },
+      {
+        "id": "JOHSWFT71-1",
+        "name": "JOH SWFT 71/1",
+        "radioName": "JOH SWFT 71/1",
+        "unitType": "RTW",
+        "station": "SWFT",
+        "alarmedTime": 0
+      },
+      {
+        "id": "RKWRNCK71-1",
+        "name": "RK WRNCK 71/1",
+        "radioName": "RK WRNCK 71/1",
+        "unitType": "RTW",
+        "station": "WRNCK",
+        "alarmedTime": 0
+      },
+      {
+        "id": "RKSWFT76-1",
+        "name": "RK SWFT 76/1",
+        "radioName": "RK SWFT 76/1",
+        "unitType": "NEF",
+        "station": "SWFT",
+        "alarmedTime": 0
+      },
+      {
+        "id": "JOHSWFT76-1",
+        "name": "JOH SWFT 76/1",
+        "radioName": "JOH SWFT 76/1",
+        "unitType": "NEF",
+        "station": "SWFT",
+        "alarmedTime": 0
+      }
+    ],
+    "custom": {
+      "elrdTest": "true"
+    },
+    "patient": [
+      {
+        "name": "",
+        "remark": "eingeklemmt, Bein deformiert",
+        "patientNumber": "1"
+      },
+      {
+        "name": "",
+        "remark": "Kopfplatzwunde, gehfähig",
+        "patientNumber": "2"
+      },
+      {
+        "name": "",
+        "remark": "Thoraxschmerz, blass",
+        "patientNumber": "3"
+      }
+    ]
+  }
+}

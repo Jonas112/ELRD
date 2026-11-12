@@ -12,7 +12,21 @@ struct NewMissionView: View {
     static let contentWidth: CGFloat = 760
 
     @Environment(\.dismiss) private var dismiss
-    @State private var form: NewMissionForm = {
+    @State private var form: NewMissionForm
+    /// Ausgangsstand (für „ungespeicherte Eingaben“ beim Wischen).
+    private let initialForm: NewMissionForm
+    @State private var errorMessage: String?
+
+    /// - Parameter initialForm: vorbefüllt, z. B. bei der Übernahme aus Alamos FE2 (Schritt 140).
+    init(commanderName: String, initialForm: NewMissionForm? = nil, start: @escaping (NewMissionForm) throws -> Void) {
+        self.commanderName = commanderName
+        self.start = start
+        let form = initialForm ?? Self.defaultForm()
+        self.initialForm = form
+        _form = State(initialValue: form)
+    }
+
+    private static func defaultForm() -> NewMissionForm {
         // Bildschirmfoto „Übung“: Lage schon gewählt.
         guard AppLaunchOptions.current.demoScreen == .newExercise, let bus = ExerciseScenario.scenario(id: "bus") else { return NewMissionForm() }
         var form = NewMissionForm()
@@ -22,13 +36,13 @@ struct NewMissionView: View {
         form.reason = bus.reason
         form.location = bus.location
         return form
-    }()
-    @State private var errorMessage: String?
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xxl) {
+                    if let alarm = form.alarm { importSection(alarm) }
                     stichwortSection
                     typeSection
                     locationSection
@@ -44,7 +58,7 @@ struct NewMissionView: View {
             .scrollDismissesKeyboard(.interactively)
             .background(Surface.canvas)
             .safeAreaInset(edge: .bottom) { startBar }
-            .navigationTitle("Neuer Einsatz")
+            .navigationTitle(form.alarm == nil ? "Neuer Einsatz" : "Einsatz übernehmen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -54,7 +68,7 @@ struct NewMissionView: View {
             }
         }
         // Eingaben nicht durch versehentliches Wischen verlieren.
-        .interactiveDismissDisabled(form != NewMissionForm())
+        .interactiveDismissDisabled(form != initialForm || form.alarm != nil)
     }
 
     // MARK: Abschnitte
@@ -76,6 +90,51 @@ struct NewMissionView: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// Schritt 140: Übernahme aus Alamos FE2 – was mitkommt.
+    private func importSection(_ alarm: AlamosAlarm) -> some View {
+        let data = alarm.data
+        return VStack(alignment: .leading, spacing: Spacing.m) {
+            HStack(spacing: Spacing.s) {
+                Label("Aus Alamos FE2", systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.headline)
+                if alarm.isTest { StatusChip("Test", color: .purple) }
+                Spacer(minLength: 0)
+                Text("Nr. \(alarm.externalId)")
+                    .font(.callout.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Text("Meldebild, Ort und Einsatznummer sind übernommen. Der Alarmtext kommt ins Tagebuch, der Einsatzort auf die Karte.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            if !data.callsigns.isEmpty {
+                Toggle(isOn: $form.importsVehicles) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Alarmierte Fahrzeuge übernehmen (\(data.callsigns.count))").font(.headline)
+                        Text(data.callsigns.joined(separator: ", "))
+                            .font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+                .onChange(of: form.importsVehicles) { _, imports in
+                    // Echte Fahrzeuge statt Platzhalter: Stichwort nur ohne Fahrzeugübernahme vorschlagen.
+                    if imports { form.alarmstichwort = nil } else if form.alarmstichwort == nil { form.alarmstichwort = data.alarmstichwort }
+                }
+            }
+            if !data.patients.isEmpty {
+                Toggle(isOn: $form.importsPatients) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Gemeldete Patienten anlegen (\(data.patients.count))").font(.headline)
+                        Text("Ungesichtet, Angaben der Leitstelle in der Notiz.")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(minHeight: TouchTarget.comfortable)
+            }
+        }
+        .padding(Spacing.l)
+        .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     private var stichwortHint: String {
@@ -205,7 +264,7 @@ struct NewMissionView: View {
                     .font(.callout)
             }
             Button(action: startMission) {
-                Label("Einsatz starten", systemImage: "play.fill")
+                Label(form.alarm == nil ? "Einsatz starten" : "Übernehmen und starten", systemImage: "play.fill")
                     .font(.title2.weight(.heavy))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, minHeight: TouchTarget.large + 8)

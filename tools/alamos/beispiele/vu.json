@@ -1,0 +1,61 @@
+{
+  "type": "ALARM",
+  "timestamp": "{{TIMESTAMP}}",
+  "sender": "Testskript",
+  "data": {
+    "externalId": "{{ID}}",
+    "keyword": "RD 2",
+    "keyword_description": "VU Pkw gegen Baum, 1 Person eingeklemmt",
+    "message": [
+      "Pkw gegen Baum, Fahrer eingeklemmt, ansprechbar.",
+      "FF Schweinfurt alarmiert."
+    ],
+    "location": {
+      "coordinate": [
+        10.2165,
+        50.0546
+      ],
+      "street": "Niederwerrner Straße",
+      "postalCode": "97421",
+      "city": "Schweinfurt",
+      "house": "100"
+    },
+    "caller": {
+      "name": "Testanrufer",
+      "contact": "0000 000000"
+    },
+    "units": [
+      {
+        "address": "ELRD"
+      }
+    ],
+    "vehicles": [
+      {
+        "id": "RKSWFT71-1",
+        "name": "RK SWFT 71/1",
+        "radioName": "RK SWFT 71/1",
+        "unitType": "RTW",
+        "station": "SWFT",
+        "alarmedTime": 0
+      },
+      {
+        "id": "RKSWFT76-1",
+        "name": "RK SWFT 76/1",
+        "radioName": "RK SWFT 76/1",
+        "unitType": "NEF",
+        "station": "SWFT",
+        "alarmedTime": 0
+      }
+    ],
+    "custom": {
+      "elrdTest": "true"
+    },
+    "patient": [
+      {
+        "name": "",
+        "remark": "eingeklemmt, ansprechbar, Schmerzen Becken",
+        "patientNumber": "1"
+      }
+    ]
+  }
+}

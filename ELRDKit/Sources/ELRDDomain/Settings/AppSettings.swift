@@ -50,6 +50,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var requiresJoinApproval: Bool = false
     /// Schritt 120: GPX-Freigaben für Hundeteams bei Einsatzende in iCloud löschen.
     public var deletesGPXSharesOnClose: Bool = true
+    /// Schritt 140: Einsätze aus Alamos FE2 über das ELRD-Backend.
+    public var alamos = AlamosSettings()
     public static let anonymizeChoices = [0, 30, 90, 180, 365]
 
     public init() {}
@@ -81,6 +83,7 @@ public struct AppSettings: Codable, Hashable, Sendable {
         nightMode = try container.decodeIfPresent(Bool.self, forKey: .nightMode) ?? false
         requiresJoinApproval = try container.decodeIfPresent(Bool.self, forKey: .requiresJoinApproval) ?? false
         deletesGPXSharesOnClose = try container.decodeIfPresent(Bool.self, forKey: .deletesGPXSharesOnClose) ?? true
+        alamos = (try? container.decodeIfPresent(AlamosSettings.self, forKey: .alamos)) ?? AlamosSettings()
     }
 
     /// Gültige E-Mail-Form (grob: etwas@etwas.tld).

@@ -36,6 +36,11 @@ struct MissionListView: View {
     @State private var pendingAnonymize: MissionSummary?
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
+    /// Schritt 140: Einsätze aus Alamos FE2.
+    @Environment(AlamosInbox.self) private var alamos: AlamosInbox?
+    @State private var selectedAlarm: AlamosAlarm?
+    @State private var pendingAlarmImport: AlarmImportRequest?
+    @State private var alarmImport: AlarmImportRequest?
     @AppStorage("missionList.showsAllYears") private var showsAllYears = false
 
     init(
@@ -63,6 +68,12 @@ struct MissionListView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.xxl) {
                     banner
+                    if let alamos, alamos.isEnabled {
+                        AlamosInboxCard(inbox: alamos, imported: importedAlarms) { alarm in
+                            alamos.markSeen(alarm)
+                            selectedAlarm = alarm
+                        }
+                    }
                     topRow(running: result.running)
                     if model.canCreate { tutorialBanner }
                     finishedSection(result)
@@ -148,6 +159,7 @@ struct MissionListView: View {
             ActivityView(items: [file.url])
         }
         .background { extrasHost }
+        .background { alamosHost }
         .sheet(isPresented: $showsNearby) {
             NearbySyncView(session: makeNearbySession())
         }
@@ -515,6 +527,56 @@ struct MissionListView: View {
 
     /// Schritte 100–102: Dialoge und Blätter an einer eigenen, unsichtbaren Ansicht –
     /// sonst wird `body` für den Compiler zu lang.
+    // MARK: Alamos FE2 (Schritt 140)
+
+    /// Übernommene Einsätze nach FE2-Einsatznummer.
+    private var importedAlarms: [String: MissionSummary] {
+        Dictionary(model.missions.compactMap { summary in summary.externalAlarmID.map { ($0, summary) } }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Einzelheiten und Übernahme; „Neuer Einsatz“ öffnet erst, wenn das Blatt zu ist.
+    private var alamosHost: some View {
+        Color.clear
+            .sheet(item: $selectedAlarm, onDismiss: {
+                if let pending = pendingAlarmImport {
+                    pendingAlarmImport = nil
+                    alarmImport = pending
+                }
+            }) { alarm in
+                AlamosAlarmSheet(
+                    alarm: alarm,
+                    masterUnits: model.masterUnits(),
+                    imported: importedAlarms[alarm.externalId],
+                    canCreate: model.canCreate,
+                    onImport: {
+                        pendingAlarmImport = AlarmImportRequest(form: .importing(alarm, settings: alamos?.settings ?? AlamosSettings()))
+                        selectedAlarm = nil
+                    },
+                    onOpen: { summary in
+                        selectedAlarm = nil
+                        open(summary.id)
+                    }
+                )
+                .largeSheet()
+            }
+            .fullScreenCover(item: $alarmImport) { request in
+                NewMissionView(commanderName: model.session.displayName, initialForm: request.form) { form in
+                    let store = try model.create(form, template: appSettings?.settings.template(for: form.type))
+                    alarmImport = nil
+                    onOpen(store)
+                }
+            }
+            .task {
+                // Bildschirmfotos: Einzelheiten bzw. Übernahme direkt zeigen.
+                guard let alamos, alamos.isDemo, let first = alamos.visibleAlarms.first else { return }
+                switch AppLaunchOptions.current.demoScreen {
+                case .alamosAlarm: selectedAlarm = first
+                case .alamosImport: alarmImport = AlarmImportRequest(form: .importing(first, settings: alamos.settings))
+                default: break
+                }
+            }
+    }
+
     private var extrasHost: some View {
         Color.clear
             .confirmationDialog(
@@ -873,3 +935,8 @@ struct ActivityView: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
+/// Übernahme eines Einsatzes aus Alamos FE2 (für `fullScreenCover(item:)`).
+struct AlarmImportRequest: Identifiable {
+    let id = UUID()
+    let form: NewMissionForm
+}

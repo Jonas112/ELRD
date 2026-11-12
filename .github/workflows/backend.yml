@@ -1,0 +1,66 @@
+name: Backend
+
+# ELRD-Backend (.NET, Ordner backend/): bauen und testen – inklusive der MQTT-Kette
+# gegen einen echten Mosquitto. Läuft nur bei Änderungen am Backend oder am Testskript.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "tools/alamos/**"
+      - ".github/workflows/backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Mosquitto für den Kettentest
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mosquitto mosquitto-clients
+          sudo systemctl stop mosquitto || true
+          mkdir -p /tmp/mq
+          cp mosquitto/acl /tmp/mq/acl
+          touch /tmp/mq/passwd
+          mosquitto_passwd -b /tmp/mq/passwd elrd-backend entwicklung-backend
+          mosquitto_passwd -b /tmp/mq/passwd test-rd entwicklung-fe2
+          sed 's#/mosquitto/config#/tmp/mq#g' mosquitto/mosquitto.dev.conf > /tmp/mq/mosquitto.conf
+          sudo chown -R mosquitto /tmp/mq
+          sudo mosquitto -c /tmp/mq/mosquitto.conf -d
+          sleep 1
+
+      - name: Bauen
+        run: dotnet build -c Release
+
+      - name: Tests
+        env:
+          ELRD_TEST_MQTT: localhost:1883:elrd-backend:entwicklung-backend
+        run: dotnet run -c Release --no-build --project tests/ELRD.Backend.Tests
+
+      - name: Testskript (Syntax und Beispiele)
+        working-directory: tools/alamos
+        run: |
+          python3 -m py_compile testalarm.py
+          for file in beispiele/*.json; do python3 -m json.tool "$file" > /dev/null; done
+          python3 testalarm.py liste
+
+      - name: Container bauen
+        run: docker build -t elrd-backend:ci .

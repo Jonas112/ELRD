@@ -45,9 +45,15 @@
 	</array>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
-	<!-- Abgleich vor Ort (Schritt 66, MultipeerConnectivity). -->
+	<!-- Abgleich vor Ort (Schritt 66, MultipeerConnectivity); Schritt 140: ELRD-Backend im lokalen Netz. -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Gleicht Einsätze mit iPads in der Nähe ab – ohne Internet und ohne Server.</string>
+	<string>Gleicht Einsätze mit iPads in der Nähe ab und erreicht ein ELRD-Backend im eigenen Netz.</string>
+	<!-- Schritt 140: ELRD-Backend zum Testen ohne HTTPS nur im lokalen Netz; sonst gilt HTTPS. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<!-- iCloud-Teilen: Einladungslinks öffnen ELRD; stille Push-Mitteilungen bei Änderungen. -->
 	<key>CKSharingSupported</key>
 	<true/>

@@ -25,6 +25,8 @@ public struct MissionSummary: Identifiable, Equatable, Sendable {
     public let triageCounts: [Sichtungskategorie: Int]
     /// Vorschaubild: markierter Eintrag, sonst erstes Foto, sonst letzter Kartenausschnitt.
     public let thumbnail: FileAttachment?
+    /// Einsatznummer im Alarmierungssystem, falls übernommen (Schritt 140).
+    public let externalAlarmID: String?
 
     public init(mission: Mission, patients: [Patient], journal: [JournalEntry] = [], calendar: Calendar = .current) {
         id = mission.id
@@ -39,6 +41,7 @@ public struct MissionSummary: Identifiable, Equatable, Sendable {
         isClosed = mission.isClosed
         isExercise = mission.isExerciseMission
         isAnonymized = mission.anonymizedAt != nil
+        externalAlarmID = mission.externalAlarm?.externalID
         let active = patients.active
         patientCount = active.count
         triageCounts = Patient.countsByTriage(active)

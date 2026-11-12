@@ -9,7 +9,7 @@ import ELRDEntitlements
 /// Einstellungen (Schritte 47–51): Allgemein, Fahrzeugbilder, Stammdaten, IVENA,
 /// Abo, Vereinbarungen. Stammdaten ändern nur Administratoren.
 struct SettingsView: View {
-    enum Page: Hashable { case general, display, sharing, missionAids, leadershipPeople, vehicleImages, masterData, ivena, subscription, agreements }
+    enum Page: Hashable { case general, display, sharing, missionAids, leadershipPeople, vehicleImages, masterData, ivena, alamos, subscription, agreements }
 
     let masterData: MasterDataEditor?
     let isAdmin: Bool
@@ -32,6 +32,7 @@ struct SettingsView: View {
                 Section {
                     row(.masterData, "Stammdaten", "list.bullet.rectangle", "Fahrzeuge, Kliniken, Abschnitte, Regionen")
                     row(.ivena, "IVENA", "cross.case", "Katalog, Anzeige beim Patienten")
+                    row(.alamos, "Alamos FE2", "antenna.radiowaves.left.and.right", "Einsätze aus der Alarmierung übernehmen (ELRD-Backend)")
                 }
                 Section {
                     row(.subscription, "Abo", "creditcard", "Freischaltung und Kauf")
@@ -57,6 +58,7 @@ struct SettingsView: View {
                 case .vehicleImages: VehicleImagesView()
                 case .masterData: MasterDataSettingsView(masterData: masterData, isAdmin: isAdmin)
                 case .ivena: IVENASettingsView(masterData: masterData, isAdmin: isAdmin)
+                case .alamos: AlamosSettingsView()
                 case .subscription: SubscriptionView()
                 case .agreements: AgreementsView()
                 }

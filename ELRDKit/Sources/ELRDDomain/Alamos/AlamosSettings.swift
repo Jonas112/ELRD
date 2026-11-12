@@ -1,0 +1,54 @@
+import Foundation
+
+/// Anbindung an Alamos FE2 über das ELRD-Backend (Schritt 140). Teil der
+/// Geräteeinstellungen; der App-Schlüssel liegt nicht hier, sondern in der Keychain.
+public struct AlamosSettings: Codable, Hashable, Sendable {
+    /// Einsätze vom Backend abfragen und in der Einsatzliste zeigen.
+    public var isEnabled: Bool = false
+    /// Adresse des ELRD-Backends, z. B. `https://elrd.example.de`.
+    public var backendURL: String = ""
+    /// Abfrage alle … Sekunden, solange die App im Vordergrund ist.
+    public var pollSeconds: Int = 30
+    /// Beim Übernehmen standardmäßig Fahrzeuge bzw. gemeldete Patienten anlegen.
+    public var importsVehicles: Bool = true
+    public var importsPatients: Bool = true
+    /// In FE2 geschlossene Einsätze weiter zeigen.
+    public var showsClosed: Bool = false
+    /// Testeinsätze (Debug-Seite, Testskript) zeigen.
+    public var showsTests: Bool = true
+    /// Name der Organisation laut Backend (beim Verbindungstest gemerkt).
+    public var organisationName: String?
+
+    public static let pollChoices = [15, 30, 60, 120]
+
+    public init() {}
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = AlamosSettings()
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? defaults.isEnabled
+        backendURL = try container.decodeIfPresent(String.self, forKey: .backendURL) ?? defaults.backendURL
+        pollSeconds = try container.decodeIfPresent(Int.self, forKey: .pollSeconds) ?? defaults.pollSeconds
+        importsVehicles = try container.decodeIfPresent(Bool.self, forKey: .importsVehicles) ?? defaults.importsVehicles
+        importsPatients = try container.decodeIfPresent(Bool.self, forKey: .importsPatients) ?? defaults.importsPatients
+        showsClosed = try container.decodeIfPresent(Bool.self, forKey: .showsClosed) ?? defaults.showsClosed
+        showsTests = try container.decodeIfPresent(Bool.self, forKey: .showsTests) ?? defaults.showsTests
+        organisationName = try container.decodeIfPresent(String.self, forKey: .organisationName)
+    }
+
+    /// Adresse als URL: ohne Schema wird `https://` ergänzt, abschließende „/“ entfernt.
+    public var normalizedURL: URL? {
+        Self.normalize(backendURL)
+    }
+
+    public static func normalize(_ text: String) -> URL? {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        if !trimmed.lowercased().hasPrefix("http://"), !trimmed.lowercased().hasPrefix("https://") {
+            trimmed = "https://" + trimmed
+        }
+        while trimmed.hasSuffix("/") { trimmed.removeLast() }
+        guard let url = URL(string: trimmed), let host = url.host, !host.isEmpty else { return nil }
+        return url
+    }
+}

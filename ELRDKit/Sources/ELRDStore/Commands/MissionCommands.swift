@@ -18,6 +18,8 @@ public struct NewMissionRequest: Sendable {
     public var scenario: ExerciseScenario?
     /// Lernpfad (Schritt 139): Übung mit Anleitung.
     public var isTutorial: Bool = false
+    /// Übernahme aus Alamos FE2 (Schritt 140): Ort, Tagebuch, Fahrzeuge, Patienten.
+    public var alarmImport: AlarmImport?
 
     public init(
         reason: String = "",
@@ -74,6 +76,9 @@ public struct NewMissionRequest: Sendable {
         }
         if let scenario {
             try Self.play(scenario, into: &draft)
+        }
+        if let alarmImport {
+            try alarmImport.apply(to: &draft)
         }
     }
 

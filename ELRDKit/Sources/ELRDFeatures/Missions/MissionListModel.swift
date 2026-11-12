@@ -20,13 +20,32 @@ struct NewMissionForm: Equatable {
     var scenarioID: String?
     /// Lernpfad (Schritt 139).
     var isTutorial = false
+    /// Übernahme aus Alamos FE2 (Schritt 140).
+    var alarm: AlamosAlarm?
+    var importsVehicles = false
+    var importsPatients = false
+
+    /// Vorbefüllt aus einem Einsatz aus Alamos FE2.
+    static func importing(_ alarm: AlamosAlarm, settings: AlamosSettings) -> NewMissionForm {
+        let data = alarm.data
+        var form = NewMissionForm()
+        form.alarm = alarm
+        form.reason = data.title
+        form.location = data.location?.addressLine ?? ""
+        form.dispatchNumber = alarm.externalId
+        form.importsVehicles = settings.importsVehicles && !data.callsigns.isEmpty
+        form.importsPatients = settings.importsPatients && !data.patients.isEmpty
+        // Echte Fahrzeuge statt Platzhalter: Stichwort nur ohne Fahrzeugübernahme.
+        form.alarmstichwort = form.importsVehicles ? nil : data.alarmstichwort
+        return form
+    }
 
     /// Einsatzarten in der Reihenfolge der Auswahl (häufige zuerst).
     static let typeOrder: [MissionType] = MissionType.defaultOrder
 
     /// Baut die Anfrage; Standardabschnitte kommen aus den Stammdaten, dazu die der
     /// Vorlage der Einsatzart (Schritt 106).
-    func request(automaticSections: [MasterSection], template: MissionTypeSetting? = nil) -> NewMissionRequest {
+    func request(automaticSections: [MasterSection], template: MissionTypeSetting? = nil, masterUnits: [MasterUnit] = []) -> NewMissionRequest {
         let sections = automaticSections.sorted { $0.sortIndex < $1.sortIndex }
         let merged = MissionTemplateSections.merge(
             master: sections.map(\.name),
@@ -46,6 +65,14 @@ struct NewMissionForm: Equatable {
         request.isExercise = isExercise
         request.isTutorial = isTutorial
         request.scenario = isExercise ? scenarioID.flatMap(ExerciseScenario.scenario(id:)) : nil
+        if let alarm {
+            request.alarmImport = AlarmImport(
+                alarm: alarm,
+                includesVehicles: importsVehicles,
+                includesPatients: importsPatients,
+                masterUnits: masterUnits
+            )
+        }
         return request
     }
 
@@ -82,6 +109,8 @@ final class MissionListModel {
     @ObservationIgnored private let clock: DeviceClock
     @ObservationIgnored private let entitlements: any EntitlementProvider
     @ObservationIgnored private let automaticSections: () -> [MasterSection]
+    /// Fahrzeuge der Stammdaten (Übernahme aus Alamos FE2, Schritt 140).
+    @ObservationIgnored let masterUnits: () -> [MasterUnit]
     @ObservationIgnored private let files: AttachmentFileStore?
     @ObservationIgnored let now: () -> Date
 
@@ -91,6 +120,7 @@ final class MissionListModel {
         clock: DeviceClock,
         entitlements: any EntitlementProvider,
         automaticSections: @escaping () -> [MasterSection] = { [] },
+        masterUnits: @escaping () -> [MasterUnit] = { [] },
         files: AttachmentFileStore? = nil,
         now: @escaping () -> Date = Date.init
     ) {
@@ -99,6 +129,7 @@ final class MissionListModel {
         self.clock = clock
         self.entitlements = entitlements
         self.automaticSections = automaticSections
+        self.masterUnits = masterUnits
         self.files = files
         self.now = now
         reload()
@@ -113,6 +144,9 @@ final class MissionListModel {
             entitlements: environment.entitlements,
             automaticSections: {
                 (try? repository.document(MasterDataSet.self, key: .masterData))?.automaticSections ?? []
+            },
+            masterUnits: {
+                (try? repository.document(MasterDataSet.self, key: .masterData))?.units ?? []
             },
             files: environment.attachments
         )
@@ -154,7 +188,7 @@ final class MissionListModel {
 
     func create(_ form: NewMissionForm, template: MissionTypeSetting? = nil) throws -> MissionStore {
         let store = try MissionStore.create(
-            form.request(automaticSections: automaticSections(), template: template),
+            form.request(automaticSections: automaticSections(), template: template, masterUnits: form.alarm == nil ? [] : masterUnits()),
             repository: repository,
             session: session,
             clock: clock,

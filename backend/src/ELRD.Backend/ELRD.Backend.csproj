@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    ELRD-Backend: „Datenschublade“ zwischen Alamos FE2 (über einen MQTT-Broker)
+    und der ELRD-App. Bewusst ohne NuGet-Pakete (E123): eigener kleiner
+    MQTT-3.1.1-Client, Speicherung als (optional verschlüsselte) JSON-Datei.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ElrdBackend</RootNamespace>
+    <AssemblyName>ELRD.Backend</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Version>0.1.0</Version>
+    <UserSecretsId>elrd-backend</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ELRD.Backend.Tests" />
+  </ItemGroup>
+
+</Project>

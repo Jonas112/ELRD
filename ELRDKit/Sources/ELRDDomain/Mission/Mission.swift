@@ -54,6 +54,8 @@ public struct Mission: VersionedEntity, MissionScoped {
     public var exerciseInjects: [ExerciseInject]?
     /// Lernpfad-Einsatz (Schritt 139): Übung mit Anleitung Schritt für Schritt.
     public var isTutorial: Bool?
+    /// Aus dem Alarmierungssystem übernommen (Schritt 140, Alamos FE2); `nil` = von Hand angelegt.
+    public var externalAlarm: ExternalAlarmReference?
 
     public init(
         id: MissionID = MissionID(),

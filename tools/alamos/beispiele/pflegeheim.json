@@ -1,0 +1,82 @@
+{
+  "type": "ALARM",
+  "timestamp": "{{TIMESTAMP}}",
+  "sender": "Testskript",
+  "data": {
+    "externalId": "{{ID}}",
+    "keyword": "RD 3",
+    "keyword_description": "Brand im Pflegeheim, mehrere Betroffene",
+    "message": [
+      "Rauchentwicklung 2. OG, Bewohner werden evakuiert.",
+      "Bereitstellungsraum Parkplatz Süd."
+    ],
+    "location": {
+      "coordinate": [
+        10.3466,
+        49.9011
+      ],
+      "street": "Rügshöfer Straße",
+      "postalCode": "97447",
+      "city": "Gerolzhofen",
+      "house": "20"
+    },
+    "caller": {
+      "name": "Testanrufer",
+      "contact": "0000 000000"
+    },
+    "units": [
+      {
+        "address": "ELRD"
+      }
+    ],
+    "vehicles": [
+      {
+        "id": "RKSWFT71-20",
+        "name": "RK SWFT 71/20",
+        "radioName": "RK SWFT 71/20",
+        "unitType": "RTW",
+        "station": "SWFT",
+        "alarmedTime": 0
+      },
+      {
+        "id": "SAMASWFT71-1",
+        "name": "SAMA SWFT 71/1",
+        "radioName": "SAMA SWFT 71/1",
+        "unitType": "RTW",
+        "station": "SWFT",
+        "alarmedTime": 0
+      },
+      {
+        "id": "RKGEOHN71-1",
+        "name": "RK GEOHN 71/1",
+        "radioName": "RK GEOHN 71/1",
+        "unitType": "RTW",
+        "station": "GEOHN",
+        "alarmedTime": 0
+      },
+      {
+        "id": "RKSWFT76-2",
+        "name": "RK SWFT 76/2",
+        "radioName": "RK SWFT 76/2",
+        "unitType": "NEF",
+        "station": "SWFT",
+        "alarmedTime": 0
+      }
+    ],
+    "custom": {
+      "elrdTest": "true"
+    },
+    "patient": [
+      {
+        "name": "",
+        "remark": "Rauchgasexposition, Husten",
+        "patientNumber": "1"
+      },
+      {
+        "name": "",
+        "remark": "gehfähig, Atemnot",
+        "patientNumber": "2"
+      }
+    ]
+  }
+}

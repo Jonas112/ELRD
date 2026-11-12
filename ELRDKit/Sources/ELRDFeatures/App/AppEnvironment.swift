@@ -19,12 +19,16 @@ public struct AppLaunchOptions: Equatable, Sendable {
         case setup, login, missions, newMission, workspace, missionDetails, patients, patientTiles, patientDetail, injuries, unitPicker, sections, addUnit, addPlaceholder, replacePlaceholder, map, mapCollapsed, mapTopo, mapObject, mapDrawing, journal, journalEntry, protocolLog, messages, report, settings, masterData, onboarding
         /// Schritte 67–76.
         case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise, whereabouts, statistics, debrief, distribution, communicationPlan, mapSigns, mapPath, patientDetailPerson, patientDetailCondition, patientDetailTransport, mapExport, communicationChart, search, tutorial
+        /// Schritt 140: Einsätze aus Alamos FE2.
+        case alamosInbox, alamosAlarm, alamosImport, alamosSettings
+
+        var isAlamos: Bool { [.alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings].contains(self) }
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
 
         /// Bildschirme, die direkt im laufenden Beispieleinsatz starten.
-        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .newExercise, .statistics, .settings, .masterData, .onboarding].contains(self) }
+        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .newExercise, .statistics, .settings, .masterData, .onboarding].contains(self) && !isAlamos }
 
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {
@@ -81,6 +85,8 @@ public final class AppEnvironment {
     let notifier: OpenItemNotifier
     /// Live Activity des geöffneten Einsatzes (Schritt 90).
     let liveActivity: LiveActivityController
+    /// Einsätze aus Alamos FE2 über das ELRD-Backend (Schritt 140).
+    let alamos: AlamosInbox
     /// `true` bei Beispieldaten im Arbeitsspeicher.
     public let isDemo: Bool
     /// Gewünschter Beispielbildschirm (nur Demo).
@@ -97,7 +103,8 @@ public final class AppEnvironment {
     ) throws {
         self.repository = repository
         self.attachments = attachments
-        self.settings = AppSettingsStore(repository: repository)
+        let settingsStore = AppSettingsStore(repository: repository)
+        self.settings = settingsStore
         self.reportLibrary = ReportLibraryStore(repository: repository)
         self.drafts = TextDraftStore(repository: repository)
         self.userService = userService
@@ -109,6 +116,9 @@ public final class AppEnvironment {
         self.demoScreen = demoScreen
         notifier = OpenItemNotifier(enabled: !isDemo)
         liveActivity = LiveActivityController(enabled: !isDemo)
+        let alamosKeys: any SecureStore
+        if isDemo { alamosKeys = InMemorySecureStore() } else { alamosKeys = KeychainStore() }
+        alamos = AlamosInbox(settings: settingsStore, secureStore: alamosKeys, isDemo: isDemo)
         if isDemo {
             // Beispieldaten: iCloud-Ersatz im Arbeitsspeicher, CloudKit bleibt unberührt.
             cloudStore = nil
@@ -131,6 +141,7 @@ public final class AppEnvironment {
             )
         }
         cloud?.onImported = { [weak self] missions in self?.reloadOpenStores(missions) }
+        if !isDemo { alamos.onNewAlarm = { AlamosAlert.announce($0) } }
     }
 
     // MARK: iCloud-Abgleich
@@ -273,6 +284,16 @@ public final class AppEnvironment {
                 settings.organisationName = "BRK Kreisverband Musterstadt"
                 settings.bannerImage = DemoMissions.demoBannerPNG()
             }
+        }
+        // Schritt 140: Alamos FE2 mit Beispiel-Einsätzen (ohne Netz).
+        if screen.isAlamos {
+            try environment.settings.update { settings in
+                settings.alamos.isEnabled = true
+                settings.alamos.backendURL = "https://elrd.example.de"
+                settings.alamos.organisationName = "BRK Kreisverband Musterstadt"
+            }
+            try environment.alamos.setAPIKey("elrd_beispiel")
+            environment.alamos.loadDemo()
         }
         // Bildschirmfoto „Einsatzdaten“: laufender Einsatz ist geteilt.
         if screen == .missionDetails, let cloud = environment.cloud,

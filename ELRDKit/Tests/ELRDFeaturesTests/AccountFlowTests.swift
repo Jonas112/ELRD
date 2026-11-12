@@ -48,11 +48,16 @@ struct AccountFlowTests {
             #expect(environment.userService.directory.activeUsers.count == 3)
             #expect(environment.userService.currentUser == nil)
         case .missions, .newMission, .workspace, .missionDetails, .patients, .patientTiles, .patientDetail, .injuries, .unitPicker, .sections, .addUnit, .addPlaceholder, .replacePlaceholder, .map, .mapCollapsed, .mapTopo, .mapObject, .mapDrawing, .journal, .journalEntry, .protocolLog, .messages, .report, .settings, .masterData, .onboarding,
-             .situationReport, .checklist, .leadership, .hospitals, .transportBoard, .handover, .journalNew, .missionTimeline, .triageGuide, .newExercise, .whereabouts, .statistics, .debrief, .distribution, .communicationPlan, .mapSigns, .mapPath, .patientDetailPerson, .patientDetailCondition, .patientDetailTransport, .mapExport, .communicationChart, .search, .tutorial:
+             .situationReport, .checklist, .leadership, .hospitals, .transportBoard, .handover, .journalNew, .missionTimeline, .triageGuide, .newExercise, .whereabouts, .statistics, .debrief, .distribution, .communicationPlan, .mapSigns, .mapPath, .patientDetailPerson, .patientDetailCondition, .patientDetailTransport, .mapExport, .communicationChart, .search, .tutorial,
+             .alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings:
             #expect(environment.userService.currentUser?.displayName == "Erika Beispiel")
             let missions = try MissionOverview.load(from: environment.repository)
             #expect(missions.count == 6)
             #expect(missions.filter { !$0.isClosed }.count == 1, "genau ein laufender Einsatz")
+            if screen.isAlamos {
+                #expect(environment.alamos.visibleAlarms.count == 2)
+                #expect(environment.alamos.hasAPIKey)
+            }
         }
         #expect(environment.demoScreen == screen)
         let masterData = try environment.repository.document(MasterDataSet.self, key: .masterData)

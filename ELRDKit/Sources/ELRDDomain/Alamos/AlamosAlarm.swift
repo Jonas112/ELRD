@@ -281,8 +281,11 @@ public struct AlamosVehicle: Codable, Hashable, Sendable {
         name = try container.decodeLenientString(forKey: .name)
         radioName = try container.decodeLenientString(forKey: .radioName)
         station = try container.decodeLenientString(forKey: .station)
-        alarmedTime = (try? container.decodeIfPresent(Double.self, forKey: .alarmedTime))
-            ?? (try container.decodeLenientString(forKey: .alarmedTime)).flatMap(Double.init)
+        if let number = try? container.decodeIfPresent(Double.self, forKey: .alarmedTime) {
+            alarmedTime = number
+        } else {
+            alarmedTime = try container.decodeLenientString(forKey: .alarmedTime).flatMap(Double.init)
+        }
         dispoInfo = try container.decodeLenientString(forKey: .dispoInfo)
         jobNumber = try container.decodeLenientString(forKey: .jobNumber)
         patientNumber = try container.decodeLenientString(forKey: .patientNumber)

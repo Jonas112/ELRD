@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - "backend-python/**"
       - "tools/alamos/**"
       - ".github/workflows/backend.yml"
   workflow_dispatch:
@@ -68,3 +69,45 @@ jobs:
 
       - name: Container bauen
         run: docker build -t elrd-backend:ci .
+
+  # Python-Backend mit dem ältesten unterstützten Python (macOS: /usr/bin/python3 = 3.9).
+  backend-python:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Mosquitto für die Abholung von einem externen Broker
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mosquitto
+          sudo systemctl stop mosquitto || true
+          mkdir -p /tmp/mq
+          cp backend/mosquitto/acl /tmp/mq/acl
+          touch /tmp/mq/passwd
+          mosquitto_passwd -b /tmp/mq/passwd elrd-backend entwicklung-backend
+          sed -e 's#/mosquitto/config#/tmp/mq#g' -e 's/listener 1883/listener 1884/' backend/mosquitto/mosquitto.dev.conf > /tmp/mq/mosquitto.conf
+          sudo chown -R mosquitto /tmp/mq
+          sudo mosquitto -c /tmp/mq/mosquitto.conf -d
+          sleep 1
+
+      - name: Tests (Python 3.9)
+        working-directory: backend-python
+        env:
+          ELRD_TEST_MQTT_BRIDGE: localhost:1884:elrd-backend:entwicklung-backend
+        run: |
+          python --version
+          python -W error::ResourceWarning -m unittest -v test_server
+          bash -n ELRD-Backend.command
+
+      - name: Start-Probe
+        working-directory: backend-python
+        run: |
+          python elrd_server.py --daten /tmp/elrd-probe --nur-lokal --http-port 18080 --mqtt-port 11883 > /tmp/start.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:18080/health && break; sleep 0.5; done
+          cat /tmp/start.log
+          curl -fs http://127.0.0.1:18080/health | grep -q '"connected"'

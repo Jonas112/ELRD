@@ -1,15 +1,20 @@
 """Kleiner MQTT-3.1.1-Client zum Senden (wie das MQTT-Plugin von FE2).
 
 Kann: verbinden (optional TLS, Benutzer/Passwort), mit QoS 0 oder 1 senden,
-trennen. Nur Python-Standardbibliothek – kein `paho-mqtt`, kein `mosquitto_pub`.
+abonnieren und empfangen (für das Python-Backend mit externem Broker), trennen.
+Nur Python-Standardbibliothek – kein `paho-mqtt`, kein `mosquitto_pub`. Python 3.9+.
 """
 
 from __future__ import annotations
 
+import select
 import socket
 import ssl
 import struct
+import threading
+import time
 import uuid
+from typing import Callable, Optional
 
 CONNACK_ERRORS = {
     1: "Broker unterstützt MQTT 3.1.1 nicht.",
@@ -54,12 +59,12 @@ class MqttConnection:
         self,
         host: str,
         port: int,
-        username: str | None = None,
-        password: str | None = None,
+        username: Optional[str] = None,
+        password: Optional[str] = None,
         use_tls: bool = False,
-        cafile: str | None = None,
+        cafile: Optional[str] = None,
         insecure: bool = False,
-        client_id: str | None = None,
+        client_id: Optional[str] = None,
         timeout: float = 10,
     ) -> None:
         self.host = host
@@ -71,8 +76,12 @@ class MqttConnection:
         self.insecure = insecure
         self.client_id = client_id or f"fe2-sim-{uuid.uuid4().hex[:8]}"
         self.timeout = timeout
-        self._socket: socket.socket | None = None
+        self._socket: Optional[socket.socket] = None
         self._packet_id = 0
+        self._send_lock = threading.Lock()
+        self._received: list[tuple[str, bytes]] = []
+        self._qos2: set[int] = set()
+        self.keep_alive = 30
 
     # MARK: Ablauf
 
@@ -122,7 +131,7 @@ class MqttConnection:
             if self.password is not None:
                 flags |= 0x40
                 payload += _string(self.password)
-        body = _string("MQTT") + bytes([4, flags]) + struct.pack("!H", 30) + payload
+        body = _string("MQTT") + bytes([4, flags]) + struct.pack("!H", self.keep_alive) + payload
         self._send(packet(0x10, body))
         header, response = self._read_packet()
         if header & 0xF0 != 0x20 or len(response) < 2:
@@ -155,6 +164,66 @@ class MqttConnection:
             self._socket.close()
             self._socket = None
 
+    def subscribe(self, topic_filter: str, qos: int = 1) -> int:
+        """Abonniert; liefert die gewährte QoS. Fehler, wenn der Broker ablehnt (ACL)."""
+        self._packet_id = self._packet_id % 0xFFFF + 1
+        packet_id = self._packet_id
+        self._send(packet(0x82, struct.pack("!H", packet_id) + _string(topic_filter) + bytes([qos])))
+        while True:
+            kind, body = self._read_packet()
+            if kind & 0xF0 == 0x90 and struct.unpack("!H", body[:2])[0] == packet_id:
+                granted = body[2] if len(body) > 2 else 0x80
+                if granted == 0x80:
+                    raise MqttError(f"Broker verweigert das Abonnement „{topic_filter}“ (Rechte/ACL prüfen).")
+                return granted
+            self._handle_incoming(kind, body)
+
+    def listen(self, on_message: Callable[[str, bytes], None], stop: threading.Event) -> None:
+        """Empfängt bis `stop` gesetzt ist; hält die Verbindung mit PINGREQ offen."""
+        assert self._socket is not None
+        last_ping = last_received = time.monotonic()
+        while not stop.is_set():
+            for topic, payload in self._received:
+                on_message(topic, payload)
+            self._received.clear()
+            now = time.monotonic()
+            if now - last_received > self.keep_alive * 1.5:
+                raise MqttError("Broker antwortet nicht mehr.")
+            if now - last_ping > self.keep_alive / 2:
+                self._send(packet(0xC0, b""))
+                last_ping = now
+            pending = isinstance(self._socket, ssl.SSLSocket) and self._socket.pending() > 0
+            if not pending:
+                readable, _, _ = select.select([self._socket], [], [], 1)
+                if not readable:
+                    continue
+            kind, body = self._read_packet()
+            last_received = time.monotonic()
+            self._handle_incoming(kind, body)
+
+    def _handle_incoming(self, kind: int, body: bytes) -> None:
+        if kind & 0xF0 == 0x30:  # PUBLISH
+            qos = (kind >> 1) & 0x03
+            length = struct.unpack_from("!H", body, 0)[0]
+            topic = body[2:2 + length].decode("utf-8", errors="replace")
+            offset = 2 + length
+            packet_id = 0
+            if qos:
+                packet_id = struct.unpack_from("!H", body, offset)[0]
+                offset += 2
+            if qos == 1:
+                self._send(packet(0x40, struct.pack("!H", packet_id)))
+            elif qos == 2:
+                self._send(packet(0x50, struct.pack("!H", packet_id)))
+                if packet_id in self._qos2:
+                    return
+                self._qos2.add(packet_id)
+            self._received.append((topic, body[offset:]))
+        elif kind & 0xF0 == 0x60:  # PUBREL
+            packet_id = struct.unpack_from("!H", body, 0)[0]
+            self._qos2.discard(packet_id)
+            self._send(packet(0x70, struct.pack("!H", packet_id)))
+
     def close(self) -> None:
         if self._socket is None:
             return
@@ -172,7 +241,8 @@ class MqttConnection:
         if self._socket is None:
             raise MqttError("Nicht verbunden.")
         try:
-            self._socket.sendall(data)
+            with self._send_lock:
+                self._socket.sendall(data)
         except OSError as error:
             raise MqttError(f"Senden fehlgeschlagen: {error}") from None
 

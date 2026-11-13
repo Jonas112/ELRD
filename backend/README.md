@@ -18,6 +18,9 @@ Alamos FE2 ──JSON-Plugin (V2) + MQTT-Plugin──▶ MQTT-Broker ──▶ E
   Änderungen simulieren (Stichwort, Patient, Fahrzeug, Ort, Schließen), eigenes JSON
   einspielen – direkt oder über den Broker (ganze Kette).
 
+> **Nur auf dem Mac testen?** `backend-python/` ist dasselbe Backend in reinem Python mit
+> eingebautem MQTT-Broker – ohne Docker, .NET oder Mosquitto (siehe `backend-python/README.md`).
+
 ## Schnellstart auf dem eigenen Rechner
 
 Mit Docker:

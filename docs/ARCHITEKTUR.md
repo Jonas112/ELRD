@@ -105,3 +105,4 @@ Alamos FE2 ──JSON-Plugin (V2) + MQTT-Plugin──▶ Mosquitto ──▶ ELR
 - Das Backend ist nur eine **Datenschublade** (E123): nimmt FE2-Einsätze an, hält sie 24 h, liefert sie per `GET /api/v1/alarms` an die App. Kein Abgleich von ELRD-Einsätzen (der bleibt bei iCloud, E88).
 - App: `AlamosAlarm`/`AlamosSettings` (Domäne), `AlarmImport` (Store, Teil von `NewMissionRequest`), `AlamosInbox`/`AlamosBackendClient` und Oberflächen in `ELRDFeatures/Alamos`. App-Schlüssel in der Keychain.
 - Einrichtung, Hosting und Schnittstelle: `backend/README.md`; Testalarme: `tools/alamos/`.
+- Für den Mac ohne Zusatzsoftware gibt es dasselbe Backend in reinem Python mit eingebautem MQTT-Broker: `backend-python/` (E127).

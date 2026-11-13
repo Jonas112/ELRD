@@ -93,6 +93,9 @@ function renderStatus(status) {
     ["Einsätze gespeichert", `${status.alarms} (Löschen nach ${status.retentionHours} h)`],
     ["Debug", status.debugEnabled ? "eingeschaltet" : "aus"],
   ];
+  if (status.addresses && status.addresses.length) {
+    rows.push(["Adresse für die App", status.addresses.map((address) => element("code", {}, address + " "))]);
+  }
   $("status").replaceChildren(...rows.flatMap(([label, value]) => [element("dt", {}, label), element("dd", {}, value)]));
 }
 
@@ -109,6 +112,8 @@ async function loadOrganisations() {
     element("td", {}, org.alarmCount),
     element("td", {}, [
       element("button", { class: "link", onclick: () => renewKey(org) }, "neuer Schlüssel"),
+      // Nur Python-Backend mit eingebautem Broker: MQTT-Zugang für FE2.
+      org.mqttUser ? element("button", { class: "link", onclick: () => renewMqttPassword(org) }, "neues MQTT-Passwort") : "",
       element("button", { class: "link danger", onclick: () => removeOrganisation(org) }, "löschen"),
     ]),
   ])));
@@ -119,11 +124,24 @@ async function loadOrganisations() {
 function showKey(result) {
   const box = $("newKey");
   box.hidden = false;
-  box.replaceChildren(
-    element("strong", {}, `App-Schlüssel für ${result.organisation.name}: `),
-    element("code", {}, result.apiKey),
-    element("div", {}, "Jetzt kopieren – er wird nicht noch einmal angezeigt. MQTT-Topic für FE2: " + result.organisation.topic),
-  );
+  const parts = [];
+  if (result.apiKey) {
+    parts.push(element("div", {}, [element("strong", {}, `App-Schlüssel für ${result.organisation.name}: `), element("code", {}, result.apiKey)]));
+  }
+  if (result.mqttPassword) {
+    parts.push(element("div", {}, [
+      element("strong", {}, "MQTT für FE2: "),
+      "Benutzer ", element("code", {}, result.organisation.mqttUser || result.organisation.id),
+      ", Passwort ", element("code", {}, result.mqttPassword),
+    ]));
+  }
+  parts.push(element("div", {}, "Jetzt kopieren – wird nicht noch einmal angezeigt. MQTT-Topic für FE2: " + result.organisation.topic));
+  box.replaceChildren(...parts);
+}
+
+async function renewMqttPassword(org) {
+  if (!confirm(`Neues MQTT-Passwort für ${org.name}? FE2 bzw. der Simulator braucht dann das neue.`)) return;
+  showKey(await api(`/organisations/${org.id}/mqtt-password`, { method: "POST" }));
 }
 
 $("orgForm").addEventListener("submit", async (event) => {

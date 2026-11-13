@@ -5,8 +5,8 @@ schickt Einsätze genau so, wie es FE2 mit JSON-Plugin (Datenformat V2) und MQTT
 den Broker. Von dort holt das ELRD-Backend sie ab, und die App auf dem iPad zeigt sie an.
 
 ```
-FE2-Simulator ──MQTT──▶ Mosquitto ──▶ ELRD-Backend ◀──HTTP── ELRD-App (iPad / Simulator)
-   (dieser Mac)          (Docker)        (Docker)
+FE2-Simulator ──MQTT──▶ ELRD-Backend (mit Broker) ◀──HTTP── ELRD-App (iPad / Simulator)
+   (dieser Mac)          (dieser Mac, Python oder Docker)
 ```
 
 Was du damit machen kannst:
@@ -45,10 +45,21 @@ Prüfen (im Terminal):
 python3 -c "import tkinter; print(tkinter.TkVersion)"   # muss 8.6 oder höher zeigen
 ```
 
-## 2. Broker und Backend starten
+## 2. Backend (mit Broker) starten
 
-Am einfachsten mit **Docker Desktop** (<https://www.docker.com/products/docker-desktop/>). Im
-Terminal, im Ordner des ELRD-Projekts:
+**Am einfachsten: das Python-Backend** – ohne Docker, mit eingebautem MQTT-Broker. Im Finder
+`backend-python/ELRD-Backend.command` doppelklicken oder im Terminal:
+
+```sh
+cd backend-python
+python3 elrd_server.py
+```
+
+Beim ersten Start legt es die Organisation **`test-rd`** an und zeigt deren **App-Schlüssel**
+(kopieren!). Der MQTT-Zugang `test-rd` / `entwicklung-fe2` passt schon zu den Voreinstellungen
+des Simulators. Mehr dazu in `backend-python/README.md`.
+
+**Alternativ das .NET-Backend mit Docker** (Docker Desktop nötig):
 
 ```sh
 cd backend
@@ -56,19 +67,10 @@ cd backend
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Das Fenster offen lassen. Zum Beenden drückst du `Ctrl-C`.
+Dann <http://localhost:8080> öffnen, mit `entwicklung-admin-schluessel` anmelden und unter
+**Organisationen** die Kennung **`test-rd`** anlegen; den angezeigten **App-Schlüssel** kopieren.
 
-Danach im Browser <http://localhost:8080> öffnen und mit dem Admin-Schlüssel
-`entwicklung-admin-schluessel` anmelden. Unter **Organisationen** legst du an:
-
-- Kennung **`test-rd`**
-- Name z. B. „Test RD“
-
-Den angezeigten **App-Schlüssel** (`elrd_…`) kopieren. Er wird nur dieses eine Mal angezeigt;
-sonst später „neuer Schlüssel“ wählen.
-
-> Die Testbenutzer aus `dev-passwd.sh`: Broker-Benutzer `test-rd`, Passwort `entwicklung-fe2`.
-> Der Simulator hat diese Werte schon voreingestellt. Sie sind nur für den eigenen Rechner gedacht.
+> Beide Varianten belegen die Ports 8080 und 1883 – immer nur eine starten.
 
 ## 3. Simulator starten
 
@@ -134,7 +136,7 @@ Eigene Einsätze stellst du so zusammen:
 Im **iOS-Simulator von Xcode** auf demselben Mac genügt die Adresse `http://localhost:8080`.
 
 Blockiert die macOS-Firewall die Verbindung (*Systemeinstellungen › Netzwerk › Firewall*),
-musst du dort eingehende Verbindungen für Docker erlauben.
+musst du dort eingehende Verbindungen für `python3` bzw. Docker erlauben.
 
 ## 6. Andere Wege und echte Broker
 
@@ -162,8 +164,8 @@ Ohne Oberfläche gibt es dasselbe im Terminal: `./testalarm.py --help`.
 | Meldung | Lösung |
 |---|---|
 | `tkinter fehlt` / Fenster bleibt leer | Python mit Tk installieren (Schritt 1), über `FE2-Simulator.command` starten |
-| `Broker localhost:1883 nicht erreichbar` | Läuft `docker compose … up` noch? Docker Desktop gestartet? |
-| `Anmeldung abgelehnt – Benutzername oder Passwort falsch …` | `./mosquitto/dev-passwd.sh` ausführen und den Broker-Container neu starten |
+| `Broker localhost:1883 nicht erreichbar` | Läuft das Backend (Fenster von `ELRD-Backend.command` bzw. `docker compose … up`)? |
+| `Anmeldung abgelehnt – Benutzername oder Passwort falsch …` | Python-Backend: MQTT-Passwort der Organisation (Verwaltungsseite › neues MQTT-Passwort); Docker: `./mosquitto/dev-passwd.sh` und Broker neu starten |
 | Gesendet, aber nichts in der App-Sicht | Organisation `test-rd` im Backend angelegt? Topic muss `elrd/test-rd/alarm` heißen; Benutzer = Organisation (Rechte im Broker) |
 | `Schlüssel abgelehnt (401)` | App-Schlüssel neu erzeugen (Verwaltungsseite › neuer Schlüssel) und eintragen |
 | `Nicht gefunden (404)` beim HTTP-Weg | Organisation fehlt oder Debug im Backend ausgeschaltet |

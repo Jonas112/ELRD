@@ -1,8 +1,17 @@
 # Testalarme wie Alamos FE2
 
-`testalarm.py` sendet Einsätze im **Datenformat V2** (wie das FE2-JSON-Plugin) – wahlweise
-über den MQTT-Broker wie FE2 selbst (`--weg mqtt`, braucht `mosquitto_pub`) oder direkt an
-die Debug-Schnittstelle des Backends (`--weg http`). Nur Python-Standardbibliothek.
+Zwei Werkzeuge, beide nur mit Python-Standardbibliothek (eigener MQTT-Client, kein
+`mosquitto_pub` nötig):
+
+- **`fe2_simulator.py`** – FE2-Simulator **mit Oberfläche** (tkinter): Einsätze zusammenstellen,
+  senden, ändern, schließen, Abläufe abspielen, sehen was die App bekommt.
+  Start unter macOS: Doppelklick auf `FE2-Simulator.command` – **Anleitung: [ANLEITUNG-macOS.md](ANLEITUNG-macOS.md)**.
+- **`testalarm.py`** – dasselbe für das Terminal (siehe unten).
+
+Beide senden im **Datenformat V2** (wie das FE2-JSON-Plugin) – über den MQTT-Broker wie FE2
+selbst (`mqtt`) oder direkt an die Debug-Schnittstelle des Backends (`http`).
+Gemeinsame Module: `fe2_format.py` (Nachrichten), `mqtt_client.py`, `elrd_backend.py`;
+Tests: `python3 -m unittest -v test_werkzeuge`.
 
 ```sh
 ./testalarm.py liste                         # Beispiele und Änderungen

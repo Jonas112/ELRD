@@ -55,12 +55,16 @@ jobs:
           ELRD_TEST_MQTT: localhost:1883:elrd-backend:entwicklung-backend
         run: dotnet run -c Release --no-build --project tests/ELRD.Backend.Tests
 
-      - name: Testskript (Syntax und Beispiele)
+      - name: Testskript und FE2-Simulator
         working-directory: tools/alamos
+        env:
+          ELRD_TEST_MQTT: localhost:1883:test-rd:entwicklung-fe2
         run: |
-          python3 -m py_compile testalarm.py
-          for file in beispiele/*.json; do python3 -m json.tool "$file" > /dev/null; done
-          python3 testalarm.py liste
+          sudo apt-get install -y -qq python3-tk xvfb
+          for file in beispiele/*.json; do /usr/bin/python3 -m json.tool "$file" > /dev/null; done
+          /usr/bin/python3 testalarm.py liste
+          bash -n FE2-Simulator.command
+          xvfb-run -a /usr/bin/python3 -m unittest -v test_werkzeuge
 
       - name: Container bauen
         run: docker build -t elrd-backend:ci .

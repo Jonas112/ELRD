@@ -22,3 +22,4 @@ Package.resolved.bak
 
 # Testskript Alamos (Zustand gesendeter Einsätze)
 tools/alamos/.zustand.json
+__pycache__/

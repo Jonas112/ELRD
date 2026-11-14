@@ -148,6 +148,7 @@ public final class AppEnvironment {
             alamos.onChangedAlarm = { AlamosAlert.announceChange($0, summary: $1) }
             // Schritt 144: Kennzeichen da → beim Backend anmelden; Push angekommen → gleich abrufen.
             let inbox = alamos
+            alamos.requestsNotificationPermission = true
             PushToken.shared.onChange = { [weak inbox] in inbox?.updatePushRegistration() }
             AlamosAnnouncements.onPush = { [weak inbox] in Task { await inbox?.refresh() } }
             alamos.updatePushRegistration()

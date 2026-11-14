@@ -38,6 +38,8 @@ final class AlamosInbox {
     /// Angemeldet als (Kennzeichen, Adresse, Schlüssel) – nur im Arbeitsspeicher.
     @ObservationIgnored private var registeredDevice: DeviceRegistration?
     @ObservationIgnored private var pushTask: Task<Void, Never>?
+    /// Nur in der echten App: Mitteilungen erlauben lassen (in Tests gibt es keine Mitteilungszentrale).
+    @ObservationIgnored var requestsNotificationPermission = false
     /// Beispieldaten: keine Netzabfragen.
     let isDemo: Bool
 
@@ -130,6 +132,7 @@ final class AlamosInbox {
 
     /// Mitteilungen erlauben (einmalige Abfrage von iPadOS).
     private func requestNotificationPermission() {
+        guard requestsNotificationPermission else { return }
         Task {
             _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         }

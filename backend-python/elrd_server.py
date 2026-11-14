@@ -203,6 +203,7 @@ def print_banner(backend: Backend, settings: dict[str, Any], settings_path: Path
         print(f" Topic für FE2:       {backend.prefix}/<organisation>/alarm, Benutzer = Organisation")
     if backend.bridge:
         print(f" Externer Broker:     {settings['externer_broker'].get('host')}:{settings['externer_broker'].get('port')}")
+    push = backend.push
     if push.configured:
         print(f" Push-Mitteilungen:   an (App {push.bundle_id}, {push.status()['devices']} Geräte angemeldet)")
     elif push.enabled:

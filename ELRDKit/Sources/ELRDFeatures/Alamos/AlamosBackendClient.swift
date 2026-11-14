@@ -75,7 +75,7 @@ struct AlamosBackendClient: Sendable {
         case .timedOut: "Das Backend antwortet nicht (Zeitüberschreitung)."
         case .cannotFindHost, .dnsLookupFailed: "Adresse des Backends nicht gefunden."
         case .cannotConnectToHost: "Backend nicht erreichbar."
-        case .appTransportSecurityRequiresSecureConnection: "Nur HTTPS erlaubt (außer im lokalen Netz)."
+        case .appTransportSecurityRequiresSecureConnection: "iPadOS erlaubt für diese Adresse nur https://. http:// geht nur im eigenen Netz (192.168.…, 10.…, 172.16–31.…, Tailscale 100.64–127.…, Name ohne Punkt oder ….local)."
         case .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid, .serverCertificateHasUnknownRoot:
             "Zertifikat des Backends ungültig."
         default: "Verbindung fehlgeschlagen (\(error.code.rawValue))."

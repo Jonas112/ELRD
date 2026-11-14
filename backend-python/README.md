@@ -150,6 +150,7 @@ Für einen einzelnen Start gehen auch Startoptionen:
 | `HTTP-Port 8080 ist belegt` | Läuft das Backend schon (anderes Fenster) oder Docker? Sonst `--http-port 9000` |
 | `MQTT-Port 1883 ist belegt` | Mosquitto (`brew services stop mosquitto`) oder Docker-Backend beenden, oder `--mqtt-port 1884` |
 | iPad erreicht den Mac nicht | gleiches WLAN? IP aus „Adresse für die App“? Firewall-Abfrage erlaubt? Lokales Netzwerk in iPadOS erlaubt? |
+| App meldet „iPadOS erlaubt für diese Adresse nur https://“ | `http://` geht nur zu privaten Adressen (192.168.…, 10.…, 172.16–31.…), Tailscale (100.64–127.…), `….local` oder Namen ohne Punkt; ältere App-Versionen kannten Tailscale noch nicht |
 | `HTTPS-Anfrage … auf dem HTTP-Port` | in der App die Adresse mit `http://` eintragen (z. B. `http://192.168.178.23:8080`); neuere App-Versionen ergänzen bei IP-Adressen selbst `http://` |
 | `Anmeldung abgelehnt` beim Senden | MQTT-Benutzer = Kennung der Organisation, Passwort von der Verwaltungsseite |
 | Gesendet, aber kein Einsatz | Topic muss `elrd/<eigene-kennung>/alarm` sein (steht im Backend-Fenster als Warnung) |

@@ -48,11 +48,36 @@
 	<!-- Abgleich vor Ort (Schritt 66, MultipeerConnectivity); Schritt 140: ELRD-Backend im lokalen Netz. -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Gleicht Einsätze mit iPads in der Nähe ab und erreicht ein ELRD-Backend im eigenen Netz.</string>
-	<!-- Schritt 140: ELRD-Backend zum Testen ohne HTTPS nur im lokalen Netz; sonst gilt HTTPS. -->
+	<!-- Schritt 140: ELRD-Backend zum Testen ohne HTTPS nur im lokalen Netz; sonst gilt HTTPS.
+	     Seit iOS 17 sperrt ATS http:// zu IP-Adressen; daher private Bereiche und
+	     100.64.0.0/10 (Tailscale/CGNAT) als CIDR-Ausnahme (E128). -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>10.0.0.0/8</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+			<key>172.16.0.0/12</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+			<key>192.168.0.0/16</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+			<key>100.64.0.0/10</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
 	</dict>
 	<!-- iCloud-Teilen: Einladungslinks öffnen ELRD; stille Push-Mitteilungen bei Änderungen. -->
 	<key>CKSharingSupported</key>

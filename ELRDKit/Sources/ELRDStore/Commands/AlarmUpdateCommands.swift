@@ -57,13 +57,22 @@ public struct AlarmUpdate: Hashable, Sendable {
 
     /// Alles auswählen.
     public var fullSelection: AlarmUpdateSelection {
-        AlarmUpdateSelection(
-            keyword: changes.keyword != nil,
-            address: changes.address != nil,
-            message: !changes.messageLines.isEmpty,
-            vehicleKeys: Set(changes.callsigns.map(MasterDataMatching.key)),
-            patientKeys: Set(changes.patientKeys)
-        )
+        AlarmUpdateSelection(events: changes.events)
+    }
+
+    /// Alle Ereignisse einzeln (Schritt 145).
+    public var events: [AlamosChanges.Event] { changes.events }
+
+    /// Fahrzeug mit Stammdaten-Treffer zu einem Fahrzeug-Ereignis.
+    public func vehicle(for event: AlamosChanges.Event) -> AlarmImport.VehicleMatch? {
+        guard event.kind == .vehicle else { return nil }
+        return zip(changes.callsigns, vehicles).first { MasterDataMatching.key($0.0) == event.key }?.1
+    }
+
+    /// Gemeldeter Patient zu einem Patienten-Ereignis (mit Name – nur für die Anzeige in der App).
+    public func patient(for event: AlamosChanges.Event) -> AlamosPatient? {
+        guard event.kind == .patient, let index = changes.patientKeys.firstIndex(of: event.key) else { return nil }
+        return changes.patients[index]
     }
 
     /// Ausgewählte Fahrzeuge bzw. Patienten.
@@ -84,7 +93,9 @@ public struct AlarmUpdate: Hashable, Sendable {
             snapshot.keywordDescription = current.keywordDescription
         }
         if selection.address { snapshot.address = current.address }
-        if selection.message { snapshot.message = current.message }
+        if !selection.messageLines.isEmpty {
+            snapshot.message = Self.merged(snapshot.message, changes.messageLines.filter { selection.messageLines.contains($0) })
+        }
         // Fahrzeuge, die schon im Einsatz sind, gelten ebenfalls als erledigt.
         let offered = Set(changes.callsigns.map(MasterDataMatching.key))
         let done = current.vehicleKeys.filter { !offered.contains($0) || selection.vehicleKeys.contains($0) }
@@ -103,7 +114,8 @@ public struct AlarmUpdate: Hashable, Sendable {
         var lines = ["Änderung aus Alamos FE2 übernommen (Einsatznummer \(alarm.externalId), Stand \(alarm.revision))."]
         if selection.keyword, let keyword = changes.keyword { lines.append("Stichwort: \(keyword)") }
         if selection.address, let address = changes.address { lines.append("Einsatzort: \(address)") }
-        if selection.message, !changes.messageLines.isEmpty { lines.append("Alarmtext ergänzt:\n" + changes.messageLines.joined(separator: "\n")) }
+        let chosenLines = changes.messageLines.filter { selection.messageLines.contains($0) }
+        if !chosenLines.isEmpty { lines.append("Alarmtext ergänzt:\n" + chosenLines.joined(separator: "\n")) }
         let chosenVehicles = vehicles(in: selection)
         if !chosenVehicles.isEmpty { lines.append("Nachalarmiert: " + chosenVehicles.map(\.callsign).joined(separator: ", ")) }
         let chosenPatients = patients(in: selection)
@@ -112,27 +124,53 @@ public struct AlarmUpdate: Hashable, Sendable {
     }
 }
 
-/// Auswahl beim Übernehmen eines neuen FE2-Stands (Schritt 143): Tagebuchvermerke,
-/// einzelne Fahrzeuge (Schlüssel nach `MasterDataMatching.key`) und Patienten.
+/// Auswahl beim Übernehmen eines neuen FE2-Stands (Schritt 143/145): Tagebuchvermerke,
+/// einzelne Alarmtext-Zeilen, Fahrzeuge (Schlüssel nach `MasterDataMatching.key`) und Patienten.
 public struct AlarmUpdateSelection: Hashable, Sendable {
     public var keyword: Bool
     public var address: Bool
-    public var message: Bool
+    public var messageLines: Set<String>
     public var vehicleKeys: Set<String>
     public var patientKeys: Set<String>
 
-    public init(keyword: Bool = false, address: Bool = false, message: Bool = false, vehicleKeys: Set<String> = [], patientKeys: Set<String> = []) {
+    public init(keyword: Bool = false, address: Bool = false, messageLines: Set<String> = [], vehicleKeys: Set<String> = [], patientKeys: Set<String> = []) {
         self.keyword = keyword
         self.address = address
-        self.message = message
+        self.messageLines = messageLines
         self.vehicleKeys = vehicleKeys
         self.patientKeys = patientKeys
     }
 
-    public var isEmpty: Bool { !keyword && !address && !message && vehicleKeys.isEmpty && patientKeys.isEmpty }
+    /// Genau diese Ereignisse (z. B. eines, „alle Fahrzeuge“ oder alles).
+    public init<Events: Sequence>(events: Events) where Events.Element == AlamosChanges.Event {
+        self.init()
+        for event in events { insert(event) }
+    }
 
-    /// Anzahl ausgewählter Punkte (für „Übernehmen (n)“).
-    public var count: Int { [keyword, address, message].filter { $0 }.count + vehicleKeys.count + patientKeys.count }
+    public mutating func insert(_ event: AlamosChanges.Event) {
+        switch event.kind {
+        case .keyword: keyword = true
+        case .address: address = true
+        case .message: messageLines.insert(event.key)
+        case .vehicle: vehicleKeys.insert(event.key)
+        case .patient: patientKeys.insert(event.key)
+        }
+    }
+
+    public func contains(_ event: AlamosChanges.Event) -> Bool {
+        switch event.kind {
+        case .keyword: keyword
+        case .address: address
+        case .message: messageLines.contains(event.key)
+        case .vehicle: vehicleKeys.contains(event.key)
+        case .patient: patientKeys.contains(event.key)
+        }
+    }
+
+    public var isEmpty: Bool { count == 0 }
+
+    /// Anzahl ausgewählter Ereignisse (für „Übernehmen (n)“).
+    public var count: Int { (keyword ? 1 : 0) + (address ? 1 : 0) + messageLines.count + vehicleKeys.count + patientKeys.count }
 }
 
 /// Neuen FE2-Stand ganz oder teilweise übernehmen: ausgewählte Fahrzeuge und Patienten
@@ -175,6 +213,32 @@ public struct ApplyAlarmUpdate: MissionCommand {
         try AlarmImport.addVehicles(update.vehicles(in: selection), to: &draft)
         for reported in update.patients(in: selection) { try AlarmImport.addReported(reported, to: &draft) }
         return update
+    }
+}
+
+/// Einzelne Ereignisse verwerfen (Schritt 145): gelten als erledigt, ohne etwas anzulegen;
+/// erscheinen nicht wieder. Nur im Änderungsprotokoll vermerkt.
+public struct DiscardAlarmChanges: MissionCommand {
+    public let alarm: AlamosAlarm
+    public let selection: AlarmUpdateSelection
+
+    public init(alarm: AlamosAlarm, selection: AlarmUpdateSelection) {
+        self.alarm = alarm
+        self.selection = selection
+    }
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let update = AlarmUpdate(alarm: alarm, mission: draft.mission, units: draft.active(MissionUnit.self), patients: draft.active(Patient.self)) else {
+            throw CommandError.invalid("Dieser Stand aus Alamos FE2 ist schon erledigt.")
+        }
+        guard !selection.isEmpty else { throw CommandError.invalid("Bitte mindestens einen Punkt auswählen.") }
+        let snapshot = update.snapshot(after: selection)
+        try draft.updateMission {
+            $0.externalAlarm?.revision = alarm.revision
+            $0.externalAlarm?.applied = snapshot
+        }
+        let titles = update.events.filter(selection.contains).map(\.title)
+        draft.log(.mission, "Aus Alamos FE2 nicht übernommen (Stand \(alarm.revision)): \(titles.joined(separator: "; "))", subject: .mission(draft.missionID))
     }
 }
 

@@ -142,8 +142,12 @@ struct AlamosAlarmTests {
         #expect(changes.messageLines == ["Zweiter Bus"])
         #expect(changes.address == "A 70, Schweinfurt")
         #expect(changes.patientKeys == ["#2"])
-        #expect(changes.summary == ["Stichwort RD 3 → RD 4 – MANV", "+1 Fahrzeug nachalarmiert: RK SWFT 76/1", "+1 Patient gemeldet", "Alarmtext ergänzt (1 Zeile)", "Einsatzort: A 70, Schweinfurt"])
-        #expect(changes.entries.map(\.kind) == [.keyword, .vehicles, .patients, .message, .address])
+        #expect(changes.summary == ["Stichwort: RD 3 → RD 4 – MANV", "Einsatzort: A 70, Schweinfurt", "Alarmtext: Zweiter Bus",
+                                    "Nachalarmiert: RK SWFT 76/1", "Weiterer Patient gemeldet"])
+        #expect(changes.events.map(\.kind) == [.keyword, .address, .message, .vehicle, .patient])
+        #expect(changes.events.map(\.key) == ["", "", "Zweiter Bus", "rk swft 76/1", "#2"])
+        #expect(Set(changes.events.map(\.id)).count == 5, "eindeutige Kennungen")
+        #expect(!changes.summary.joined().contains("Bernd"), "keine Namen")
 
         // Weggefallenes zählt nicht.
         var fewer = old

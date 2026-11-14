@@ -304,13 +304,22 @@ enum AlamosAlert {
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
-    /// Schritt 143: neuer Stand eines Einsatzes – eine Mitteilung je Meldung
-    /// („+1 Fahrzeug nachalarmiert: …“, „+2 Patienten gemeldet“ …), gruppiert je Einsatz.
+    /// Höchstens so viele Mitteilungen je Stand; der Rest kommt als Sammelzeile.
+    static let maxChangeNotifications = 12
+
+    /// Schritt 143/145: neuer Stand eines Einsatzes – eine Mitteilung je Ereignis
+    /// („Nachalarmiert: RK SWFT 76/1“, „Patient 3 gemeldet“ …), gestapelt je Einsatz.
+    /// Ohne Patientennamen (Sperrbildschirm).
     static func announceChange(_ alarm: AlamosAlarm, summary: [String]) {
         Haptics.warning()
         let place = alarm.data.location?.city ?? alarm.data.location?.street
         let subject = [alarm.data.keyword, place].compactMap { $0 }.joined(separator: " · ")
-        for (index, line) in summary.enumerated() {
+        var lines = summary
+        if lines.count > maxChangeNotifications {
+            let rest = lines.count - (maxChangeNotifications - 1)
+            lines = Array(lines.prefix(maxChangeNotifications - 1)) + ["… und \(rest) weitere Änderungen – im Einsatz einzeln ansehen"]
+        }
+        for (index, line) in lines.enumerated() {
             let content = UNMutableNotificationContent()
             content.title = (alarm.isTest ? "Testeinsatz geändert" : "Einsatz geändert") + (subject.isEmpty ? " (Alamos FE2)" : ": \(subject)")
             content.body = line

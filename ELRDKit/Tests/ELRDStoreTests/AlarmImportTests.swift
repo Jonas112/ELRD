@@ -178,10 +178,59 @@ struct AlarmImportTests {
         #expect(rest.changes.keyword != nil)
         #expect(rest.changes.messageLines == ["Zweiter Bus beteiligt"])
 
-        try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection(keyword: true, message: true, patientKeys: ["3"])))
+        try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection(keyword: true, messageLines: ["Zweiter Bus beteiligt"], patientKeys: ["3"])))
         #expect(AlarmUpdate(alarm: second, state: store.state) == nil, "alles erledigt")
         #expect(store.state.patients.filter { !$0.isDeleted }.count == 3)
         #expect(throws: CommandError.self) { try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection())) }
+    }
+
+    /// Schritt 145: jedes Ereignis einzeln übernehmen oder verwerfen.
+    @Test func eventsOneByOne() throws {
+        let fixture = try StoreFixture()
+        let first = alarm()
+        let store = try imported(first, fixture: fixture)
+        var data = updated(first).data
+        data.vehicles.append(AlamosVehicle(unitType: "KTW", radioName: "MHD SW 71/2"))
+        data.patients.append(AlamosPatient(remark: "leicht verletzt"))
+        data.message.append("Polizei vor Ort")
+        let second = AlamosAlarm(id: first.id, externalId: first.externalId, revision: 3, receivedAt: first.receivedAt, data: data)
+
+        let update = try #require(AlarmUpdate(alarm: second, state: store.state, masterUnits: [rtw, nef]))
+        #expect(update.events.map(\.kind) == [.keyword, .message, .message, .vehicle, .vehicle, .patient, .patient])
+        let vehicle = try #require(update.events.first { $0.kind == .vehicle })
+        #expect(update.vehicle(for: vehicle)?.callsign == "JOH SWFT 71/1")
+        let named = try #require(update.events.first { $0.kind == .patient && $0.key == "3" })
+        #expect(update.patient(for: named)?.name == "Erika Muster", "Name nur für die Anzeige in der App")
+
+        // Ein Fahrzeug einzeln.
+        try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection(events: [vehicle])))
+        #expect(store.state.units.contains { $0.callsign == "JOH SWFT 71/1" && !$0.isDeleted })
+        #expect(!store.state.units.contains { $0.callsign == "MHD SW 71/2" && !$0.isDeleted })
+
+        // Eine Alarmtext-Zeile einzeln.
+        var rest = try #require(AlarmUpdate(alarm: second, state: store.state))
+        let line = try #require(rest.events.first { $0.kind == .message && $0.key == "Polizei vor Ort" })
+        try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection(events: [line])))
+        #expect(store.state.journal.contains { $0.text.contains("Polizei vor Ort") && !$0.text.contains("Zweiter Bus beteiligt") })
+
+        // Alle Patienten auf einmal.
+        rest = try #require(AlarmUpdate(alarm: second, state: store.state))
+        try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection(events: rest.events.filter { $0.kind == .patient })))
+        #expect(store.state.patients.filter { !$0.isDeleted }.count == 4)
+
+        // Stichwort verwerfen: erledigt, aber nichts im Tagebuch.
+        rest = try #require(AlarmUpdate(alarm: second, state: store.state))
+        let keyword = try #require(rest.events.first { $0.kind == .keyword })
+        let journalCount = store.state.journal.count
+        try store.perform(DiscardAlarmChanges(alarm: second, selection: AlarmUpdateSelection(events: [keyword])))
+        #expect(store.state.journal.count == journalCount)
+        rest = try #require(AlarmUpdate(alarm: second, state: store.state))
+        #expect(rest.events.map(\.kind) == [.message, .vehicle], "offen: Zeile „Zweiter Bus“ und ein Fahrzeug")
+
+        // Der Rest auf einmal.
+        try store.perform(ApplyAlarmUpdate(alarm: second))
+        #expect(AlarmUpdate(alarm: second, state: store.state) == nil)
+        #expect(store.state.units.contains { $0.callsign == "MHD SW 71/2" && $0.type == .ktw && !$0.isDeleted })
     }
 
     @Test func vehicleAddedByHandIsNotOfferedAgain() throws {

@@ -78,47 +78,54 @@ public struct AlamosChanges: Hashable, Sendable {
         keyword == nil && address == nil && messageLines.isEmpty && callsigns.isEmpty && patients.isEmpty
     }
 
-    /// Eine Meldung je Art der Änderung (Schritt 143) – ohne Patientennamen (Sperrbildschirm).
-    public struct Entry: Hashable, Sendable, Identifiable {
-        public enum Kind: String, Hashable, Sendable {
-            case keyword, vehicles, patients, message, address
+    /// Ein einzelnes Ereignis (Schritt 145): jedes Fahrzeug, jeder Patient, jede neue
+    /// Alarmtext-Zeile, Stichwort und Ort einzeln – einzeln übernehmbar.
+    public struct Event: Hashable, Sendable, Identifiable {
+        public enum Kind: String, Hashable, Sendable, CaseIterable {
+            case keyword, address, message, vehicle, patient
         }
 
         public let kind: Kind
-        public let text: String
-        public var id: Kind { kind }
+        /// Auswahl-Schlüssel: Fahrzeug- bzw. Patientenschlüssel, Alarmtext-Zeile; bei Stichwort und Ort leer.
+        public let key: String
+        /// Kurztext ohne Patientennamen – auch für Mitteilungen auf dem Sperrbildschirm.
+        public let title: String
+
+        public init(kind: Kind, key: String, title: String) {
+            self.kind = kind
+            self.key = key
+            self.title = title
+        }
+
+        public var id: String { "\(kind.rawValue):\(key)" }
 
         /// SF-Symbol für die Anzeige.
         public var systemImage: String {
             switch kind {
             case .keyword: "exclamationmark.bubble"
-            case .vehicles: "car.2"
-            case .patients: "person.2"
-            case .message: "text.bubble"
             case .address: "mappin.and.ellipse"
+            case .message: "text.bubble"
+            case .vehicle: "car.2"
+            case .patient: "person.badge.plus"
             }
         }
     }
 
-    public var entries: [Entry] {
-        var entries: [Entry] = []
-        if let keyword { entries.append(Entry(kind: .keyword, text: "Stichwort \(keyword)")) }
-        if !callsigns.isEmpty {
-            let noun = callsigns.count == 1 ? "Fahrzeug" : "Fahrzeuge"
-            entries.append(Entry(kind: .vehicles, text: "+\(callsigns.count) \(noun) nachalarmiert: \(callsigns.joined(separator: ", "))"))
+    /// Alle Ereignisse in fester Reihenfolge: Stichwort, Ort, Alarmtext, Fahrzeuge, Patienten.
+    public var events: [Event] {
+        var events: [Event] = []
+        if let keyword { events.append(Event(kind: .keyword, key: "", title: "Stichwort: \(keyword)")) }
+        if let address { events.append(Event(kind: .address, key: "", title: "Einsatzort: \(address)")) }
+        events += messageLines.map { Event(kind: .message, key: $0, title: "Alarmtext: \($0)") }
+        events += callsigns.map { Event(kind: .vehicle, key: MasterDataMatching.key($0), title: "Nachalarmiert: \($0)") }
+        events += patientKeys.map { key in
+            Event(kind: .patient, key: key, title: key.hasPrefix("#") ? "Weiterer Patient gemeldet" : "Patient \(key) gemeldet")
         }
-        if !patients.isEmpty {
-            entries.append(Entry(kind: .patients, text: "+\(patients.count) \(patients.count == 1 ? "Patient" : "Patienten") gemeldet"))
-        }
-        if !messageLines.isEmpty {
-            entries.append(Entry(kind: .message, text: "Alarmtext ergänzt (\(messageLines.count) \(messageLines.count == 1 ? "Zeile" : "Zeilen"))"))
-        }
-        if let address { entries.append(Entry(kind: .address, text: "Einsatzort: \(address)")) }
-        return entries
+        return events
     }
 
-    /// Kurzfassung (je Meldung eine Zeile).
-    public var summary: [String] { entries.map(\.text) }
+    /// Kurzfassung: je Ereignis eine Zeile.
+    public var summary: [String] { events.map(\.title) }
 }
 
 public extension AlamosAlarmData {

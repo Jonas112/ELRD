@@ -335,6 +335,12 @@ public struct MissionWorkspaceView: View {
             AlamosUpdateBanner(
                 update: update,
                 canEdit: store.isEnabled(.missionEditing),
+                onApply: { selection in
+                    if let message = applyAlarmChanges(alarm, selection) { errorMessage = message }
+                },
+                onDiscard: { selection in
+                    if let message = discardAlarmChanges(alarm, selection) { errorMessage = message }
+                },
                 onReview: { reviewedAlarm = alarm },
                 onDismiss: {
                     do {
@@ -358,24 +364,42 @@ public struct MissionWorkspaceView: View {
         return alamos.alarms.first { $0.externalId == reference.externalID }
     }
 
-    /// Vorschau mit Auswahl; zeigt immer den neuesten Stand.
+    /// Schritt 145: Ereignisse übernehmen; Fehlertext oder `nil`.
+    private func applyAlarmChanges(_ alarm: AlamosAlarm, _ selection: AlarmUpdateSelection) -> String? {
+        do {
+            try store.perform(ApplyAlarmUpdate(alarm: alarm, selection: selection, masterUnits: masterData?.units ?? []))
+            alamos?.markSeen(alarm)
+            return nil
+        } catch {
+            return ErrorText.message(for: error)
+        }
+    }
+
+    /// Schritt 145: Ereignisse verwerfen (erledigt, nichts angelegt); Fehlertext oder `nil`.
+    private func discardAlarmChanges(_ alarm: AlamosAlarm, _ selection: AlarmUpdateSelection) -> String? {
+        do {
+            try store.perform(DiscardAlarmChanges(alarm: alarm, selection: selection))
+            alamos?.markSeen(alarm)
+            return nil
+        } catch {
+            return ErrorText.message(for: error)
+        }
+    }
+
+    /// Alle Ereignisse einzeln; zeigt immer den neuesten Stand.
     @ViewBuilder private func alamosReview(_ selected: AlamosAlarm) -> some View {
         let alarm = linkedAlarm ?? selected
-        let masterUnits = masterData?.units ?? []
-        if let update = AlarmUpdate(alarm: alarm, state: store.state, masterUnits: masterUnits) {
-            AlamosUpdateSheet(update: update) { selection in
-                do {
-                    try store.perform(ApplyAlarmUpdate(alarm: alarm, selection: selection, masterUnits: masterUnits))
-                    alamos?.markSeen(alarm)
-                    return nil
-                } catch {
-                    return ErrorText.message(for: error)
-                }
-            }
+        if let update = AlarmUpdate(alarm: alarm, state: store.state, masterUnits: masterData?.units ?? []) {
+            AlamosUpdateSheet(
+                update: update,
+                canEdit: store.isEnabled(.missionEditing),
+                onApply: { applyAlarmChanges(alarm, $0) },
+                onDiscard: { discardAlarmChanges(alarm, $0) }
+            )
             .largeSheet()
         } else {
             NavigationStack {
-                ContentUnavailableView("Nichts mehr offen", systemImage: "checkmark.circle", description: Text("Alle Änderungen aus Alamos FE2 sind übernommen oder ausgeblendet."))
+                ContentUnavailableView("Nichts mehr offen", systemImage: "checkmark.circle", description: Text("Alle Änderungen aus Alamos FE2 sind übernommen, verworfen oder ausgeblendet."))
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Fertig") { reviewedAlarm = nil }

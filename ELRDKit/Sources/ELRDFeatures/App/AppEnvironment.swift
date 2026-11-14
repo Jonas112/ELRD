@@ -21,14 +21,16 @@ public struct AppLaunchOptions: Equatable, Sendable {
         case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise, whereabouts, statistics, debrief, distribution, communicationPlan, mapSigns, mapPath, patientDetailPerson, patientDetailCondition, patientDetailTransport, mapExport, communicationChart, search, tutorial
         /// Schritt 140: Einsätze aus Alamos FE2.
         case alamosInbox, alamosAlarm, alamosImport, alamosSettings
+        /// Schritt 143: neuer FE2-Stand im übernommenen Einsatz.
+        case alamosUpdate
 
-        var isAlamos: Bool { [.alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings].contains(self) }
+        var isAlamos: Bool { [.alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings, .alamosUpdate].contains(self) }
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
 
         /// Bildschirme, die direkt im laufenden Beispieleinsatz starten.
-        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .newExercise, .statistics, .settings, .masterData, .onboarding].contains(self) && !isAlamos }
+        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .newExercise, .statistics, .settings, .masterData, .onboarding].contains(self) && (!isAlamos || self == .alamosUpdate) }
 
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {
@@ -141,7 +143,10 @@ public final class AppEnvironment {
             )
         }
         cloud?.onImported = { [weak self] missions in self?.reloadOpenStores(missions) }
-        if !isDemo { alamos.onNewAlarm = { AlamosAlert.announce($0) } }
+        if !isDemo {
+            alamos.onNewAlarm = { AlamosAlert.announce($0) }
+            alamos.onChangedAlarm = { AlamosAlert.announceChange($0, summary: $1) }
+        }
     }
 
     // MARK: iCloud-Abgleich

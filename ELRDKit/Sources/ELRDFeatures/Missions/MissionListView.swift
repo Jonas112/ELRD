@@ -542,7 +542,9 @@ struct MissionListView: View {
                     pendingAlarmImport = nil
                     alarmImport = pending
                 }
-            }) { alarm in
+            }) { selected in
+                // Schritt 143: immer den neuesten Stand aus dem Abruf zeigen.
+                let alarm = alamos?.alarms.first { $0.id == selected.id } ?? selected
                 AlamosAlarmSheet(
                     alarm: alarm,
                     masterUnits: model.masterUnits(),

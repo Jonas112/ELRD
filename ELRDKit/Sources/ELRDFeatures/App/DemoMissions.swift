@@ -242,6 +242,10 @@ enum DemoMissions {
         for item in ChecklistTemplate.standard.items.prefix(4) {
             try running.perform(CheckChecklistItem(item))
         }
+        // Schritt 143: laufender Einsatz stammt aus FE2, dort gibt es schon einen neuen Stand.
+        if environment.demoScreen == .alamosUpdate {
+            try running.perform(LinkExternalAlarm(alarm: AlamosDemo.importedBus(now: now)))
+        }
         try running.perform(AddSituationReport(
             text: SituationReport.text(for: running.state, now: now),
             situationNote: "3 Pkw beteiligt, 1 Person eingeklemmt, Patientenablage eingerichtet",

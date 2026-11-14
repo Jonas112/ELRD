@@ -43,6 +43,8 @@ public struct MissionWorkspaceView: View {
     @Environment(LiveActivityController.self) private var liveActivity: LiveActivityController?
     @Environment(AppSettingsStore.self) private var appSettings: AppSettingsStore?
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
+    /// Schritt 143: neuer Stand aus Alamos FE2 für übernommene Einsätze.
+    @Environment(AlamosInbox.self) private var alamos: AlamosInbox?
     @Environment(\.attachmentStore) private var attachments
     /// Schritt 109: Lagebild wird gerade erstellt (MapKit braucht einen Moment).
     @State private var snapshotInProgress = false
@@ -94,6 +96,7 @@ public struct MissionWorkspaceView: View {
                             situationBar(layout: layout, badges: badges)
                             exerciseBanner
                             closedBanner
+                            alamosBanner
                             content
                         }
                     }
@@ -102,6 +105,7 @@ public struct MissionWorkspaceView: View {
                         situationBar(layout: layout, badges: badges)
                         exerciseBanner
                         closedBanner
+                        alamosBanner
                         content
                         WorkspaceTabBar(selection: $selection, badges: badges)
                     }
@@ -319,6 +323,36 @@ public struct MissionWorkspaceView: View {
             .padding(.horizontal, Spacing.xl)
             .padding(.vertical, Spacing.m)
             .background(Surface.elevated)
+        }
+    }
+
+    /// Schritt 143: Hinweis auf einen neuen FE2-Stand (nur laufende, übernommene Einsätze).
+    @ViewBuilder private var alamosBanner: some View {
+        let state = store.state
+        if let alamos, let reference = state.mission.externalAlarm, !state.mission.isClosed,
+           let alarm = alamos.alarms.first(where: { $0.externalId == reference.externalID }),
+           let update = AlarmUpdate(alarm: alarm, state: state, masterUnits: masterData?.units ?? []) {
+            AlamosUpdateBanner(
+                update: update,
+                canEdit: store.isEnabled(.missionEditing),
+                onApply: {
+                    do {
+                        try store.perform(ApplyAlarmUpdate(alarm: alarm, masterUnits: masterData?.units ?? []))
+                        alamos.markSeen(alarm)
+                    } catch {
+                        errorMessage = ErrorText.message(for: error)
+                    }
+                },
+                onDismiss: {
+                    do {
+                        try store.perform(DismissAlarmUpdate(revision: alarm.revision))
+                        alamos.markSeen(alarm)
+                    } catch {
+                        errorMessage = ErrorText.message(for: error)
+                    }
+                }
+            )
+            .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
 

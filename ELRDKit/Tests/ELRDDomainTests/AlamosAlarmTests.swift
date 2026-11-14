@@ -112,6 +112,44 @@ struct AlamosAlarmTests {
         #expect(text.contains("Gemeldete Patienten: 1"))
     }
 
+    /// Schritt 143: Unterschiede zwischen zwei Ständen.
+    @Test func changesSinceSnapshot() {
+        let old = AlamosAlarmData(
+            keyword: "RD 3",
+            message: ["Bus", " "],
+            location: AlamosLocation(street: "A 70", city: "Werneck"),
+            patients: [AlamosPatient(name: "Anna Alt", patientNumber: "1"), AlamosPatient(remark: "gehfähig")],
+            vehicles: [AlamosVehicle(radioName: "RK SWFT 71/1")]
+        )
+        let snapshot = AlarmSnapshot(old)
+        #expect(snapshot.patientKeys == ["1", "#1"])
+        #expect(snapshot.message == ["Bus"])
+        #expect(snapshot.vehicleKeys == ["rk swft 71/1"])
+        #expect(old.changes(since: snapshot).isEmpty)
+
+        var changed = old
+        changed.keyword = "RD 4"
+        changed.keywordDescription = "MANV"
+        changed.message.append("Zweiter Bus")
+        changed.vehicles.append(AlamosVehicle(radioName: "rk swft 71/1"))
+        changed.vehicles.append(AlamosVehicle(radioName: "RK SWFT 76/1"))
+        changed.patients.append(AlamosPatient(name: "Bernd Neu", remark: "Schock"))
+        changed.location?.city = "Schweinfurt"
+        let changes = changed.changes(since: snapshot)
+        #expect(changes.keyword == "RD 3 → RD 4 – MANV")
+        #expect(changes.callsigns == ["RK SWFT 76/1"])
+        #expect(changes.patients.map(\.name) == ["Bernd Neu"])
+        #expect(changes.messageLines == ["Zweiter Bus"])
+        #expect(changes.address == "A 70, Schweinfurt")
+        #expect(changes.summary == ["Stichwort RD 3 → RD 4 – MANV", "+1 Fahrzeug: RK SWFT 76/1", "+1 Patient", "Alarmtext ergänzt", "Einsatzort: A 70, Schweinfurt"])
+
+        // Weggefallenes zählt nicht.
+        var fewer = old
+        fewer.vehicles = []
+        fewer.patients = []
+        #expect(fewer.changes(since: snapshot).isEmpty)
+    }
+
     @Test func settingsNormalizeURL() {
         #expect(AlamosSettings.normalize("elrd.example.de/")?.absoluteString == "https://elrd.example.de")
         #expect(AlamosSettings.normalize(" http://192.168.1.20:8080 ")?.absoluteString == "http://192.168.1.20:8080")

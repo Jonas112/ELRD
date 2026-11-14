@@ -23,6 +23,9 @@ final class AlamosInbox {
     private(set) var unseen: Set<UUID> = []
     /// Wird bei einem neuen Einsatz aufgerufen (Hinweis, Haptik).
     @ObservationIgnored var onNewAlarm: ((AlamosAlarm) -> Void)?
+    /// Schritt 143: Wird bei einem neuen Stand eines bekannten Einsatzes aufgerufen
+    /// (Kurzfassung der Änderungen ohne Patientennamen).
+    @ObservationIgnored var onChangedAlarm: ((AlamosAlarm, [String]) -> Void)?
 
     @ObservationIgnored private let settingsStore: AppSettingsStore
     @ObservationIgnored private let secureStore: any SecureStore
@@ -140,7 +143,9 @@ final class AlamosInbox {
     /// Übernimmt eine neue Liste und erkennt neue Einsätze bzw. Stände.
     func apply(_ incoming: [AlamosAlarm]) {
         let sorted = incoming.sorted { $0.updatedAt > $1.updatedAt }
+        let previous = Dictionary(alarms.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var fresh: [AlamosAlarm] = []
+        var changed: [(AlamosAlarm, [String])] = []
         for alarm in sorted {
             let known = knownRevisions[alarm.id]
             if known == nil || known! < alarm.revision {
@@ -148,6 +153,10 @@ final class AlamosInbox {
                 let isRecent = now().timeIntervalSince(alarm.updatedAt) < 15 * 60
                 if hasLoaded || isRecent, !alarm.isClosed { unseen.insert(alarm.id) }
                 if hasLoaded, known == nil, !alarm.isClosed { fresh.append(alarm) }
+                if hasLoaded, known != nil, let old = previous[alarm.id] {
+                    let summary = Self.changeSummary(from: old, to: alarm)
+                    if !summary.isEmpty { changed.append((alarm, summary)) }
+                }
             }
             knownRevisions[alarm.id] = alarm.revision
         }
@@ -159,6 +168,17 @@ final class AlamosInbox {
         for alarm in fresh where settings.showsTests || !alarm.isTest {
             onNewAlarm?(alarm)
         }
+        for (alarm, summary) in changed where settings.showsTests || !alarm.isTest {
+            onChangedAlarm?(alarm, summary)
+        }
+    }
+
+    /// Kurzfassung eines neuen Stands; leer, wenn sich nichts Sichtbares geändert hat.
+    static func changeSummary(from old: AlamosAlarm, to new: AlamosAlarm) -> [String] {
+        if new.isClosed { return old.isClosed ? [] : ["In FE2 geschlossen"] }
+        var summary = new.data.changes(since: AlarmSnapshot(old.data)).summary
+        if summary.isEmpty, old.isClosed { summary = ["In FE2 wieder geöffnet"] }
+        return summary
     }
 
     // MARK: Beispieldaten
@@ -189,10 +209,37 @@ enum AlamosAlert {
         let request = UNNotificationRequest(identifier: "alamos-\(alarm.id.uuidString)", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
+
+    /// Schritt 143: neuer Stand eines Einsatzes („RD 4 · +1 Fahrzeug: …, +2 Patienten“).
+    static func announceChange(_ alarm: AlamosAlarm, summary: [String]) {
+        Haptics.warning()
+        let content = UNMutableNotificationContent()
+        content.title = alarm.isTest ? "Testeinsatz geändert (Alamos FE2)" : "Einsatz geändert (Alamos FE2)"
+        content.body = ([alarm.data.keyword].compactMap { $0 } + [summary.joined(separator: ", ")]).joined(separator: " · ")
+        content.sound = .default
+        content.threadIdentifier = "alamos"
+        let request = UNNotificationRequest(identifier: "alamos-\(alarm.id.uuidString)-\(alarm.revision)", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+    }
 }
 
 /// Beispiel-Einsätze (erfunden, Funkrufnamen aus den Stammdaten Schweinfurt).
 enum AlamosDemo {
+    static let busNumber = "2611-04711"
+
+    /// Schritt 143: erster Stand des Bus-Einsatzes, wie er übernommen wurde
+    /// (Stand 2 bringt Stichwort RD 4, zwei Fahrzeuge, einen Patienten und Alarmtext).
+    static func importedBus(now: Date) -> AlamosAlarm {
+        let current = alarms(now: now)[0]
+        var data = current.data
+        data.keyword = "RD 3"
+        data.keywordDescription = "VU Reisebus"
+        data.message = Array(data.message.prefix(1))
+        data.patients = Array(data.patients.prefix(2))
+        data.vehicles = Array(data.vehicles.prefix(3))
+        return AlamosAlarm(externalId: busNumber, revision: 1, receivedAt: current.receivedAt, sender: current.sender, isTest: true, data: data)
+    }
+
     static func alarms(now: Date) -> [AlamosAlarm] {
         let bus = AlamosAlarmData(
             externalId: "2611-04711",
@@ -219,7 +266,7 @@ enum AlamosDemo {
             vehicles: [AlamosVehicle(name: "RK SWFT 71/2", radioName: "RK SWFT 71/2")]
         )
         return [
-            AlamosAlarm(externalId: "2611-04711", revision: 2, receivedAt: now.addingTimeInterval(-240), updatedAt: now.addingTimeInterval(-60), sender: "ILS Schweinfurt", isTest: true, data: bus),
+            AlamosAlarm(externalId: busNumber, revision: 2, receivedAt: now.addingTimeInterval(-240), updatedAt: now.addingTimeInterval(-60), sender: "ILS Schweinfurt", isTest: true, data: bus),
             AlamosAlarm(externalId: "2611-04698", receivedAt: now.addingTimeInterval(-55 * 60), sender: "ILS Schweinfurt", isTest: true, data: fall),
         ]
     }

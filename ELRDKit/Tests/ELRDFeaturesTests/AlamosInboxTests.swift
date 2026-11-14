@@ -69,6 +69,28 @@ struct AlamosInboxTests {
         #expect(!inbox.isUnseen(updatedFirst))
     }
 
+    /// Schritt 143: neuer Stand eines bekannten Einsatzes → Hinweis mit Kurzfassung.
+    @Test func changedAlarmsAreAnnounced() throws {
+        let clock = Clock()
+        let inbox = try makeInbox(clock: clock)
+        var changes: [[String]] = []
+        inbox.onChangedAlarm = { changes.append($1) }
+        let id = UUID()
+        func version(_ revision: Int, closed: Bool = false, vehicles: [AlamosVehicle] = []) -> AlamosAlarm {
+            AlamosAlarm(id: id, externalId: "4711", revision: revision, receivedAt: clock.now, closedAt: closed ? clock.now : nil,
+                        data: AlamosAlarmData(keyword: "RD 2", vehicles: vehicles))
+        }
+        inbox.apply([version(1)])
+        #expect(changes.isEmpty)
+        let vehicles = [AlamosVehicle(radioName: "RK SWFT 71/1")]
+        inbox.apply([version(2, vehicles: vehicles)])
+        #expect(changes == [["+1 Fahrzeug: RK SWFT 71/1"]])
+        inbox.apply([version(2, vehicles: vehicles)])
+        #expect(changes.count == 1, "gleicher Stand → kein Hinweis")
+        inbox.apply([version(3, closed: true, vehicles: vehicles)])
+        #expect(changes.last == ["In FE2 geschlossen"])
+    }
+
     @Test func filtersClosedAndTests() throws {
         let clock = Clock()
         let inbox = try makeInbox(clock: clock)

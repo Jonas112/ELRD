@@ -368,12 +368,26 @@ public struct ExternalAlarmReference: Codable, Hashable, Sendable {
     /// Übernommener Stand.
     public var revision: Int
     public var importedAt: Date
+    /// Schritt 143: Inhalt des übernommenen Stands (für den Vergleich mit neuen Ständen).
+    /// Fehlt bei Einsätzen, die vor Schritt 143 übernommen wurden.
+    public var applied: AlarmSnapshot?
+    /// Schritt 143: Hinweis auf diesen Stand ausgeblendet, ohne zu übernehmen.
+    public var dismissedRevision: Int?
 
-    public init(source: String = ExternalAlarmReference.alamosSource, externalID: String, revision: Int, importedAt: Date) {
+    public init(
+        source: String = ExternalAlarmReference.alamosSource,
+        externalID: String,
+        revision: Int,
+        importedAt: Date,
+        applied: AlarmSnapshot? = nil,
+        dismissedRevision: Int? = nil
+    ) {
         self.source = source
         self.externalID = externalID
         self.revision = revision
         self.importedAt = importedAt
+        self.applied = applied
+        self.dismissedRevision = dismissedRevision
     }
 
     public static let alamosSource = "Alamos FE2"

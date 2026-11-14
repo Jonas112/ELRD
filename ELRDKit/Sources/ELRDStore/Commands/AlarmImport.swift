@@ -46,7 +46,7 @@ public struct AlarmImport: Sendable {
     @MainActor
     func apply(to draft: inout MissionDraft) throws {
         let data = alarm.data
-        let reference = ExternalAlarmReference(externalID: alarm.externalId, revision: alarm.revision, importedAt: draft.context.now)
+        let reference = ExternalAlarmReference(externalID: alarm.externalId, revision: alarm.revision, importedAt: draft.context.now, applied: AlarmSnapshot(data))
         let coordinate = data.location?.geoCoordinate
         try draft.updateMission {
             $0.externalAlarm = reference
@@ -55,28 +55,35 @@ public struct AlarmImport: Sendable {
         _ = try draft.addJournalEntry(text: data.journalText, origin: .automatic)
         draft.log(.mission, "Aus Alamos FE2 übernommen (Einsatznummer \(alarm.externalId), Stand \(alarm.revision))", subject: .mission(draft.missionID))
 
-        if includesVehicles {
-            let matches = vehicleMatches
-            let masters = matches.compactMap(\.master)
-            if !masters.isEmpty { _ = try AddMasterUnits(masters).execute(&draft) }
-            for match in matches where match.master == nil {
-                // Doppelte (gleicher Funkrufname schon im Einsatz) still überspringen.
-                _ = try? AddTemporaryUnit(callsign: match.callsign, type: match.type).execute(&draft)
-            }
-        }
+        if includesVehicles { try Self.addVehicles(vehicleMatches, to: &draft) }
 
         if includesPatients {
-            for reported in data.patients {
-                let patient = try AddPatient(triage: .ungesichtet).execute(&draft)
-                let (first, last) = Self.splitName(reported.name)
-                let notes = Self.notes(for: reported)
-                try draft.update(Patient.self, id: patient.id) {
-                    $0.dispatchPatientNumber = reported.patientNumber
-                    if let first { $0.firstName = first }
-                    if let last { $0.lastName = last }
-                    if !notes.isEmpty { $0.notes = notes }
-                }
-            }
+            for reported in data.patients { try Self.addReported(reported, to: &draft) }
+        }
+    }
+
+    /// Gemeldeten Patienten ungesichtet anlegen (Name, Patientennummer, Bemerkung als Notiz).
+    @MainActor
+    static func addReported(_ reported: AlamosPatient, to draft: inout MissionDraft) throws {
+        let patient = try AddPatient(triage: .ungesichtet).execute(&draft)
+        let (first, last) = Self.splitName(reported.name)
+        let notes = Self.notes(for: reported)
+        try draft.update(Patient.self, id: patient.id) {
+            $0.dispatchPatientNumber = reported.patientNumber
+            if let first { $0.firstName = first }
+            if let last { $0.lastName = last }
+            if !notes.isEmpty { $0.notes = notes }
+        }
+    }
+
+    /// Fahrzeuge anlegen: aus den Stammdaten, sonst temporär; schon eingesetzte überspringen.
+    @MainActor
+    static func addVehicles(_ matches: [VehicleMatch], to draft: inout MissionDraft) throws {
+        let masters = matches.compactMap(\.master)
+        if !masters.isEmpty { _ = try AddMasterUnits(masters).execute(&draft) }
+        for match in matches where match.master == nil {
+            // Doppelte (gleicher Funkrufname schon im Einsatz) still überspringen.
+            _ = try? AddTemporaryUnit(callsign: match.callsign, type: match.type).execute(&draft)
         }
     }
 

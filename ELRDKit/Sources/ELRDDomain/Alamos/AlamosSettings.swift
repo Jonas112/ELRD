@@ -36,7 +36,9 @@ public struct AlamosSettings: Codable, Hashable, Sendable {
         organisationName = try container.decodeIfPresent(String.self, forKey: .organisationName)
     }
 
-    /// Adresse als URL: ohne Schema wird `https://` ergänzt, abschließende „/“ entfernt.
+    /// Adresse als URL: ohne Schema wird `https://` ergänzt – bei einer IP-Adresse,
+    /// `localhost` oder `….local` aber `http://` (Backend im eigenen Netz, z. B. das
+    /// Python-Backend auf dem Mac). Abschließende „/“ werden entfernt.
     public var normalizedURL: URL? {
         Self.normalize(backendURL)
     }
@@ -45,10 +47,22 @@ public struct AlamosSettings: Codable, Hashable, Sendable {
         var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         if !trimmed.lowercased().hasPrefix("http://"), !trimmed.lowercased().hasPrefix("https://") {
-            trimmed = "https://" + trimmed
+            trimmed = (isLocalHost(trimmed) ? "http://" : "https://") + trimmed
         }
         while trimmed.hasSuffix("/") { trimmed.removeLast() }
         guard let url = URL(string: trimmed), let host = url.host, !host.isEmpty else { return nil }
         return url
+    }
+
+    /// „192.168.1.20:8080“, „localhost“, „macbook.local:8080“ → lokales Netz.
+    static func isLocalHost(_ address: String) -> Bool {
+        let host = address.split(separator: "/", maxSplits: 1).first.map(String.init) ?? address
+        let name = (host.split(separator: ":").first.map(String.init) ?? host).lowercased()
+        if name == "localhost" || name.hasSuffix(".local") { return true }
+        let parts = name.split(separator: ".", omittingEmptySubsequences: false)
+        return parts.count == 4 && parts.allSatisfy { part in
+            guard let number = Int(part), !part.isEmpty else { return false }
+            return (0...255).contains(number)
+        }
     }
 }

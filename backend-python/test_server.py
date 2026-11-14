@@ -277,6 +277,18 @@ class ServerTests(unittest.TestCase):
         status, health = self.request("GET", "/health")
         self.assertEqual(health["mqtt"], "connected")
 
+    def test_https_on_http_port(self) -> None:
+        """App mit https:// auf dem HTTP-Port: Hinweis im Log statt Absturz im Logging."""
+        client_hello = b"\x16\x03\x01\x02\x00\x01\x00\x01\xfc\x03\x03" + bytes(32) + b"\x00\x20"
+        with self.assertLogs("elrd.web", level="WARNING") as logs:
+            with socket.create_connection(("127.0.0.1", self.server.server_address[1]), timeout=5) as raw:
+                raw.sendall(client_hello)
+                raw.shutdown(socket.SHUT_WR)
+                answer = raw.recv(64)
+        self.assertTrue(answer.startswith(b"HTTP/1.0 400") or answer == b"", answer)
+        self.assertTrue(any("HTTPS-Anfrage" in line for line in logs.output), logs.output)
+        self.assertEqual(self.request("GET", "/health")[0], 200)
+
     def test_retention(self) -> None:
         old = iso(utc_now() - timedelta(hours=30))
         self.backend.store.write(lambda s: s["alarms"].append({"id": "x", "organisationId": "test-rd", "externalId": "ALT", "revision": 1,

@@ -106,7 +106,7 @@ bleiben in `backend-python/daten/` erhalten.
 - App-Schlüssel eintragen
 - **Verbindung testen**
 
-Mac und iPad müssen im **gleichen WLAN** sein. Im iOS-Simulator von Xcode genügt
+Mac und iPad müssen im **gleichen WLAN** sein (oder per Tailscale/VPN verbunden; dann die Tailscale-IP des Macs mit `http://` eintragen). Im iOS-Simulator von Xcode genügt
 `http://localhost:8080`.
 
 ## 4. Organisationen und Zugänge
@@ -150,6 +150,7 @@ Für einen einzelnen Start gehen auch Startoptionen:
 | `HTTP-Port 8080 ist belegt` | Läuft das Backend schon (anderes Fenster) oder Docker? Sonst `--http-port 9000` |
 | `MQTT-Port 1883 ist belegt` | Mosquitto (`brew services stop mosquitto`) oder Docker-Backend beenden, oder `--mqtt-port 1884` |
 | iPad erreicht den Mac nicht | gleiches WLAN? IP aus „Adresse für die App“? Firewall-Abfrage erlaubt? Lokales Netzwerk in iPadOS erlaubt? |
+| `HTTPS-Anfrage … auf dem HTTP-Port` | in der App die Adresse mit `http://` eintragen (z. B. `http://192.168.178.23:8080`); neuere App-Versionen ergänzen bei IP-Adressen selbst `http://` |
 | `Anmeldung abgelehnt` beim Senden | MQTT-Benutzer = Kennung der Organisation, Passwort von der Verwaltungsseite |
 | Gesendet, aber kein Einsatz | Topic muss `elrd/<eigene-kennung>/alarm` sein (steht im Backend-Fenster als Warnung) |
 | `Verwaltungsseite fehlt` | Backend aus dem ELRD-Projektordner starten (die Seite liegt in `backend/src/ELRD.Backend/wwwroot`) |

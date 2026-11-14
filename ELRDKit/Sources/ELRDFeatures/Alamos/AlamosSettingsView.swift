@@ -104,7 +104,7 @@ struct AlamosSettingsView: View {
         } header: {
             Text("ELRD-Backend")
         } footer: {
-            Text("Adresse und App-Schlüssel bekommt ihr vom Betreiber des Backends (Verwaltungsseite › Organisation). Der Schlüssel liegt nur in der Keychain dieses Geräts. Im lokalen Netz geht auch http://, sonst nur https://.")
+            Text("Adresse und App-Schlüssel bekommt ihr vom Betreiber des Backends (Verwaltungsseite › Organisation). Der Schlüssel liegt nur in der Keychain dieses Geräts. Im lokalen Netz geht auch http:// (bei einer IP-Adresse ohne Angabe automatisch), sonst nur https://.")
         }
 
         Section("Abfrage") {

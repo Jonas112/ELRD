@@ -115,6 +115,13 @@ struct AlamosAlarmTests {
     @Test func settingsNormalizeURL() {
         #expect(AlamosSettings.normalize("elrd.example.de/")?.absoluteString == "https://elrd.example.de")
         #expect(AlamosSettings.normalize(" http://192.168.1.20:8080 ")?.absoluteString == "http://192.168.1.20:8080")
+        // Ohne Schema: IP, localhost und .local → http (Backend im eigenen Netz), sonst https.
+        #expect(AlamosSettings.normalize("100.68.17.75:8080")?.absoluteString == "http://100.68.17.75:8080")
+        #expect(AlamosSettings.normalize("localhost:8080")?.absoluteString == "http://localhost:8080")
+        #expect(AlamosSettings.normalize("Jonas-MacBook.local:8080/")?.absoluteString == "http://Jonas-MacBook.local:8080")
+        #expect(AlamosSettings.normalize("https://100.68.17.75:8443")?.absoluteString == "https://100.68.17.75:8443")
+        #expect(AlamosSettings.normalize("elrd.example.de:8080")?.absoluteString == "https://elrd.example.de:8080")
+        #expect(AlamosSettings.normalize("1.2.3")?.absoluteString == "https://1.2.3")
         #expect(AlamosSettings.normalize("") == nil)
         #expect(AlamosSettings.normalize("https://") == nil)
     }

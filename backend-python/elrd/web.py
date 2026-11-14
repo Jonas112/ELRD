@@ -375,8 +375,19 @@ class Handler(BaseHTTPRequestHandler):
         self._dispatch("DELETE")
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
-        # Nur Methode, Pfad ohne Abfrage und Status – keine Inhalte.
-        log.debug("%s %s", self.command, urlparse(self.path).path)
+        # Nur Methode, Pfad ohne Abfrage und Status – keine Inhalte. Bei unlesbaren
+        # Anfragen fehlen command/path noch (http.server ruft das dann trotzdem auf).
+        path = getattr(self, "path", None)
+        log.debug("%s %s", getattr(self, "command", None) or "-", urlparse(path).path if path else "-")
+
+    def log_error(self, format: str, *args: Any) -> None:  # noqa: A002
+        """Unlesbare Anfrage (z. B. HTTPS auf dem HTTP-Port) verständlich melden."""
+        raw = getattr(self, "raw_requestline", b"") or b""
+        client = self.client_address[0] if self.client_address else "?"
+        if raw.startswith(b"\x16\x03"):
+            log.warning("HTTPS-Anfrage von %s auf dem HTTP-Port – in der App die Adresse mit „http://“ eintragen.", client)
+        else:
+            log.warning("Unlesbare Anfrage von %s abgelehnt.", client)
 
     def _dispatch(self, method: str) -> None:
         url = urlparse(self.path)

@@ -21,16 +21,16 @@ public struct AppLaunchOptions: Equatable, Sendable {
         case situationReport, checklist, leadership, hospitals, transportBoard, handover, journalNew, missionTimeline, triageGuide, newExercise, whereabouts, statistics, debrief, distribution, communicationPlan, mapSigns, mapPath, patientDetailPerson, patientDetailCondition, patientDetailTransport, mapExport, communicationChart, search, tutorial
         /// Schritt 140: Einsätze aus Alamos FE2.
         case alamosInbox, alamosAlarm, alamosImport, alamosSettings
-        /// Schritt 143: neuer FE2-Stand im übernommenen Einsatz.
-        case alamosUpdate
+        /// Schritt 143: neuer FE2-Stand im übernommenen Einsatz (Hinweis bzw. Vorschau).
+        case alamosUpdate, alamosUpdateReview
 
-        var isAlamos: Bool { [.alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings, .alamosUpdate].contains(self) }
+        var isAlamos: Bool { [.alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings, .alamosUpdate, .alamosUpdateReview].contains(self) }
 
         /// Bildschirme, die einen angemeldeten Benutzer mit Beispieleinsätzen brauchen.
         var needsMissions: Bool { ![.setup, .login].contains(self) }
 
         /// Bildschirme, die direkt im laufenden Beispieleinsatz starten.
-        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .newExercise, .statistics, .settings, .masterData, .onboarding].contains(self) && (!isAlamos || self == .alamosUpdate) }
+        var opensRunningMission: Bool { ![.setup, .login, .missions, .newMission, .newExercise, .statistics, .settings, .masterData, .onboarding].contains(self) && (!isAlamos || [.alamosUpdate, .alamosUpdateReview].contains(self)) }
 
         /// Bereich, in dem der Arbeitsbereich startet.
         var initialWorkspaceSection: WorkspaceSection {

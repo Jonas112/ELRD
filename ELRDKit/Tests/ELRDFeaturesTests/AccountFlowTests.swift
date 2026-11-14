@@ -49,7 +49,7 @@ struct AccountFlowTests {
             #expect(environment.userService.currentUser == nil)
         case .missions, .newMission, .workspace, .missionDetails, .patients, .patientTiles, .patientDetail, .injuries, .unitPicker, .sections, .addUnit, .addPlaceholder, .replacePlaceholder, .map, .mapCollapsed, .mapTopo, .mapObject, .mapDrawing, .journal, .journalEntry, .protocolLog, .messages, .report, .settings, .masterData, .onboarding,
              .situationReport, .checklist, .leadership, .hospitals, .transportBoard, .handover, .journalNew, .missionTimeline, .triageGuide, .newExercise, .whereabouts, .statistics, .debrief, .distribution, .communicationPlan, .mapSigns, .mapPath, .patientDetailPerson, .patientDetailCondition, .patientDetailTransport, .mapExport, .communicationChart, .search, .tutorial,
-             .alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings:
+             .alamosInbox, .alamosAlarm, .alamosImport, .alamosSettings, .alamosUpdate, .alamosUpdateReview:
             #expect(environment.userService.currentUser?.displayName == "Erika Beispiel")
             let missions = try MissionOverview.load(from: environment.repository)
             #expect(missions.count == 6)
@@ -57,6 +57,10 @@ struct AccountFlowTests {
             if screen.isAlamos {
                 #expect(environment.alamos.visibleAlarms.count == 2)
                 #expect(environment.alamos.hasAPIKey)
+            }
+            if screen == .alamosUpdate || screen == .alamosUpdateReview {
+                let running = try #require(missions.first { !$0.isClosed })
+                #expect(running.externalAlarmID == AlamosDemo.busNumber, "laufender Einsatz mit FE2 verknüpft")
             }
         }
         #expect(environment.demoScreen == screen)

@@ -45,6 +45,8 @@ public struct MissionWorkspaceView: View {
     @Environment(CloudSyncCoordinator.self) private var cloud: CloudSyncCoordinator?
     /// Schritt 143: neuer Stand aus Alamos FE2 für übernommene Einsätze.
     @Environment(AlamosInbox.self) private var alamos: AlamosInbox?
+    /// Schritt 143: Vorschau eines neuen FE2-Stands.
+    @State private var reviewedAlarm: AlamosAlarm?
     @Environment(\.attachmentStore) private var attachments
     /// Schritt 109: Lagebild wird gerade erstellt (MapKit braucht einen Moment).
     @State private var snapshotInProgress = false
@@ -253,6 +255,7 @@ public struct MissionWorkspaceView: View {
             ReportEditorView(store: store, people: people, hospitals: catalogs.hospitals) { showsReport = false }
         }
         .sheet(isPresented: $showsDetails) { MissionDetailsView(store: store, people: people).largeSheet() }
+        .sheet(item: $reviewedAlarm) { alamosReview($0) }
         .alert("Aktion nicht möglich", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -328,31 +331,58 @@ public struct MissionWorkspaceView: View {
 
     /// Schritt 143: Hinweis auf einen neuen FE2-Stand (nur laufende, übernommene Einsätze).
     @ViewBuilder private var alamosBanner: some View {
-        let state = store.state
-        if let alamos, let reference = state.mission.externalAlarm, !state.mission.isClosed,
-           let alarm = alamos.alarms.first(where: { $0.externalId == reference.externalID }),
-           let update = AlarmUpdate(alarm: alarm, state: state, masterUnits: masterData?.units ?? []) {
+        if let alarm = linkedAlarm, let update = AlarmUpdate(alarm: alarm, state: store.state, masterUnits: masterData?.units ?? []) {
             AlamosUpdateBanner(
                 update: update,
                 canEdit: store.isEnabled(.missionEditing),
-                onApply: {
-                    do {
-                        try store.perform(ApplyAlarmUpdate(alarm: alarm, masterUnits: masterData?.units ?? []))
-                        alamos.markSeen(alarm)
-                    } catch {
-                        errorMessage = ErrorText.message(for: error)
-                    }
-                },
+                onReview: { reviewedAlarm = alarm },
                 onDismiss: {
                     do {
                         try store.perform(DismissAlarmUpdate(revision: alarm.revision))
-                        alamos.markSeen(alarm)
+                        alamos?.markSeen(alarm)
                     } catch {
                         errorMessage = ErrorText.message(for: error)
                     }
                 }
             )
             .transition(.move(edge: .top).combined(with: .opacity))
+            .task {
+                if AppLaunchOptions.current.demoScreen == .alamosUpdateReview { reviewedAlarm = alarm }
+            }
+        }
+    }
+
+    /// Neuester Stand des FE2-Einsatzes, aus dem dieser Einsatz übernommen wurde.
+    private var linkedAlarm: AlamosAlarm? {
+        guard let alamos, let reference = store.state.mission.externalAlarm, !store.state.mission.isClosed else { return nil }
+        return alamos.alarms.first { $0.externalId == reference.externalID }
+    }
+
+    /// Vorschau mit Auswahl; zeigt immer den neuesten Stand.
+    @ViewBuilder private func alamosReview(_ selected: AlamosAlarm) -> some View {
+        let alarm = linkedAlarm ?? selected
+        let masterUnits = masterData?.units ?? []
+        if let update = AlarmUpdate(alarm: alarm, state: store.state, masterUnits: masterUnits) {
+            AlamosUpdateSheet(update: update) { selection in
+                do {
+                    try store.perform(ApplyAlarmUpdate(alarm: alarm, selection: selection, masterUnits: masterUnits))
+                    alamos?.markSeen(alarm)
+                    return nil
+                } catch {
+                    return ErrorText.message(for: error)
+                }
+            }
+            .largeSheet()
+        } else {
+            NavigationStack {
+                ContentUnavailableView("Nichts mehr offen", systemImage: "checkmark.circle", description: Text("Alle Änderungen aus Alamos FE2 sind übernommen oder ausgeblendet."))
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Fertig") { reviewedAlarm = nil }
+                        }
+                    }
+            }
+            .formSheet()
         }
     }
 

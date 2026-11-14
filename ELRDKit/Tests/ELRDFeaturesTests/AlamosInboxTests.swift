@@ -84,7 +84,7 @@ struct AlamosInboxTests {
         #expect(changes.isEmpty)
         let vehicles = [AlamosVehicle(radioName: "RK SWFT 71/1")]
         inbox.apply([version(2, vehicles: vehicles)])
-        #expect(changes == [["+1 Fahrzeug: RK SWFT 71/1"]])
+        #expect(changes == [["+1 Fahrzeug nachalarmiert: RK SWFT 71/1"]])
         inbox.apply([version(2, vehicles: vehicles)])
         #expect(changes.count == 1, "gleicher Stand → kein Hinweis")
         inbox.apply([version(3, closed: true, vehicles: vehicles)])

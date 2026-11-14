@@ -4,30 +4,40 @@ import ELRDStore
 
 /// Hinweis im Einsatz auf einen neuen Stand aus Alamos FE2 (Schritt 143, E129).
 ///
-/// Zeigt die Änderungen seit der letzten Übernahme. „Übernehmen“ ergänzt nur Neues
-/// (Fahrzeuge, Patienten, Tagebuch); „Ausblenden“ lässt den Einsatz unverändert.
+/// Jede Art von Änderung ist eine eigene Meldung. „Ansehen und übernehmen“ öffnet die
+/// Vorschau mit Auswahl; „Ausblenden“ lässt den Einsatz bis zum nächsten Stand unverändert.
 struct AlamosUpdateBanner: View {
     let update: AlarmUpdate
     let canEdit: Bool
-    let onApply: () -> Void
+    let onReview: () -> Void
     let onDismiss: () -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: Spacing.m) {
-                icon
-                text
-                Spacer(minLength: Spacing.m)
-                buttons
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.s) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+                    .accessibilityHidden(true)
+                Text("Alamos FE2: \(update.changes.entries.count == 1 ? "1 neue Meldung" : "\(update.changes.entries.count) neue Meldungen") (Stand \(update.alarm.revision))")
+                    .font(.headline)
+                Spacer(minLength: Spacing.s)
+                Text(update.alarm.updatedAt, format: .dateTime.hour().minute())
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            VStack(alignment: .leading, spacing: Spacing.s) {
-                HStack(alignment: .top, spacing: Spacing.m) {
-                    icon
-                    text
-                }
-                HStack(spacing: Spacing.s) {
-                    Spacer(minLength: 0)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .bottom, spacing: Spacing.m) {
+                    messages
+                    Spacer(minLength: Spacing.m)
                     buttons
+                }
+                VStack(alignment: .leading, spacing: Spacing.s) {
+                    messages
+                    HStack(spacing: Spacing.s) {
+                        Spacer(minLength: 0)
+                        buttons
+                    }
                 }
             }
         }
@@ -39,27 +49,16 @@ struct AlamosUpdateBanner: View {
         .accessibilityElement(children: .contain)
     }
 
-    private var icon: some View {
-        Image(systemName: "antenna.radiowaves.left.and.right")
-            .font(.title3.weight(.semibold))
-            .foregroundStyle(.orange)
-            .accessibilityHidden(true)
-    }
-
-    private var text: some View {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text("Neuer Stand aus Alamos FE2 (Stand \(update.alarm.revision))")
-                .font(.headline)
-            ForEach(update.changes.summary, id: \.self) { line in
-                Text(line)
+    /// Eine Zeile je Meldung.
+    private var messages: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            ForEach(update.changes.entries) { entry in
+                Label(entry.text, systemImage: entry.systemImage)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
                     .lineLimit(2)
-            }
-            if update.changes.keyword != nil || update.changes.address != nil {
-                Text("Stichwort und Einsatzort werden nur im Tagebuch vermerkt.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, Spacing.s)
+                    .padding(.vertical, Spacing.xxs)
+                    .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             }
         }
     }
@@ -68,7 +67,7 @@ struct AlamosUpdateBanner: View {
         HStack(spacing: Spacing.s) {
             Button("Ausblenden", action: onDismiss)
                 .buttonStyle(.bordered)
-            Button("Übernehmen", action: onApply)
+            Button("Ansehen und übernehmen …", action: onReview)
                 .buttonStyle(.borderedProminent)
                 .tint(.orange)
         }

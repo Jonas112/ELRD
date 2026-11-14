@@ -55,31 +55,70 @@ public struct AlamosChanges: Hashable, Sendable {
     public var callsigns: [String]
     /// Neu gemeldete Patienten.
     public var patients: [AlamosPatient]
+    /// Schlüssel der neuen Patienten (gleiche Reihenfolge wie `patients`).
+    public var patientKeys: [String]
 
-    public init(keyword: String? = nil, address: String? = nil, messageLines: [String] = [], callsigns: [String] = [], patients: [AlamosPatient] = []) {
+    public init(
+        keyword: String? = nil,
+        address: String? = nil,
+        messageLines: [String] = [],
+        callsigns: [String] = [],
+        patients: [AlamosPatient] = [],
+        patientKeys: [String]? = nil
+    ) {
         self.keyword = keyword
         self.address = address
         self.messageLines = messageLines
         self.callsigns = callsigns
         self.patients = patients
+        self.patientKeys = patientKeys ?? patients.indices.map { "#\($0 + 1)" }
     }
 
     public var isEmpty: Bool {
         keyword == nil && address == nil && messageLines.isEmpty && callsigns.isEmpty && patients.isEmpty
     }
 
-    /// Kurzfassung für Hinweis und Mitteilung – ohne Patientennamen (Sperrbildschirm).
-    public var summary: [String] {
-        var lines: [String] = []
-        if let keyword { lines.append("Stichwort \(keyword)") }
-        if !callsigns.isEmpty {
-            lines.append("+\(callsigns.count) \(callsigns.count == 1 ? "Fahrzeug" : "Fahrzeuge"): \(callsigns.joined(separator: ", "))")
+    /// Eine Meldung je Art der Änderung (Schritt 143) – ohne Patientennamen (Sperrbildschirm).
+    public struct Entry: Hashable, Sendable, Identifiable {
+        public enum Kind: String, Hashable, Sendable {
+            case keyword, vehicles, patients, message, address
         }
-        if !patients.isEmpty { lines.append("+\(patients.count) \(patients.count == 1 ? "Patient" : "Patienten")") }
-        if !messageLines.isEmpty { lines.append("Alarmtext ergänzt") }
-        if let address { lines.append("Einsatzort: \(address)") }
-        return lines
+
+        public let kind: Kind
+        public let text: String
+        public var id: Kind { kind }
+
+        /// SF-Symbol für die Anzeige.
+        public var systemImage: String {
+            switch kind {
+            case .keyword: "exclamationmark.bubble"
+            case .vehicles: "car.2"
+            case .patients: "person.2"
+            case .message: "text.bubble"
+            case .address: "mappin.and.ellipse"
+            }
+        }
     }
+
+    public var entries: [Entry] {
+        var entries: [Entry] = []
+        if let keyword { entries.append(Entry(kind: .keyword, text: "Stichwort \(keyword)")) }
+        if !callsigns.isEmpty {
+            let noun = callsigns.count == 1 ? "Fahrzeug" : "Fahrzeuge"
+            entries.append(Entry(kind: .vehicles, text: "+\(callsigns.count) \(noun) nachalarmiert: \(callsigns.joined(separator: ", "))"))
+        }
+        if !patients.isEmpty {
+            entries.append(Entry(kind: .patients, text: "+\(patients.count) \(patients.count == 1 ? "Patient" : "Patienten") gemeldet"))
+        }
+        if !messageLines.isEmpty {
+            entries.append(Entry(kind: .message, text: "Alarmtext ergänzt (\(messageLines.count) \(messageLines.count == 1 ? "Zeile" : "Zeilen"))"))
+        }
+        if let address { entries.append(Entry(kind: .address, text: "Einsatzort: \(address)")) }
+        return entries
+    }
+
+    /// Kurzfassung (je Meldung eine Zeile).
+    public var summary: [String] { entries.map(\.text) }
 }
 
 public extension AlamosAlarmData {
@@ -116,7 +155,9 @@ public extension AlamosAlarmData {
         let oldVehicles = Set(old.vehicleKeys)
         changes.callsigns = callsigns.filter { !oldVehicles.contains(MasterDataMatching.key($0)) }
         let oldPatients = Set(old.patientKeys)
-        changes.patients = zip(patients, patientKeys).filter { !oldPatients.contains($0.1) }.map(\.0)
+        let added = zip(patients, patientKeys).filter { !oldPatients.contains($0.1) }
+        changes.patients = added.map { $0.0 }
+        changes.patientKeys = added.map { $0.1 }
         return changes
     }
 }

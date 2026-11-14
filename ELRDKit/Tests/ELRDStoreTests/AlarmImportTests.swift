@@ -159,6 +159,41 @@ struct AlarmImportTests {
         #expect(again.changes.callsigns == ["JOH SWFT 71/1"])
     }
 
+    @Test func partialApplyLeavesRestOpen() throws {
+        let fixture = try StoreFixture()
+        let first = alarm()
+        let store = try imported(first, fixture: fixture)
+        let second = updated(first)
+        let full = try #require(AlarmUpdate(alarm: second, state: store.state))
+        #expect(full.fullSelection.count == 4, "Stichwort, Alarmtext, 1 Fahrzeug, 1 Patient")
+
+        try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection(vehicleKeys: [MasterDataMatching.key("JOH SWFT 71/1")])))
+        #expect(store.state.units.contains { $0.callsign == "JOH SWFT 71/1" && !$0.isDeleted })
+        #expect(store.state.patients.filter { !$0.isDeleted }.count == 2, "Patient nicht ausgewählt")
+        #expect(store.state.journal.contains { $0.text.contains("Nachalarmiert: JOH SWFT 71/1") && !$0.text.contains("Stichwort") })
+
+        let rest = try #require(AlarmUpdate(alarm: second, state: store.state), "Rest bleibt offen")
+        #expect(rest.changes.callsigns.isEmpty)
+        #expect(rest.changes.patientKeys == ["3"])
+        #expect(rest.changes.keyword != nil)
+        #expect(rest.changes.messageLines == ["Zweiter Bus beteiligt"])
+
+        try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection(keyword: true, message: true, patientKeys: ["3"])))
+        #expect(AlarmUpdate(alarm: second, state: store.state) == nil, "alles erledigt")
+        #expect(store.state.patients.filter { !$0.isDeleted }.count == 3)
+        #expect(throws: CommandError.self) { try store.perform(ApplyAlarmUpdate(alarm: second, selection: AlarmUpdateSelection())) }
+    }
+
+    @Test func vehicleAddedByHandIsNotOfferedAgain() throws {
+        let fixture = try StoreFixture()
+        let first = alarm()
+        let store = try imported(first, fixture: fixture)
+        try store.perform(AddTemporaryUnit(callsign: "JOH SWFT 71/1", type: .rtw))
+        let update = try #require(AlarmUpdate(alarm: updated(first), state: store.state))
+        #expect(update.changes.callsigns.isEmpty)
+        #expect(update.vehicles.isEmpty)
+    }
+
     @Test func otherMissionOrOlderReferenceWithoutSnapshot() throws {
         let fixture = try StoreFixture()
         let first = alarm()

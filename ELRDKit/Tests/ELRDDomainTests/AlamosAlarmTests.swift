@@ -141,7 +141,9 @@ struct AlamosAlarmTests {
         #expect(changes.patients.map(\.name) == ["Bernd Neu"])
         #expect(changes.messageLines == ["Zweiter Bus"])
         #expect(changes.address == "A 70, Schweinfurt")
-        #expect(changes.summary == ["Stichwort RD 3 → RD 4 – MANV", "+1 Fahrzeug: RK SWFT 76/1", "+1 Patient", "Alarmtext ergänzt", "Einsatzort: A 70, Schweinfurt"])
+        #expect(changes.patientKeys == ["#2"])
+        #expect(changes.summary == ["Stichwort RD 3 → RD 4 – MANV", "+1 Fahrzeug nachalarmiert: RK SWFT 76/1", "+1 Patient gemeldet", "Alarmtext ergänzt (1 Zeile)", "Einsatzort: A 70, Schweinfurt"])
+        #expect(changes.entries.map(\.kind) == [.keyword, .vehicles, .patients, .message, .address])
 
         // Weggefallenes zählt nicht.
         var fewer = old

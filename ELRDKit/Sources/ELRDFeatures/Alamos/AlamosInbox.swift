@@ -210,16 +210,21 @@ enum AlamosAlert {
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 
-    /// Schritt 143: neuer Stand eines Einsatzes („RD 4 · +1 Fahrzeug: …, +2 Patienten“).
+    /// Schritt 143: neuer Stand eines Einsatzes – eine Mitteilung je Meldung
+    /// („+1 Fahrzeug nachalarmiert: …“, „+2 Patienten gemeldet“ …), gruppiert je Einsatz.
     static func announceChange(_ alarm: AlamosAlarm, summary: [String]) {
         Haptics.warning()
-        let content = UNMutableNotificationContent()
-        content.title = alarm.isTest ? "Testeinsatz geändert (Alamos FE2)" : "Einsatz geändert (Alamos FE2)"
-        content.body = ([alarm.data.keyword].compactMap { $0 } + [summary.joined(separator: ", ")]).joined(separator: " · ")
-        content.sound = .default
-        content.threadIdentifier = "alamos"
-        let request = UNNotificationRequest(identifier: "alamos-\(alarm.id.uuidString)-\(alarm.revision)", content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+        let place = alarm.data.location?.city ?? alarm.data.location?.street
+        let subject = [alarm.data.keyword, place].compactMap { $0 }.joined(separator: " · ")
+        for (index, line) in summary.enumerated() {
+            let content = UNMutableNotificationContent()
+            content.title = (alarm.isTest ? "Testeinsatz geändert" : "Einsatz geändert") + (subject.isEmpty ? " (Alamos FE2)" : ": \(subject)")
+            content.body = line
+            content.sound = index == 0 ? .default : nil
+            content.threadIdentifier = "alamos-\(alarm.id.uuidString)"
+            let request = UNNotificationRequest(identifier: "alamos-\(alarm.id.uuidString)-\(alarm.revision)-\(index)", content: content, trigger: nil)
+            UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+        }
     }
 }
 

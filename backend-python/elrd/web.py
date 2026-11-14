@@ -28,6 +28,7 @@ from .bridge import ExternalBridge
 from .broker import Broker
 from .ingest import AlarmIngest, IngestResult
 from .organisations import Organisations
+from .push import PushService
 from .store import Store, alarm_dto, iso, parse_iso, utc_now
 
 log = logging.getLogger("elrd.web")
@@ -55,6 +56,7 @@ class Backend:
         bridge: Optional[ExternalBridge] = None,
         web_root: Optional[Path] = None,
         addresses: Optional[list[str]] = None,
+        push: Optional[PushService] = None,
     ) -> None:
         self.store = store
         self.organisations = Organisations(store)
@@ -67,6 +69,9 @@ class Backend:
         self.bridge = bridge
         self.web_root = web_root
         self.addresses = addresses or []
+        # Schritt 144: Push-Mitteilungen bei neuen Einsätzen.
+        self.push = push or PushService(store)
+        self.ingest.listeners.append(self.push.on_ingest)
 
     # MARK: Hilfen
 
@@ -85,6 +90,7 @@ class Backend:
         dto = {
             "id": organisation["id"], "name": organisation["name"], "apiKeyHint": organisation.get("apiKeyHint", ""),
             "createdAt": organisation.get("createdAt"), "alarmCount": count, "topic": self.topic(organisation["id"]),
+            "devices": len(self.push.devices(organisation["id"])),
         }
         if self.broker is not None:
             dto["mqttUser"] = organisation["id"]
@@ -185,7 +191,23 @@ def build_routes() -> list[Route]:
     def ping(backend: Backend, request: "Request") -> Any:
         organisation = request.organisation
         return {"organisationId": organisation["id"], "organisationName": organisation["name"],
-                "serverTime": iso(utc_now()), "version": VERSION, "retentionHours": backend.retention_hours}
+                "serverTime": iso(utc_now()), "version": VERSION, "retentionHours": backend.retention_hours,
+                "pushEnabled": backend.push.configured}
+
+    # Schritt 144: Gerät für Push-Mitteilungen an- bzw. abmelden.
+    @route("POST", r"/api/v1/devices", "app")
+    def register_device(backend: Backend, request: "Request") -> Any:
+        body = request.json()
+        try:
+            backend.push.register(request.organisation["id"], str(body.get("token") or ""), str(body.get("environment") or "production"))
+        except ValueError as error:
+            raise HttpError(400, "Gerät nicht angemeldet", str(error)) from None
+        return {"registered": True, "pushEnabled": backend.push.configured}
+
+    @route("DELETE", r"/api/v1/devices/(?P<token>[0-9a-fA-F]{64,200})", "app")
+    def unregister_device(backend: Backend, request: "Request", token: str) -> Any:
+        backend.push.unregister(request.organisation["id"], token)
+        return None
 
     @route("GET", r"/api/v1/alarms", "app")
     def alarms(backend: Backend, request: "Request") -> Any:
@@ -224,7 +246,7 @@ def build_routes() -> list[Route]:
         organisations, alarm_count = backend.store.read(lambda s: (len(s["organisations"]), len(s["alarms"])))
         return {"version": VERSION, "debugEnabled": backend.debug, "retentionHours": backend.retention_hours,
                 "mqtt": backend.mqtt_status(), "organisations": organisations, "alarms": alarm_count,
-                "builtInBroker": backend.broker is not None, "addresses": backend.addresses}
+                "builtInBroker": backend.broker is not None, "addresses": backend.addresses, "push": backend.push.status()}
 
     @route("GET", r"/admin/api/organisations", "admin")
     def organisations(backend: Backend, request: "Request") -> Any:
@@ -262,7 +284,20 @@ def build_routes() -> list[Route]:
     def delete_organisation(backend: Backend, request: "Request", org: str) -> Any:
         if not backend.organisations.delete(org):
             raise HttpError(404, "Nicht gefunden")
+        backend.push.remove_organisation(org)
         return None
+
+    @route("POST", r"/admin/api/organisations/(?P<org>[^/]+)/push-test", "admin")
+    def push_test(backend: Backend, request: "Request", org: str) -> Any:
+        if not backend.organisations.exists(org):
+            raise HttpError(404, "Nicht gefunden")
+        if not backend.push.configured:
+            raise HttpError(400, "Push-Mitteilungen nicht eingerichtet", backend.push.last_error or "In den Einstellungen push.eingeschaltet auf true setzen.")
+        if not backend.push.devices(org):
+            raise HttpError(400, "Keine Geräte", "In der App unter Einstellungen › Alamos FE2 den Abruf einschalten; die App meldet sich dann an.")
+        payload = {"aps": {"alert": {"title": "Test-Mitteilung (ELRD-Backend)", "body": "Push-Mitteilungen kommen an."}, "sound": "default",
+                           "thread-id": "alamos"}, "elrd": {"kind": "test"}}
+        return backend.push.send(org, payload)
 
     # Debug
     @route("GET", r"/admin/api/debug/info", "debug")

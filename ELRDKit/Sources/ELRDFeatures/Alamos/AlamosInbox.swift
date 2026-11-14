@@ -21,6 +21,8 @@ final class AlamosInbox {
     private(set) var isRefreshing = false
     /// Neue Einsätze bzw. neue Stände seit dem letzten Ansehen.
     private(set) var unseen: Set<UUID> = []
+    /// Schritt 144: Stand der Anmeldung für Push-Mitteilungen.
+    private(set) var push: PushState = .off
     /// Wird bei einem neuen Einsatz aufgerufen (Hinweis, Haptik).
     @ObservationIgnored var onNewAlarm: ((AlamosAlarm) -> Void)?
     /// Schritt 143: Wird bei einem neuen Stand eines bekannten Einsatzes aufgerufen
@@ -33,6 +35,9 @@ final class AlamosInbox {
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var knownRevisions: [UUID: Int] = [:]
     @ObservationIgnored private var hasLoaded = false
+    /// Angemeldet als (Kennzeichen, Adresse, Schlüssel) – nur im Arbeitsspeicher.
+    @ObservationIgnored private var registeredDevice: DeviceRegistration?
+    @ObservationIgnored private var pushTask: Task<Void, Never>?
     /// Beispieldaten: keine Netzabfragen.
     let isDemo: Bool
 
@@ -56,12 +61,78 @@ final class AlamosInbox {
     func setAPIKey(_ key: String?) throws {
         let trimmed = key?.trimmingCharacters(in: .whitespacesAndNewlines)
         try secureStore.set((trimmed?.isEmpty ?? true) ? nil : trimmed, for: Self.keychainKey)
+        updatePushRegistration()
     }
 
     /// Einstellungen ändern (nur über diesen Weg, damit der Abruf neu startet).
     func updateSettings(_ change: (inout AlamosSettings) -> Void) throws {
         try settingsStore.update { change(&$0.alamos) }
         restart()
+        updatePushRegistration()
+    }
+
+    // MARK: Push-Mitteilungen (Schritt 144)
+
+    enum PushState: Equatable {
+        /// Abruf oder Push ausgeschaltet, Beispieldaten.
+        case off
+        /// iPadOS hat noch kein Kennzeichen geliefert.
+        case waitingForDevice
+        case registering
+        /// Angemeldet; `backendSends`: Backend hat Push eingerichtet.
+        case registered(backendSends: Bool)
+        case failed(String)
+    }
+
+    struct DeviceRegistration: Equatable {
+        let token: String
+        let url: URL
+        let key: String
+    }
+
+    /// Gewünschte Anmeldung nach den aktuellen Einstellungen (`nil`: keine).
+    private var wantedRegistration: DeviceRegistration? {
+        guard isEnabled, settings.pushEnabled, !isDemo, let token = PushToken.shared.hex,
+              let url = settings.normalizedURL, let key = storedAPIKey, !key.isEmpty else { return nil }
+        return DeviceRegistration(token: token, url: url, key: key)
+    }
+
+    /// Beim Backend an- bzw. abmelden, wenn sich Kennzeichen, Adresse, Schlüssel oder
+    /// Einstellungen geändert haben. Nacheinander, damit Abmelden nie das neue Anmelden überholt.
+    func updatePushRegistration() {
+        let wanted = wantedRegistration
+        if wanted == nil {
+            push = isDemo || !isEnabled || !settings.pushEnabled ? .off : (PushToken.shared.hex == nil ? .waitingForDevice : push)
+        }
+        guard wanted != registeredDevice else { return }
+        let previous = registeredDevice
+        registeredDevice = wanted
+        let earlier = pushTask
+        pushTask = Task { [weak self] in
+            await earlier?.value
+            if let previous {
+                try? await AlamosBackendClient(baseURL: previous.url, apiKey: previous.key).unregisterDevice(token: previous.token)
+            }
+            guard let wanted else { return }
+            self?.push = .registering
+            do {
+                let result = try await AlamosBackendClient(baseURL: wanted.url, apiKey: wanted.key)
+                    .registerDevice(token: wanted.token, environment: PushToken.environment)
+                self?.push = .registered(backendSends: result.pushEnabled)
+            } catch {
+                guard let self else { return }
+                self.push = .failed(ErrorText.message(for: error))
+                // Beim nächsten Abruf erneut versuchen.
+                if self.registeredDevice == wanted { self.registeredDevice = nil }
+            }
+        }
+    }
+
+    /// Mitteilungen erlauben (einmalige Abfrage von iPadOS).
+    private func requestNotificationPermission() {
+        Task {
+            _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
+        }
     }
 
     private func makeClient(url: URL? = nil, key: String? = nil) throws -> AlamosBackendClient {
@@ -91,6 +162,7 @@ final class AlamosInbox {
     /// Startet die regelmäßige Abfrage (nur im Vordergrund aufrufen).
     func start() {
         guard pollTask == nil, isEnabled, !isDemo else { return }
+        requestNotificationPermission()
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
@@ -127,6 +199,7 @@ final class AlamosInbox {
             apply(list.alarms)
             lastSuccess = now()
             lastError = nil
+            if registeredDevice == nil { updatePushRegistration() }
         } catch is CancellationError {
             return
         } catch {
@@ -196,6 +269,24 @@ final class AlamosInbox {
 @MainActor
 enum AlamosAlert {
     static func announce(_ alarm: AlamosAlarm) {
+        // Schritt 144: Hat das Backend schon per Push gemeldet, nicht noch einmal.
+        let identifier = AlamosAnnouncements.identifier(for: alarm.id)
+        guard AlamosAnnouncements.claim(identifier) else { return }
+        let id = alarm.id
+        UNUserNotificationCenter.current().getDeliveredNotifications { delivered in
+            let shown = delivered.contains { $0.request.identifier == identifier || AlamosAlert.alarmID(of: $0) == id }
+            guard !shown else { return }
+            Task { @MainActor in AlamosAlert.post(alarm, identifier: identifier) }
+        }
+    }
+
+    /// Einsatz einer zugestellten Push-Mitteilung des Backends.
+    private nonisolated static func alarmID(of notification: UNNotification) -> UUID? {
+        let elrd = notification.request.content.userInfo["elrd"] as? [String: Any]
+        return (elrd?["alarmId"] as? String).flatMap(UUID.init(uuidString:))
+    }
+
+    private static func post(_ alarm: AlamosAlarm, identifier: String) {
         Haptics.warning()
         let data = alarm.data
         let content = UNMutableNotificationContent()
@@ -206,7 +297,7 @@ enum AlamosAlert {
             .joined(separator: " · ")
         content.sound = .default
         content.threadIdentifier = "alamos"
-        let request = UNNotificationRequest(identifier: "alamos-\(alarm.id.uuidString)", content: content, trigger: nil)
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
 

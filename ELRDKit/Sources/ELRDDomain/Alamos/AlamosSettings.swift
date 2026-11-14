@@ -18,6 +18,8 @@ public struct AlamosSettings: Codable, Hashable, Sendable {
     public var showsTests: Bool = true
     /// Name der Organisation laut Backend (beim Verbindungstest gemerkt).
     public var organisationName: String?
+    /// Schritt 144: beim Backend für Push-Mitteilungen anmelden (neuer Einsatz auch bei geschlossener App).
+    public var pushEnabled: Bool = true
 
     public static let pollChoices = [15, 30, 60, 120]
 
@@ -34,6 +36,7 @@ public struct AlamosSettings: Codable, Hashable, Sendable {
         showsClosed = try container.decodeIfPresent(Bool.self, forKey: .showsClosed) ?? defaults.showsClosed
         showsTests = try container.decodeIfPresent(Bool.self, forKey: .showsTests) ?? defaults.showsTests
         organisationName = try container.decodeIfPresent(String.self, forKey: .organisationName)
+        pushEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushEnabled) ?? defaults.pushEnabled
     }
 
     /// Adresse als URL: ohne Schema wird `https://` ergänzt – bei einer IP-Adresse,

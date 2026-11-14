@@ -96,10 +96,20 @@ public final class ELRDNotificationDelegate: NSObject, UNUserNotificationCenterD
 
     public func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        // Schritt 144: Push vom ELRD-Backend – Abruf anstoßen, jeden Einsatz nur einmal melden.
+        if notification.request.trigger is UNPushNotificationTrigger {
+            let userInfo = notification.request.content.userInfo
+            let elrd = userInfo["elrd"] as? [String: Any]
+            let kind = elrd?["kind"] as? String
+            let alarmID = elrd?["alarmId"] as? String
+            let options = await MainActor.run {
+                AlamosAnnouncements.presentation(for: ["elrd": ["kind": kind ?? "", "alarmId": alarmID ?? ""]])
+            }
+            if let options { return options }
+        }
         // Schritt 105: neue offene Punkte auch bei offener App mit Banner und Ton.
-        completionHandler([.banner, .list, .sound])
+        return [.banner, .list, .sound]
     }
 }

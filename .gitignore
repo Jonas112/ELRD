@@ -26,3 +26,5 @@ __pycache__/
 
 # Python-Backend: Einstellungen und Einsätze
 backend-python/daten/
+# Schritt 144: Apple-Push-Schlüssel nie einchecken.
+*.p8

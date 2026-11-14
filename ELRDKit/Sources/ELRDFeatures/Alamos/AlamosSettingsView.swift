@@ -120,6 +120,19 @@ struct AlamosSettingsView: View {
             }
         }
 
+        // Schritt 144: Push-Mitteilungen vom Backend.
+        Section {
+            Toggle("Push-Mitteilung bei neuem Einsatz", isOn: binding(inbox, \.pushEnabled))
+                .frame(minHeight: TouchTarget.minimum)
+            if settings.isEnabled, settings.pushEnabled {
+                pushStatus(inbox)
+            }
+        } header: {
+            Text("Mitteilungen")
+        } footer: {
+            Text("Das Backend meldet neue Einsätze über Apple – auch wenn ELRD geschlossen ist. Dazu braucht der Betreiber einen Push-Schlüssel von Apple (Anleitung im Ordner backend-python). Ohne Push meldet die App neue Einsätze nur, solange sie geöffnet ist.")
+        }
+
         Section {
             Toggle("Alarmierte Fahrzeuge übernehmen", isOn: binding(inbox, \.importsVehicles))
             Toggle("Gemeldete Patienten anlegen", isOn: binding(inbox, \.importsPatients))
@@ -139,6 +152,32 @@ struct AlamosSettingsView: View {
             }
             .font(.callout)
             .padding(.vertical, Spacing.xs)
+        }
+    }
+
+    @ViewBuilder
+    private func pushStatus(_ inbox: AlamosInbox) -> some View {
+        switch inbox.push {
+        case .off:
+            EmptyView()
+        case .waitingForDevice:
+            Label(PushToken.shared.errorMessage.map { "iPadOS meldet: \($0)" } ?? "Warte auf iPadOS …", systemImage: "hourglass")
+                .foregroundStyle(.secondary)
+        case .registering:
+            HStack {
+                Text("Wird beim Backend angemeldet …").foregroundStyle(.secondary)
+                Spacer()
+                ProgressView()
+            }
+        case .registered(backendSends: true):
+            Label("Angemeldet – das Backend sendet Mitteilungen.", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case .registered(backendSends: false):
+            Label("Angemeldet, aber im Backend ist Push noch nicht eingerichtet.", systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+        case .failed(let text):
+            Label(text, systemImage: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
         }
     }
 
@@ -189,7 +228,8 @@ struct AlamosSettingsView: View {
         do {
             let ping = try await inbox.testConnection(url: url, key: key.isEmpty ? nil : key)
             try? inbox.updateSettings { $0.organisationName = ping.organisationName }
-            testState = .success("Verbunden mit „\(ping.organisationName)“ (Backend \(ping.version)).")
+            let push = ping.pushEnabled == true ? " Push-Mitteilungen sind eingerichtet." : ""
+            testState = .success("Verbunden mit „\(ping.organisationName)“ (Backend \(ping.version)).\(push)")
         } catch {
             testState = .failure(ErrorText.message(for: error))
         }

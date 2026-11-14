@@ -70,6 +70,11 @@ Alle Werte stehen in `appsettings.json` und lassen sich per Umgebungsvariable
 | `Elrd:Storage:DataDirectory` | `data` | Ordner für `store.json`. |
 | `Elrd:Storage:EncryptionKey` | – | 32 Byte Base64 (`openssl rand -base64 32`) → Datei verschlüsselt. |
 | `Elrd:Retention:Hours` | `24` | Einsätze so lange nach der letzten Änderung behalten. |
+| `Elrd:Push:Enabled` | `false` | Push-Mitteilungen über Apple bei neuen Einsätzen (Schritt 144). |
+| `Elrd:Push:TeamId` / `KeyId` | – | Aus dem Apple-Developer-Konto (Keys › APNs); Team des ELRD-Projekts `2V6336KP7H`. |
+| `Elrd:Push:KeyFile` / `Key` | – | Pfad zur `.p8`-Datei bzw. ihr Inhalt (z. B. `Elrd__Push__Key` beim Hoster). Nie einchecken. |
+| `Elrd:Push:BundleId` | `ELRD.App` | Bundle-ID der App. |
+| `Elrd:Push:IncludeTests` | `true` | Auch bei Testeinsätzen melden. |
 
 ## Betrieb auf einem eigenen Server (empfohlen)
 
@@ -158,7 +163,9 @@ UTC, z. B. `2026-11-11T18:30:00.123Z`.
 
 | Aufruf | Antwort |
 |---|---|
-| `GET /api/v1/ping` | `{ organisationId, organisationName, serverTime, version, retentionHours }` |
+| `GET /api/v1/ping` | `{ organisationId, organisationName, serverTime, version, retentionHours, pushEnabled }` |
+| `POST /api/v1/devices` `{ token, environment: "production"\|"sandbox" }` | `{ registered, pushEnabled }` – Gerät für Push-Mitteilungen anmelden |
+| `DELETE /api/v1/devices/{token}` | `204` – abmelden |
 | `GET /api/v1/alarms?since=<Zeitpunkt>&includeClosed=true` | `{ serverTime, alarms: [Alarm] }` – mit `since` nur danach geänderte; `serverTime` als nächstes `since` verwenden |
 | `GET /api/v1/alarms/{id}` | `Alarm` |
 | `GET /health` | `{ status, version, mqtt }` (ohne Anmeldung) |
@@ -176,6 +183,8 @@ Verwaltung und Debug (`X-Admin-Key`): `/admin/api/status`, `/admin/api/organisat
 - Einsatz- und ggf. Patientendaten liegen nur bis zum Ablauf der Aufbewahrung im Backend.
 - `Elrd:Storage:EncryptionKey` setzen; Server-Festplatte zusätzlich verschlüsseln.
 - Protokolle enthalten nur Kennungen (Organisation, Einsatz-ID, Stand), keine Inhalte.
+- Push-Mitteilungen enthalten nur Stichwort, Beschreibung und Ort, keine Patientendaten
+  (sie gehen über Apple und stehen auf dem Sperrbildschirm).
 - Vor dem Echtbetrieb: Vertrag zur Auftragsverarbeitung mit dem FE2-Betreiber,
   Freigabe der Datenweitergabe (Leitstelle/Träger), Datenschutzkonzept.
 

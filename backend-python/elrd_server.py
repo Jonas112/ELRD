@@ -35,6 +35,7 @@ from elrd import VERSION  # noqa: E402
 from elrd.bridge import ExternalBridge  # noqa: E402
 from elrd.broker import Broker  # noqa: E402
 from elrd.organisations import Organisations  # noqa: E402
+from elrd.push import PushService  # noqa: E402
 from elrd.store import Store  # noqa: E402
 from elrd.web import Backend, make_server, start_retention  # noqa: E402
 
@@ -54,6 +55,12 @@ DEFAULT_SETTINGS: dict[str, Any] = {
         "eingeschaltet": False, "host": "", "port": 8883, "tls": True,
         "benutzer": "", "passwort": "", "ca_datei": "", "client_id": "elrd-backend-py",
     },
+    # Schritt 144: Push-Mitteilungen über Apple (APNs). Schlüssel: Apple-Developer-Konto ›
+    # Keys › „Apple Push Notifications service“; .p8-Datei in den Ordner „daten“ legen.
+    "push": {
+        "eingeschaltet": False, "team_id": "", "key_id": "", "schluessel_datei": "", "bundle_id": "ELRD.App",
+        "testeinsaetze": True,
+    },
 }
 
 
@@ -71,9 +78,14 @@ def load_settings(path: Path) -> tuple[dict[str, Any], bool]:
     """Liest die Einstellungen; legt die Datei beim ersten Start an."""
     if path.exists():
         try:
-            return merge(DEFAULT_SETTINGS, json.loads(path.read_text(encoding="utf-8"))), False
+            stored = json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as error:
             sys.exit(f"{path} ist kein gültiges JSON: {error}")
+        merged = merge(DEFAULT_SETTINGS, stored)
+        if merged != stored:
+            # Neue Einträge (z. B. „push“) sichtbar machen; vorhandene Werte bleiben.
+            path.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
+        return merged, False
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(DEFAULT_SETTINGS, ensure_ascii=False, indent=2), encoding="utf-8")
     return dict(DEFAULT_SETTINGS), True
@@ -115,6 +127,7 @@ def main() -> None:
     prefix = settings["topic_praefix"]
 
     store = Store(args.daten)
+    push = PushService(store, settings["push"], base_dir=args.daten)
     organisations = Organisations(store)
     created_key = None
     if first_start and not organisations.all():
@@ -128,6 +141,7 @@ def main() -> None:
         prefix=prefix,
         web_root=WEB_ROOT,
         addresses=[] if args.nur_lokal else [f"http://{a}:{http_port}" for a in local_addresses()],
+        push=push,
     )
 
     broker_settings = settings["broker"]
@@ -189,6 +203,12 @@ def print_banner(backend: Backend, settings: dict[str, Any], settings_path: Path
         print(f" Topic für FE2:       {backend.prefix}/<organisation>/alarm, Benutzer = Organisation")
     if backend.bridge:
         print(f" Externer Broker:     {settings['externer_broker'].get('host')}:{settings['externer_broker'].get('port')}")
+    if push.configured:
+        print(f" Push-Mitteilungen:   an (App {push.bundle_id}, {push.status()['devices']} Geräte angemeldet)")
+    elif push.enabled:
+        print(f" Push-Mitteilungen:   FEHLER – {push.last_error}")
+    else:
+        print(" Push-Mitteilungen:   aus (einstellungen.json › push, siehe README)")
     print(f" Debug-Funktionen:    {'an' if backend.debug else 'aus'} · Einsätze werden nach {backend.retention_hours} h gelöscht")
     print(f" Einstellungen:       {settings_path}")
     if created_key:

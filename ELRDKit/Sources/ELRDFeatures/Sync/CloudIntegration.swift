@@ -76,6 +76,15 @@ public final class ELRDAppDelegate: NSObject, UIApplicationDelegate {
         return configuration
     }
 
+    /// Schritt 144: Kennzeichen für Push-Mitteilungen (auch für das ELRD-Backend).
+    public func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        MainActor.assumeIsolated { PushToken.shared.receive(deviceToken) }
+    }
+
+    public func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
+        MainActor.assumeIsolated { PushToken.shared.fail(error) }
+    }
+
     public func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any]

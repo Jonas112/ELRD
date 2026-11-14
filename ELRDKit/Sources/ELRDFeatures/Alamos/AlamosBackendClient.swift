@@ -39,15 +39,37 @@ struct AlamosBackendClient: Sendable {
         return try await get("api/v1/alarms", query: query)
     }
 
+    /// Schritt 144: Gerät für Push-Mitteilungen anmelden (Kennzeichen von Apple, hexadezimal).
+    func registerDevice(token: String, environment: String) async throws -> AlamosDeviceRegistration {
+        let body = try JSONEncoder().encode(["token": token, "environment": environment])
+        return try await send("api/v1/devices", method: "POST", body: body)
+    }
+
+    /// Schritt 144: Gerät abmelden (Abruf aus oder anderer Schlüssel).
+    func unregisterDevice(token: String) async throws {
+        let _: Empty = try await send("api/v1/devices/\(token)", method: "DELETE", body: nil)
+    }
+
+    private struct Empty: Decodable {}
+
     private func get<Result: Decodable>(_ path: String, query: [URLQueryItem]) async throws -> Result {
+        try await send(path, query: query, method: "GET", body: nil)
+    }
+
+    private func send<Result: Decodable>(_ path: String, query: [URLQueryItem] = [], method: String, body: Data?) async throws -> Result {
         guard var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false) else {
             throw AlamosClientError.invalidURL
         }
         if !query.isEmpty { components.queryItems = query }
         guard let url = components.url else { throw AlamosClientError.invalidURL }
         var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.httpMethod = method
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let body {
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
 
         let result: (Data, URLResponse)
         do {
@@ -59,6 +81,7 @@ struct AlamosBackendClient: Sendable {
         guard let http = response as? HTTPURLResponse else { throw AlamosClientError.unreadable }
         switch http.statusCode {
         case 200: break
+        case 204 where Result.self == Empty.self: return try JSONDecoder().decode(Result.self, from: Data("{}".utf8))
         case 401, 403: throw AlamosClientError.unauthorized
         default: throw AlamosClientError.server(http.statusCode)
         }

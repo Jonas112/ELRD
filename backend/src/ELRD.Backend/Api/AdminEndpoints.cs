@@ -6,16 +6,17 @@ using ElrdBackend.Debug;
 using ElrdBackend.Json;
 using ElrdBackend.Mqtt;
 using ElrdBackend.Options;
+using ElrdBackend.Push;
 using ElrdBackend.Security;
 using ElrdBackend.Storage;
 using Microsoft.Extensions.Options;
 
 namespace ElrdBackend.Api;
 
-public sealed record OrganisationDto(string Id, string Name, string ApiKeyHint, DateTimeOffset CreatedAt, int AlarmCount, string Topic);
+public sealed record OrganisationDto(string Id, string Name, string ApiKeyHint, DateTimeOffset CreatedAt, int AlarmCount, string Topic, int Devices);
 public sealed record CreateOrganisationRequest(string Id, string Name);
 public sealed record OrganisationKeyDto(OrganisationDto Organisation, string ApiKey);
-public sealed record StatusDto(string Version, bool DebugEnabled, int RetentionHours, MqttStatus Mqtt, int Organisations, int Alarms);
+public sealed record StatusDto(string Version, bool DebugEnabled, int RetentionHours, MqttStatus Mqtt, int Organisations, int Alarms, PushStatus Push);
 public sealed record CreateTestAlarmRequest(string? SampleId, string? Via);
 public sealed record SimulateRequest(string Change, string? Via);
 public sealed record RawRequest(string Json, string? Via);
@@ -32,10 +33,10 @@ public static class AdminEndpoints
     {
         var admin = routes.MapGroup("/admin/api").AddEndpointFilter<AdminKeyFilter>();
 
-        admin.MapGet("/status", (IOptions<BackendOptions> options, MqttBridge mqtt, DataStore store) =>
+        admin.MapGet("/status", (IOptions<BackendOptions> options, MqttBridge mqtt, DataStore store, PushNotifier push) =>
         {
             var (organisations, alarms) = store.Read(state => (state.Organisations.Count, state.Alarms.Count));
-            return new StatusDto(BackendApp.Version, options.Value.Debug.Enabled, options.Value.Retention.Hours, mqtt.Status, organisations, alarms);
+            return new StatusDto(BackendApp.Version, options.Value.Debug.Enabled, options.Value.Retention.Hours, mqtt.Status, organisations, alarms, push.Status);
         });
 
         admin.MapGet("/organisations", (Organisations organisations, DataStore store, MqttBridge mqtt) =>
@@ -61,8 +62,27 @@ public static class AdminEndpoints
             return key is null || organisation is null ? Results.NotFound() : Results.Ok(new OrganisationKeyDto(ToDto(organisation, store, mqtt), key));
         });
 
-        admin.MapDelete("/organisations/{id}", (string id, Organisations organisations) =>
-            organisations.Delete(id) ? Results.NoContent() : Results.NotFound());
+        admin.MapDelete("/organisations/{id}", (string id, Organisations organisations, PushNotifier push) =>
+        {
+            if (!organisations.Delete(id)) return Results.NotFound();
+            push.RemoveOrganisation(id);
+            return Results.NoContent();
+        });
+
+        // Schritt 144: Test-Mitteilung an alle Geräte der Organisation.
+        admin.MapPost("/organisations/{id}/push-test", async (string id, Organisations organisations, PushNotifier push, CancellationToken token) =>
+        {
+            if (!organisations.Exists(id)) return Results.NotFound();
+            if (!push.Configured)
+            {
+                return Results.Problem(title: "Push-Mitteilungen nicht eingerichtet", detail: push.LastError ?? "Elrd:Push:Enabled auf true setzen.", statusCode: 400);
+            }
+            if (push.DeviceCount(id) == 0)
+            {
+                return Results.Problem(title: "Keine Geräte", detail: "In der App unter Einstellungen › Alamos FE2 den Abruf einschalten; die App meldet sich dann an.", statusCode: 400);
+            }
+            return Results.Ok(await push.SendAsync(id, PushNotifier.TestPayload(), null, token));
+        });
 
         // MARK: Debug
 
@@ -120,7 +140,8 @@ public static class AdminEndpoints
         organisation.ApiKeyHint,
         organisation.CreatedAt,
         store.Read(state => state.Alarms.Count(a => a.OrganisationId == organisation.Id)),
-        mqtt.AlarmTopic(organisation.Id));
+        mqtt.AlarmTopic(organisation.Id),
+        store.Read(state => state.Devices.Count(d => d.OrganisationId == organisation.Id)));
 
     private sealed class DebugEnabledFilter(IOptions<BackendOptions> options) : IEndpointFilter
     {

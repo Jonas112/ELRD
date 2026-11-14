@@ -7,8 +7,11 @@ Mit externem Broker (z. B. Mosquitto) zusätzlich die Abholung von dort:
 
 from __future__ import annotations
 
+import base64
 import json
 import os
+import shutil
+import subprocess
 import socket
 import struct
 import sys
@@ -18,6 +21,7 @@ import unittest
 import urllib.error
 import urllib.request
 from datetime import timedelta
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -32,6 +36,7 @@ from elrd.broker import Broker, packet, wait_until  # noqa: E402
 from elrd.ingest import AlarmIngest  # noqa: E402
 from elrd.organisations import Organisations, hash_api_key, verify_password  # noqa: E402
 from elrd.store import Store, iso, parse_iso, utc_now  # noqa: E402
+from elrd import push as apns  # noqa: E402
 from elrd.web import Backend, make_server  # noqa: E402
 
 ADMIN = "test-admin-schluessel-123"
@@ -41,6 +46,12 @@ class TempDir:
     def __init__(self) -> None:
         self.directory = tempfile.TemporaryDirectory()
         self.path = Path(self.directory.name)
+
+    def __enter__(self) -> Path:
+        return self.path
+
+    def __exit__(self, *exc: object) -> None:
+        self.directory.cleanup()
 
 
 class StoreAndIngestTests(unittest.TestCase):
@@ -317,6 +328,198 @@ class ExternalBrokerTests(unittest.TestCase):
             bridge.stop()
             temp.directory.cleanup()
 
+
+
+
+def pkcs8_pem(private: int) -> str:
+    """Schlüsseldatei wie von Apple (.p8, PKCS#8, P-256) – ohne öffentlichen Teil."""
+    der = (bytes.fromhex("3041020100301306072a8648ce3d020106082a8648ce3d030107042730250201010420")
+           + private.to_bytes(32, "big"))
+    body = base64.b64encode(der).decode()
+    return "-----BEGIN PRIVATE KEY-----\n" + body + "\n-----END PRIVATE KEY-----\n"
+
+
+class PushTests(unittest.TestCase):
+    """Schritt 144: Push-Mitteilungen über APNs (ohne echten Versand)."""
+
+    PRIVATE = 0x1F2E3D4C5B6A79880F1E2D3C4B5A69788796A5B4C3D2E1F00112233445566778
+    TOKEN = "ab" * 32
+
+    def test_signature_and_token(self) -> None:
+        private = apns.load_private_key(pkcs8_pem(self.PRIVATE))
+        self.assertEqual(private, self.PRIVATE)
+        public = apns.public_key(private)
+        signature = apns.sign(b"ELRD", private)
+        self.assertTrue(apns.verify(b"ELRD", signature, public))
+        self.assertFalse(apns.verify(b"ELRD!", signature, public))
+        token = apns.make_token("TEAM123456", "KEY1234567", private, issued_at=1_700_000_000)
+        header, claims, signed = token.split(".")
+        pad = lambda text: text + "=" * (-len(text) % 4)  # noqa: E731
+        self.assertEqual(json.loads(base64.urlsafe_b64decode(pad(header))), {"alg": "ES256", "kid": "KEY1234567"})
+        self.assertEqual(json.loads(base64.urlsafe_b64decode(pad(claims))), {"iss": "TEAM123456", "iat": 1_700_000_000})
+        self.assertTrue(apns.verify(f"{header}.{claims}".encode(), base64.urlsafe_b64decode(pad(signed)), public))
+        with self.assertRaises(ValueError):
+            apns.load_private_key("-----BEGIN PRIVATE KEY-----\nkaputt\n-----END PRIVATE KEY-----")
+
+    @unittest.skipUnless(shutil.which("openssl"), "openssl fehlt")
+    def test_signature_matches_openssl(self) -> None:
+        """Gegenprobe mit OpenSSL: gleicher öffentlicher Schlüssel, Signatur gültig."""
+        with TempDir() as directory:
+            key = directory / "key.p8"
+            key.write_text(pkcs8_pem(self.PRIVATE))
+            public_der = subprocess.run(["openssl", "pkey", "-in", str(key), "-pubout", "-outform", "DER"],
+                                        capture_output=True, check=True).stdout
+            x, y = apns.public_key(self.PRIVATE)
+            self.assertEqual(public_der[-65:], b"\x04" + x.to_bytes(32, "big") + y.to_bytes(32, "big"))
+            signature = apns.sign(b"Nachricht", self.PRIVATE)
+            r, s = (int.from_bytes(signature[:32], "big"), int.from_bytes(signature[32:], "big"))
+
+            def integer(value: int) -> bytes:
+                raw = value.to_bytes(33, "big").lstrip(b"\x00") or b"\x00"
+                raw = b"\x00" + raw if raw[0] & 0x80 else raw
+                return bytes([0x02, len(raw)]) + raw
+            body = integer(r) + integer(s)
+            (directory / "sig.der").write_bytes(bytes([0x30, len(body)]) + body)
+            (directory / "pub.der").write_bytes(public_der)
+            (directory / "msg").write_bytes(b"Nachricht")
+            result = subprocess.run(["openssl", "dgst", "-sha256", "-verify", str(directory / "pub.der"), "-keyform", "DER",
+                                     "-signature", str(directory / "sig.der"), str(directory / "msg")], capture_output=True, text=True)
+            self.assertIn("Verified OK", result.stdout, result.stderr)
+
+    def make_backend(self, directory: Path, replies: list) -> tuple:
+        (directory / "AuthKey.p8").write_text(pkcs8_pem(self.PRIVATE))
+        calls = []
+
+        def sender(url: str, headers: dict, body: bytes) -> tuple:
+            calls.append((url, headers, json.loads(body)))
+            return replies.pop(0) if replies else (200, "")
+
+        store = Store(directory)
+        settings = {"eingeschaltet": True, "team_id": "TEAM123456", "key_id": "KEY1234567", "schluessel_datei": "AuthKey.p8"}
+        service = apns.PushService(store, settings, sender=sender, base_dir=directory)
+        backend = Backend(store, admin_key=ADMIN, push=service)
+        _, key, _ = backend.organisations.create("test-rd", "Test RD")
+        return backend, service, calls, key
+
+    def test_new_alarm_is_pushed_without_patient_data(self) -> None:
+        with TempDir() as directory:
+            backend, service, calls, _ = self.make_backend(directory, [])
+            self.assertTrue(service.configured)
+            service.register("test-rd", self.TOKEN.upper(), "sandbox")
+            service.register("test-rd", self.TOKEN, "sandbox")  # doppelt → einmal
+            self.assertEqual(len(service.devices("test-rd")), 1)
+            with self.assertRaises(ValueError):
+                service.register("test-rd", "kein-token", "sandbox")
+
+            alarm = fe2.load_sample("vu", "P-1")
+            alarm["data"]["patient"] = [{"name": "Erika Muster", "remark": "Schock"}]
+            backend.ingest.ingest("test-rd", json.dumps(alarm).encode(), source="mqtt")
+            self.assertTrue(wait_until(lambda: len(calls) == 1))
+            url, headers, payload = calls[0]
+            self.assertEqual(url, f"https://api.sandbox.push.apple.com/3/device/{self.TOKEN}")
+            self.assertEqual(headers["apns-topic"], "ELRD.App")
+            self.assertEqual(headers["apns-push-type"], "alert")
+            self.assertTrue(headers["authorization"].startswith("bearer ey"))
+            stored = backend.store.read(lambda s: s["alarms"][0])
+            self.assertEqual(headers["apns-collapse-id"], f"alamos-{stored['id']}")
+            self.assertEqual(payload["elrd"]["alarmId"], stored["id"])
+            self.assertNotIn("Erika", json.dumps(payload, ensure_ascii=False))
+            self.assertIn(alarm["data"]["keyword"], payload["aps"]["alert"]["body"])
+
+            # Aktualisierung → keine weitere Mitteilung.
+            alarm["data"]["message"] = ["geändert"]
+            backend.ingest.ingest("test-rd", json.dumps(alarm).encode(), source="mqtt")
+            threading.Event().wait(0.2)
+            self.assertEqual(len(calls), 1)
+
+    def test_rejected_device_is_removed(self) -> None:
+        with TempDir() as directory:
+            _, service, calls, _ = self.make_backend(directory, [(410, '{"reason":"Unregistered"}')])
+            service.register("test-rd", self.TOKEN, "production")
+            result = service.send("test-rd", {"aps": {"alert": "x"}})
+            self.assertEqual((result["sent"], result["failed"]), (0, 1))
+            self.assertEqual(result["results"][0]["reason"], "Unregistered")
+            self.assertTrue(calls[0][0].startswith("https://api.push.apple.com/"))
+            self.assertEqual(service.devices("test-rd"), [])
+
+    def test_device_api_and_test_push(self) -> None:
+        with TempDir() as directory:
+            backend, service, calls, key = self.make_backend(directory, [])
+            server = make_server(backend, "127.0.0.1", 0)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            base = f"http://127.0.0.1:{server.server_address[1]}"
+            try:
+                def call(method: str, path: str, body: object = None, admin: bool = False) -> tuple:
+                    headers = {"Content-Type": "application/json"}
+                    headers.update({"X-Admin-Key": ADMIN} if admin else {"Authorization": f"Bearer {key}"})
+                    data = json.dumps(body).encode() if body is not None else None
+                    request = urllib.request.Request(base + path, data=data, method=method, headers=headers)
+                    try:
+                        with urllib.request.urlopen(request, timeout=5) as response:
+                            raw = response.read()
+                            return response.status, json.loads(raw) if raw else None
+                    except urllib.error.HTTPError as error:
+                        return error.code, json.loads(error.read() or b"null")
+
+                self.assertEqual(call("POST", "/admin/api/organisations/test-rd/push-test", admin=True)[0], 400, "noch kein Gerät")
+                status, body = call("POST", "/api/v1/devices", {"token": self.TOKEN, "environment": "sandbox"})
+                self.assertEqual((status, body), (200, {"registered": True, "pushEnabled": True}))
+                self.assertEqual(call("POST", "/api/v1/devices", {"token": "xyz"})[0], 400)
+                self.assertTrue(call("GET", "/api/v1/ping")[1]["pushEnabled"])
+                status, result = call("POST", "/admin/api/organisations/test-rd/push-test", admin=True)
+                self.assertEqual((status, result["sent"]), (200, 1))
+                self.assertEqual(calls[-1][2]["elrd"]["kind"], "test")
+                status, info = call("GET", "/admin/api/status", admin=True)
+                self.assertEqual((info["push"]["configured"], info["push"]["devices"]), (True, 1))
+                self.assertEqual(call("GET", "/admin/api/organisations", admin=True)[1][0]["devices"], 1)
+                self.assertEqual(call("DELETE", f"/api/v1/devices/{self.TOKEN}")[0], 204)
+                self.assertEqual(service.devices("test-rd"), [])
+            finally:
+                server.shutdown()
+                server.server_close()
+
+    def test_disabled_or_incomplete(self) -> None:
+        with TempDir() as directory:
+            store = Store(directory)
+            self.assertFalse(apns.PushService(store).configured)
+            broken = apns.PushService(store, {"eingeschaltet": True, "team_id": "T", "key_id": "K", "schluessel_datei": "fehlt.p8"},
+                                      sender=lambda *a: (200, ""), base_dir=directory)
+            self.assertFalse(broken.configured)
+            self.assertIn("nicht gefunden", broken.last_error)
+
+    @unittest.skipUnless(apns.curl_status()[0], "curl mit HTTP/2 fehlt")
+    def test_curl_sender(self) -> None:
+        """Versand über curl: Kopfzeilen und Inhalt kommen an (lokaler Server statt Apple)."""
+        received = {}
+
+        class Fake(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                received["path"] = self.path
+                received["headers"] = dict(self.headers)
+                received["body"] = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+                answer = b'{"reason":"BadDeviceToken"}'
+                self.send_response(400)
+                self.send_header("Content-Length", str(len(answer)))
+                self.end_headers()
+                self.wfile.write(answer)
+
+            def log_message(self, *args: object) -> None:
+                pass
+
+        server = HTTPServer(("127.0.0.1", 0), Fake)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            url = f"http://127.0.0.1:{server.server_address[1]}/3/device/{self.TOKEN}"
+            status, text = apns.send_with_curl(url, {"authorization": "bearer abc\"def", "apns-topic": "ELRD.App"}, b'{"aps":{}}')
+            self.assertEqual(status, 400)
+            self.assertIn("BadDeviceToken", text)
+            self.assertEqual(received["path"], f"/3/device/{self.TOKEN}")
+            self.assertEqual(received["headers"].get("authorization"), 'bearer abc"def')
+            self.assertEqual(received["headers"].get("apns-topic"), "ELRD.App")
+            self.assertEqual(received["body"], b'{"aps":{}}')
+        finally:
+            server.shutdown()
+            server.server_close()
 
 if __name__ == "__main__":
     unittest.main()

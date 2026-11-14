@@ -48,6 +48,8 @@ class AlarmIngest:
     def __init__(self, store: Store, clock: Callable[[], datetime] = utc_now) -> None:
         self.store = store
         self.clock = clock
+        # Schritt 144: z. B. Push-Mitteilungen; (Organisation, Ergebnis, Einsatz).
+        self.listeners: list[Callable[[str, str, Optional[dict[str, Any]]], None]] = []
 
     def ingest(self, organisation_id: str, payload: bytes, source: str, is_test: bool = False) -> IngestResult:
         if len(payload) > MAX_PAYLOAD_BYTES:
@@ -147,7 +149,11 @@ class AlarmIngest:
         log.warning("Nachricht für %s abgelehnt: %s", organisation_id, message)
         return IngestResult("Rejected", message)
 
-    @staticmethod
-    def _log(organisation_id: str, result: IngestResult) -> None:
+    def _log(self, organisation_id: str, result: IngestResult) -> None:
         alarm = result.alarm or {}
         log.info("%s: %s %s (Stand %s)", organisation_id, result.outcome, alarm.get("id", "–"), alarm.get("revision", "–"))
+        for listener in self.listeners:
+            try:
+                listener(organisation_id, result.outcome, result.alarm)
+            except Exception:  # noqa: BLE001 – Eingang darf daran nicht scheitern
+                log.exception("Nachverarbeitung fehlgeschlagen")

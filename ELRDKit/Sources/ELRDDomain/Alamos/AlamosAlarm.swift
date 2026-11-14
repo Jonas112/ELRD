@@ -485,6 +485,19 @@ public struct AlamosPing: Codable, Hashable, Sendable {
     public let serverTime: Date
     public let version: String
     public let retentionHours: Int?
+    /// Schritt 144: Backend kann Push-Mitteilungen senden (fehlt bei älteren Backends).
+    public let pushEnabled: Bool?
+}
+
+/// Antwort auf `POST /api/v1/devices` (Schritt 144).
+public struct AlamosDeviceRegistration: Codable, Hashable, Sendable {
+    public let registered: Bool
+    public let pushEnabled: Bool
+
+    public init(registered: Bool, pushEnabled: Bool) {
+        self.registered = registered
+        self.pushEnabled = pushEnabled
+    }
 }
 
 public enum AlamosJSON {

@@ -42,4 +42,17 @@ public sealed class StoreState
     public int Version { get; set; } = 1;
     public List<Organisation> Organisations { get; set; } = [];
     public List<StoredAlarm> Alarms { get; set; } = [];
+    /// <summary>Schritt 144: Geräte für Push-Mitteilungen.</summary>
+    public List<PushDevice> Devices { get; set; } = [];
+}
+
+/// <summary>Ein Gerät, das Push-Mitteilungen bekommt (Kennzeichen von Apple, hexadezimal).</summary>
+public sealed class PushDevice
+{
+    public required string OrganisationId { get; set; }
+    public required string Token { get; set; }
+    /// <summary><c>production</c> (TestFlight, App Store) oder <c>sandbox</c> (aus Xcode).</summary>
+    public string Environment { get; set; } = "production";
+    public DateTimeOffset RegisteredAt { get; set; }
+    public DateTimeOffset LastSeenAt { get; set; }
 }

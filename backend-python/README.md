@@ -135,6 +135,7 @@ Die Datei wird beim ersten Start angelegt. Nach einer Änderung das Backend neu 
 | `broker.port` | `1883` | Port des eingebauten Brokers |
 | `broker.tls_port`, `zertifikat`, `schluessel` | – | optional MQTT mit TLS (z. B. 8883, PEM-Dateien) |
 | `externer_broker.eingeschaltet` … | `false` | statt/zusätzlich: Einsätze bei einem externen Broker abholen (`host`, `port`, `tls`, `benutzer`, `passwort`, `ca_datei`) |
+| `push.eingeschaltet` … | `false` | Push-Mitteilungen bei neuen Einsätzen (`team_id`, `key_id`, `schluessel_datei`, `bundle_id`, `testeinsaetze`), siehe Abschnitt 6 |
 
 Für einen einzelnen Start gehen auch Startoptionen:
 - `--http-port 9000`, `--mqtt-port 1884` (wenn ein Port belegt ist)
@@ -143,7 +144,56 @@ Für einen einzelnen Start gehen auch Startoptionen:
 - `--daten <ordner>`
 - `--ausfuehrlich` (jede HTTP-Anfrage protokollieren)
 
-## 6. Wenn etwas nicht klappt
+## 6. Push-Mitteilungen (neuer Einsatz auch bei geschlossener App)
+
+Ohne Push meldet die App neue Einsätze nur, solange sie geöffnet ist. Mit Push schickt das
+Backend bei jedem **neuen** Einsatz über Apple eine Mitteilung an alle angemeldeten iPads
+der Organisation – mit Stichwort, Beschreibung und Ort, ohne Patientendaten.
+
+**Einmalig im Apple-Developer-Konto** (<https://developer.apple.com/account> › Certificates,
+Identifiers & Profiles):
+
+1. **Keys** › „+“ › Name z. B. „ELRD Push“, Haken bei **Apple Push Notifications service (APNs)**
+   › Continue › Register.
+2. **Download** der Datei `AuthKey_XXXXXXXXXX.p8` – geht nur **einmal**. Gut aufheben, nie
+   ins Git-Projekt legen (ist dort gesperrt) und nicht weitergeben.
+3. Notieren: **Key ID** (die 10 Zeichen im Dateinamen) und **Team ID** (oben rechts im Konto,
+   beim ELRD-Projekt `2V6336KP7H`).
+
+**Im Backend:**
+
+4. Die `.p8`-Datei in den Ordner `backend-python/daten` legen.
+5. In `daten/einstellungen.json` (der Abschnitt `push` steht nach dem ersten Start schon drin):
+
+   ```json
+   "push": {
+     "eingeschaltet": true,
+     "team_id": "2V6336KP7H",
+     "key_id": "XXXXXXXXXX",
+     "schluessel_datei": "AuthKey_XXXXXXXXXX.p8",
+     "bundle_id": "ELRD.App",
+     "testeinsaetze": true
+   }
+   ```
+
+6. Backend neu starten. Im Fenster steht dann `Push-Mitteilungen: an`.
+
+**In der App:** Einstellungen › Alamos FE2 › „Push-Mitteilung bei neuem Einsatz“ (ist an) –
+darunter steht „Angemeldet – das Backend sendet Mitteilungen“. iPadOS fragt einmal, ob ELRD
+Mitteilungen senden darf: **Erlauben**.
+
+**Testen:** Verwaltungsseite › Organisationen › Spalte „Geräte“ zeigt die angemeldeten iPads;
+„Test-Mitteilung“ schickt eine Mitteilung. Danach App schließen und auf der Debug-Seite einen
+Testeinsatz anlegen.
+
+Gut zu wissen:
+- Aus **Xcode** installierte Apps nutzen Apples Entwicklungs-Server, **TestFlight** und App Store
+  den normalen – die App meldet das selbst an, im Backend ist nichts umzustellen.
+- Nur **neue** Einsätze werden per Push gemeldet. Änderungen meldet die App, wenn sie offen ist.
+- Gesendet wird mit `curl` (auf dem Mac vorhanden), weil Apple HTTP/2 verlangt.
+- Lehnt Apple ein Gerät ab (App gelöscht), meldet das Backend es selbst ab.
+
+## 7. Wenn etwas nicht klappt
 
 | Meldung / Problem | Lösung |
 |---|---|
@@ -155,6 +205,11 @@ Für einen einzelnen Start gehen auch Startoptionen:
 | `Anmeldung abgelehnt` beim Senden | MQTT-Benutzer = Kennung der Organisation, Passwort von der Verwaltungsseite |
 | Gesendet, aber kein Einsatz | Topic muss `elrd/<eigene-kennung>/alarm` sein (steht im Backend-Fenster als Warnung) |
 | `Verwaltungsseite fehlt` | Backend aus dem ELRD-Projektordner starten (die Seite liegt in `backend/src/ELRD.Backend/wwwroot`) |
+| `Push-Mitteilungen: FEHLER – Schlüsseldatei … nicht gefunden` | `.p8`-Datei in `daten` legen, Dateiname in `schluessel_datei` genau so eintragen |
+| Test-Mitteilung: `403 InvalidProviderToken` | Team ID oder Key ID falsch, oder der Schlüssel ist nicht für APNs freigeschaltet |
+| Test-Mitteilung: `400 BadDeviceToken` / `DeviceTokenNotForTopic` | `bundle_id` muss `ELRD.App` sein; das Gerät wird abgemeldet und meldet sich beim nächsten Abruf neu an |
+| App: „Angemeldet, aber im Backend ist Push noch nicht eingerichtet“ | Abschnitt 6, Schritte 4–6 |
+| App: „Warte auf iPadOS …“ | Gerät ohne Internet oder Simulator (dort gibt es keinen Push von Apple) |
 
 ## Für Entwickler
 
@@ -165,6 +220,7 @@ Für einen einzelnen Start gehen auch Startoptionen:
   - `broker.py`: eingebauter MQTT-3.1.1-Broker
   - `bridge.py`: externer Broker
   - `web.py`: HTTP
+  - `push.py`: Push-Mitteilungen (ES256-Token in reinem Python, Versand über `curl --http2`)
 
   Gemeinsam mit den Werkzeugen genutzt werden `tools/alamos/fe2_format.py` (Vorlagen,
   Änderungen) und `mqtt_client.py`.

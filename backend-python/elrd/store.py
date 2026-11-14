@@ -48,16 +48,16 @@ def parse_iso(text: Optional[str]) -> Optional[datetime]:
 
 
 class Store:
-    """Organisationen und Einsätze; Zugriff nur über `read`/`write` (unter Sperre)."""
+    """Organisationen, Einsätze und Geräte für Mitteilungen; Zugriff nur über `read`/`write` (unter Sperre)."""
 
     def __init__(self, directory: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)
         self.path = directory / "store.json"
         self._lock = threading.RLock()
-        self._state: dict[str, Any] = {"version": 1, "organisations": [], "alarms": []}
+        self._state: dict[str, Any] = {"version": 1, "organisations": [], "alarms": [], "devices": []}
         if self.path.exists():
             loaded = json.loads(self.path.read_text(encoding="utf-8") or "{}")
-            self._state.update({k: v for k, v in loaded.items() if k in ("version", "organisations", "alarms")})
+            self._state.update({k: v for k, v in loaded.items() if k in ("version", "organisations", "alarms", "devices")})
 
     def read(self, reader: Callable[[dict[str, Any]], T]) -> T:
         with self._lock:

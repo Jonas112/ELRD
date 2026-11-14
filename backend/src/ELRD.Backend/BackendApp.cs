@@ -4,9 +4,11 @@ using ElrdBackend.Api;
 using ElrdBackend.Json;
 using ElrdBackend.Mqtt;
 using ElrdBackend.Options;
+using ElrdBackend.Push;
 using ElrdBackend.Security;
 using ElrdBackend.Storage;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace ElrdBackend;
@@ -31,6 +33,9 @@ public static class BackendApp
         builder.Services.AddSingleton<Organisations>();
         builder.Services.AddSingleton<AdminKey>();
         builder.Services.AddSingleton<Delivery>();
+        // Schritt 144: Push-Mitteilungen (Transport in Tests ersetzbar).
+        builder.Services.TryAddSingleton<PushTransport>();
+        builder.Services.AddSingleton<PushNotifier>();
         builder.Services.AddSingleton<MqttBridge>();
         builder.Services.AddHostedService(provider => provider.GetRequiredService<MqttBridge>());
         builder.Services.AddSingleton<RetentionWorker>();
@@ -44,6 +49,8 @@ public static class BackendApp
         });
 
         var app = builder.Build();
+        var push = app.Services.GetRequiredService<PushNotifier>();
+        app.Services.GetRequiredService<AlarmIngest>().Processed += push.OnIngest;
         app.UseForwardedHeaders();
         app.UseExceptionHandler();
         app.UseDefaultFiles();

@@ -10,6 +10,27 @@ public sealed class BackendOptions
     public AdminOptions Admin { get; set; } = new();
     public DebugOptions Debug { get; set; } = new();
     public RetentionOptions Retention { get; set; } = new();
+    public PushOptions Push { get; set; } = new();
+}
+
+/// <summary>
+/// Schritt 144: Push-Mitteilungen über Apple (APNs) bei neuen Einsätzen. Schlüssel aus dem
+/// Apple-Developer-Konto (Keys › „Apple Push Notifications service“, .p8-Datei).
+/// </summary>
+public sealed class PushOptions
+{
+    public bool Enabled { get; set; }
+    public string? TeamId { get; set; }
+    public string? KeyId { get; set; }
+    /// <summary>Pfad zur .p8-Datei …</summary>
+    public string? KeyFile { get; set; }
+    /// <summary>… oder ihr Inhalt (z. B. als Umgebungsvariable <c>Elrd__Push__Key</c>).</summary>
+    public string? Key { get; set; }
+    public string BundleId { get; set; } = "ELRD.App";
+    /// <summary>Auch bei Testeinsätzen (Debug-Seite, Testskript) melden.</summary>
+    public bool IncludeTests { get; set; } = true;
+    /// <summary>Nur für Tests: andere Adresse statt Apple.</summary>
+    public string? HostOverride { get; set; }
 }
 
 public sealed class MqttOptions

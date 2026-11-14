@@ -34,6 +34,9 @@ public sealed class AlarmIngest(DataStore store, TimeProvider time, ILogger<Alar
 {
     public const int MaxPayloadBytes = 512 * 1024;
 
+    /// <summary>Schritt 144: nach jeder verarbeiteten Nachricht (z. B. Push-Mitteilungen).</summary>
+    public event Action<string, IngestResult>? Processed;
+
     public IngestResult Ingest(string organisationId, ReadOnlySpan<byte> payload, string source, bool isTest = false)
     {
         if (payload.Length > MaxPayloadBytes) return Reject(organisationId, "Nachricht ist größer als 512 KB.");
@@ -153,6 +156,15 @@ public sealed class AlarmIngest(DataStore store, TimeProvider time, ILogger<Alar
         logger.LogInformation(
             "{Organisation}: {Outcome} {AlarmId} (Stand {Revision})",
             organisationId, result.Outcome, result.Alarm?.Id, result.Alarm?.Revision);
+        try
+        {
+            Processed?.Invoke(organisationId, result);
+        }
+        catch (Exception error)
+        {
+            // Der Eingang darf an der Nachverarbeitung nicht scheitern.
+            logger.LogError(error, "Nachverarbeitung fehlgeschlagen");
+        }
     }
 
     private static string? Text(JsonObject json, string name)

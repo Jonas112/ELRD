@@ -152,6 +152,16 @@ struct AlamosAlarmTests {
         #expect(fewer.changes(since: snapshot).isEmpty)
     }
 
+    /// Schritt 144: ältere Einstellungen ohne „pushEnabled“ → Push an.
+    @Test func settingsPushDefault() throws {
+        let old = try JSONDecoder().decode(AlamosSettings.self, from: Data(#"{"isEnabled":true,"backendURL":"http://192.168.1.2:8080"}"#.utf8))
+        #expect(old.pushEnabled)
+        var settings = AlamosSettings()
+        settings.pushEnabled = false
+        let roundTrip = try JSONDecoder().decode(AlamosSettings.self, from: JSONEncoder().encode(settings))
+        #expect(!roundTrip.pushEnabled)
+    }
+
     @Test func settingsNormalizeURL() {
         #expect(AlamosSettings.normalize("elrd.example.de/")?.absoluteString == "https://elrd.example.de")
         #expect(AlamosSettings.normalize(" http://192.168.1.20:8080 ")?.absoluteString == "http://192.168.1.20:8080")

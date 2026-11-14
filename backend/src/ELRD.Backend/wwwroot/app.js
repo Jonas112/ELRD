@@ -93,6 +93,18 @@ function renderStatus(status) {
     ["Einsätze gespeichert", `${status.alarms} (Löschen nach ${status.retentionHours} h)`],
     ["Debug", status.debugEnabled ? "eingeschaltet" : "aus"],
   ];
+  // Schritt 144: Push-Mitteilungen über Apple.
+  if (status.push) {
+    const push = status.push;
+    const pushState = !push.enabled
+      ? element("span", {}, "aus (siehe Anleitung)")
+      : push.configured
+        ? element("span", { class: push.lastError ? "bad" : "ok" },
+          `eingerichtet für ${push.bundleId} – ${push.devices} Geräte, ${push.sent} gesendet` +
+          (push.lastSentAt ? ` (zuletzt ${formatTime(push.lastSentAt)})` : "") + (push.lastError ? " – " + push.lastError : ""))
+        : element("span", { class: "bad" }, "Fehler – " + (push.lastError || "unvollständig"));
+    rows.push(["Push-Mitteilungen", pushState]);
+  }
   if (status.addresses && status.addresses.length) {
     rows.push(["Adresse für die App", status.addresses.map((address) => element("code", {}, address + " "))]);
   }
@@ -110,7 +122,9 @@ async function loadOrganisations() {
     element("td", {}, element("code", {}, org.topic)),
     element("td", {}, "…" + org.apiKeyHint),
     element("td", {}, org.alarmCount),
+    element("td", {}, org.devices ?? "–"),
     element("td", {}, [
+      org.devices ? element("button", { class: "link", onclick: () => pushTest(org) }, "Test-Mitteilung") : "",
       element("button", { class: "link", onclick: () => renewKey(org) }, "neuer Schlüssel"),
       // Nur Python-Backend mit eingebautem Broker: MQTT-Zugang für FE2.
       org.mqttUser ? element("button", { class: "link", onclick: () => renewMqttPassword(org) }, "neues MQTT-Passwort") : "",
@@ -162,6 +176,17 @@ $("orgForm").addEventListener("submit", async (event) => {
 async function renewKey(org) {
   if (!confirm(`Neuen Schlüssel für ${org.name} erzeugen? Der alte gilt sofort nicht mehr.`)) return;
   showKey(await api(`/organisations/${org.id}/key`, { method: "POST" }));
+  await loadOrganisations();
+}
+
+async function pushTest(org) {
+  try {
+    const result = await api(`/organisations/${org.id}/push-test`, { method: "POST" });
+    const details = result.results.map((r) => `${r.device} (${r.environment}): ${r.status === 200 ? "ok" : r.status + " " + r.reason}`).join("\n");
+    alert(`Test-Mitteilung: ${result.sent} gesendet, ${result.failed} fehlgeschlagen.\n${details}`);
+  } catch (error) {
+    alert(error.message);
+  }
   await loadOrganisations();
 }
 

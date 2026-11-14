@@ -91,6 +91,21 @@ struct AlamosInboxTests {
         #expect(changes.last == ["In FE2 geschlossen"])
     }
 
+    /// Schritt 144: Push vom Backend und eigener Abruf melden einen Einsatz nur einmal.
+    @Test func pushAndPollAnnounceOnce() {
+        var pushes = 0
+        AlamosAnnouncements.onPush = { pushes += 1 }
+        defer { AlamosAnnouncements.onPush = nil }
+        let id = UUID()
+        let info: [AnyHashable: Any] = ["elrd": ["kind": "alamos", "alarmId": id.uuidString.lowercased()]]
+        #expect(AlamosAnnouncements.presentation(for: info) == [.banner, .list, .sound])
+        #expect(AlamosAnnouncements.presentation(for: info) == [.list], "zweites Mal ohne Banner")
+        #expect(pushes == 2, "jede Push-Mitteilung stößt den Abruf an")
+        #expect(!AlamosAnnouncements.claim(AlamosAnnouncements.identifier(for: id)), "eigener Abruf meldet nicht noch einmal")
+        #expect(AlamosAnnouncements.presentation(for: ["elrd": ["kind": "test"]]) == [.banner, .list, .sound])
+        #expect(AlamosAnnouncements.presentation(for: ["aps": [:]]) == nil, "andere Mitteilungen wie bisher")
+    }
+
     @Test func filtersClosedAndTests() throws {
         let clock = Clock()
         let inbox = try makeInbox(clock: clock)

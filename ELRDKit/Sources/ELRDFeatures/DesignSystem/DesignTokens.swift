@@ -62,15 +62,25 @@ public final class DisplayMode: @unchecked Sendable {
 /// nur für Text und Symbole; weiße Schrift darauf wäre zu kontrastarm.
 public enum ActionFill {
     public static let primary = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0x2F / 255, green: 0x6F / 255, blue: 0xD6 / 255, alpha: 1)
-            : UIColor(red: 0x1F / 255, green: 0x5F / 255, blue: 0xAD / 255, alpha: 1)
+        // Schritt 149: bei „Kontrast erhöhen“ dunkler (Weiß 8,6:1 bzw. 6,7:1).
+        switch (traits.userInterfaceStyle == .dark, traits.accessibilityContrast == .high) {
+        case (true, false): UIColor(rgb: 0x2F6FD6)
+        case (true, true): UIColor(rgb: 0x1F57B8)
+        case (false, false): UIColor(rgb: 0x1F5FAD)
+        case (false, true): UIColor(rgb: 0x184C8C)
+        }
     })
-    /// Ausgewählter Zustand von Auswahlknöpfen (Hintergrund).
-    public static let selected = Color.accentColor.opacity(0.22)
-    /// Schritt 147: Warn-Aktionen mit weißer Schrift (5,6:1). Systemorange trägt
-    /// weiße Schrift nur mit 2,1:1.
-    public static let warning = Color(uiColor: UIColor(red: 0xA8 / 255, green: 0x4E / 255, blue: 0, alpha: 1))
+    /// Ausgewählter Zustand von Auswahlknöpfen (Hintergrund). Schritt 149: bei
+    /// „Kontrast erhöhen“ schwächer getönt, damit Akzentschrift darauf ≥ 4,7:1 hat.
+    public static let selected = Color(uiColor: UIColor { traits in
+        let accent = (UIColor(named: "AccentColor") ?? .systemBlue).resolvedColor(with: traits)
+        return accent.withAlphaComponent(traits.accessibilityContrast == .high ? 0.14 : 0.22)
+    })
+    /// Schritt 147: Warn-Aktionen mit weißer Schrift (5,6:1, bei „Kontrast erhöhen“ 7,1:1).
+    /// Systemorange trägt weiße Schrift nur mit 2,1:1.
+    public static let warning = Color(uiColor: UIColor { traits in
+        UIColor(rgb: traits.accessibilityContrast == .high ? 0x8F4200 : 0xA84E00)
+    })
 }
 
 /// Schriftfarben für Warn- und Erfolgstexte (Schritt 147, HIG-Befund 2).
@@ -79,16 +89,23 @@ public enum ActionFill {
 /// (≥ 4,5:1 auf Weiß und gruppiertem Hintergrund), dunkel die Systemfarben (≥ 6,7:1).
 /// Für reine Symbole darf die Signalfarbe bleiben.
 public enum StatusText {
+    /// Dunkel: Systemfarben (passen sich „Kontrast erhöhen“ selbst an). Hell: eigene
+    /// Töne, bei „Kontrast erhöhen“ noch dunkler (7,1:1 bzw. 6,6:1, Schritt 149).
     public static let warning = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? .systemOrange
-            : UIColor(red: 0xA8 / 255, green: 0x4E / 255, blue: 0, alpha: 1)
+        guard traits.userInterfaceStyle != .dark else { return UIColor.systemOrange.resolvedColor(with: traits) }
+        return UIColor(rgb: traits.accessibilityContrast == .high ? 0x8F4200 : 0xA84E00)
     })
     public static let success = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? .systemGreen
-            : UIColor(red: 0x1E / 255, green: 0x7B / 255, blue: 0x34 / 255, alpha: 1)
+        guard traits.userInterfaceStyle != .dark else { return UIColor.systemGreen.resolvedColor(with: traits) }
+        return UIColor(rgb: traits.accessibilityContrast == .high ? 0x176B2C : 0x1E7B34)
     })
+}
+
+extension UIColor {
+    /// 0xRRGGBB, deckend.
+    convenience init(rgb: UInt32) {
+        self.init(red: CGFloat((rgb >> 16) & 0xFF) / 255, green: CGFloat((rgb >> 8) & 0xFF) / 255, blue: CGFloat(rgb & 0xFF) / 255, alpha: 1)
+    }
 }
 
 public extension Color {

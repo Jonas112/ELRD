@@ -68,7 +68,7 @@ final class CoreFlowUITests: XCTestCase {
 
     func testReportOpensWithOutputButtons() {
         let app = launch("workspace")
-        let report = app.buttons["Bericht erstellen"]
+        let report = app.buttons["Bericht"].firstMatch
         XCTAssertTrue(report.waitForExistence(timeout: 30))
         report.tap()
         XCTAssertTrue(button(app, containing: "An ILS").waitForExistence(timeout: 30), "Bericht mit Versandknopf")

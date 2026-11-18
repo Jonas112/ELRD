@@ -659,6 +659,7 @@ struct SituationBar: View {
             .buttonStyle(.plain)
             .foregroundStyle(Color.primary.opacity(0.8))
             .accessibilityLabel("Suchen")
+            .accessibilityInputLabels(["Suchen", "Suche"])
             ReportButton(size: buttonSize, action: onReport)
             MessagesBellButton(unread: unreadMessages, size: buttonSize, action: onMessages)
             if let account { AccountAvatarMenu(account: account, size: buttonSize) }
@@ -675,6 +676,7 @@ struct SituationBar: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Zurück zur Einsatzliste")
+            .accessibilityInputLabels(["Zurück", "Einsätze", "Einsatzliste"])
         }
     }
 
@@ -881,12 +883,18 @@ struct WorkspaceRail: View {
 
     var body: some View {
         VStack(spacing: Spacing.s) {
-            ForEach(WorkspaceSection.allCases) { section in
-                SectionButton(section: section, isSelected: selection == section, badge: badges.badge(for: section), height: 72) {
-                    selection = section
+            // Schritt 148: als Gruppe „Bereiche“ mit Position je Knopf (wie eine Tab-Leiste).
+            VStack(spacing: Spacing.s) {
+                ForEach(Array(WorkspaceSection.allCases.enumerated()), id: \.element) { index, section in
+                    SectionButton(section: section, isSelected: selection == section, badge: badges.badge(for: section), height: 72,
+                                  position: index + 1, count: WorkspaceSection.allCases.count) {
+                        selection = section
+                    }
+                    .frame(width: 80)
                 }
-                .frame(width: 80)
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Bereiche")
             Spacer(minLength: Spacing.l)
             Button(action: onSearch) {
                 RailIcon(systemImage: "magnifyingglass", title: "Suchen", showsLabel: true, size: TouchTarget.comfortable)
@@ -894,6 +902,7 @@ struct WorkspaceRail: View {
             .buttonStyle(.plain)
             .foregroundStyle(Color.primary.opacity(0.8))
             .accessibilityLabel("Suchen")
+            .accessibilityInputLabels(["Suchen", "Suche"])
             .accessibilityHint("Tastatur: Befehl K")
             ReportButton(showsLabel: true, action: onReport)
             MessagesBellButton(unread: badges.unreadMessages, showsLabel: true, action: onMessages)
@@ -912,7 +921,10 @@ struct WorkspaceRail: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.primary.opacity(0.85))
-                .accessibilityLabel("Einsatz verlassen, zurück zur Einsatzliste")
+                // Schritt 148: Name wie die sichtbare Beschriftung (Voice Control „Tippe Einsätze“).
+                .accessibilityLabel("Einsätze")
+                .accessibilityHint("Verlässt den Einsatz und zeigt die Einsatzliste")
+                .accessibilityInputLabels(["Einsätze", "Einsatzliste", "Einsatz verlassen"])
             }
         }
         .padding(.vertical, Spacing.l)
@@ -930,12 +942,15 @@ struct WorkspaceTabBar: View {
 
     var body: some View {
         HStack(spacing: Spacing.xs) {
-            ForEach(WorkspaceSection.allCases) { section in
-                SectionButton(section: section, isSelected: selection == section, badge: badges.badge(for: section), height: 64) {
+            ForEach(Array(WorkspaceSection.allCases.enumerated()), id: \.element) { index, section in
+                SectionButton(section: section, isSelected: selection == section, badge: badges.badge(for: section), height: 64,
+                              position: index + 1, count: WorkspaceSection.allCases.count) {
                     selection = section
                 }
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Bereiche")
         .padding(.horizontal, Spacing.m)
         .padding(.top, Spacing.s)
         .background(Color(uiColor: .secondarySystemBackground), ignoresSafeAreaEdges: .bottom)
@@ -949,6 +964,9 @@ struct SectionButton: View {
     let isSelected: Bool
     let badge: Int
     let height: CGFloat
+    /// Schritt 148: Position in der Leiste für VoiceOver („Tab 2 von 5“).
+    var position = 0
+    var count = 0
     let action: () -> Void
 
     var body: some View {
@@ -980,8 +998,18 @@ struct SectionButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(badge > 0 ? "\(section.title), \(badge) offen" : section.title)
+        .accessibilityLabel(section.title)
+        .accessibilityValue(accessibilityValue)
+        .accessibilityInputLabels([section.title])
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// „3 offen, Tab 2 von 5“ – wie eine Tab-Leiste des Systems.
+    private var accessibilityValue: String {
+        var parts: [String] = []
+        if badge > 0 { parts.append("\(badge) offen") }
+        if count > 0 { parts.append("Tab \(position) von \(count)") }
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -999,7 +1027,9 @@ struct ReportButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.primary.opacity(0.8))
-        .accessibilityLabel("Bericht erstellen")
+        .accessibilityLabel("Bericht")
+        .accessibilityHint("Erstellt den Einsatzbericht")
+        .accessibilityInputLabels(["Bericht", "Bericht erstellen"])
     }
 }
 
@@ -1024,7 +1054,10 @@ struct MessagesBellButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.primary.opacity(0.8))
-        .accessibilityLabel(unread > 0 ? "Benachrichtigungen, \(unread) ungelesen" : "Benachrichtigungen")
+        // Schritt 148: Name wie die sichtbare Beschriftung „Meldungen“.
+        .accessibilityLabel("Meldungen")
+        .accessibilityValue(unread > 0 ? "\(unread) ungelesen" : "")
+        .accessibilityInputLabels(["Meldungen", "Nachrichten", "Benachrichtigungen"])
     }
 }
 

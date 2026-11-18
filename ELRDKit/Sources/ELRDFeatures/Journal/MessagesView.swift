@@ -88,7 +88,7 @@ struct MessagesView: View {
                     HStack(alignment: .top, spacing: Spacing.m) {
                         Image(systemName: record.isRead ? "bell" : "bell.badge.fill")
                             .font(.title3)
-                            .foregroundStyle(record.isRead ? Color.secondary : Color.orange)
+                            .foregroundStyle(record.isRead ? Color.secondary : StatusText.warning)
                             .frame(width: 28)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(record.item.title)
@@ -155,7 +155,7 @@ struct MessagesView: View {
                 .foregroundStyle(trimmed.isEmpty ? Color.secondary : Color.white)
                 .padding(.horizontal, Spacing.l)
                 .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
-                .background(trimmed.isEmpty ? Surface.elevated : (isWarning ? Color.orange : ActionFill.primary),
+                .background(trimmed.isEmpty ? Surface.elevated : (isWarning ? ActionFill.warning : ActionFill.primary),
                             in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 .fixedSize(horizontal: true, vertical: false)
         }
@@ -194,7 +194,7 @@ struct MessageRow: View {
         HStack(alignment: .top, spacing: Spacing.m) {
             Image(systemName: symbol)
                 .font(.title2)
-                .foregroundStyle(message.kind == .warning ? Color.orange : Color.secondary)
+                .foregroundStyle(message.kind == .warning ? StatusText.warning : Color.secondary)
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 HStack(spacing: Spacing.s) {

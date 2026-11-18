@@ -284,9 +284,9 @@ struct SituationOverview: View {
         let figures: [(String, String, Color?)] = [
             (ElapsedTimeFormat.string(from: state.mission.startedAt, to: now), "Laufzeit", nil),
             ("\(dashboard.patientTotal)", "Patienten", nil),
-            ("\(waiting)", "ohne Transport", waiting > 0 ? .orange : nil),
-            ("\(dashboard.freeTransport)", "Transportmittel frei", dashboard.freeTransport == 0 && waiting > 0 ? .orange : nil),
-            (due.map { $0 <= 0 ? "jetzt" : "\($0) min" } ?? "–", "nächste Lagemeldung", (due ?? 1) <= 0 ? .orange : nil),
+            ("\(waiting)", "ohne Transport", waiting > 0 ? StatusText.warning : nil),
+            ("\(dashboard.freeTransport)", "Transportmittel frei", dashboard.freeTransport == 0 && waiting > 0 ? StatusText.warning : nil),
+            (due.map { $0 <= 0 ? "jetzt" : "\($0) min" } ?? "–", "nächste Lagemeldung", (due ?? 1) <= 0 ? StatusText.warning : nil),
         ]
         return ViewThatFits(in: .horizontal) {
             HStack(spacing: Spacing.s) {
@@ -382,7 +382,7 @@ struct SituationOverview: View {
                 Text("\(count)")
                     .font(.system(size: 40, weight: .heavy))
                     .monospacedDigit()
-                    .foregroundStyle(highlight ? Color.orange : Color.primary)
+                    .foregroundStyle(highlight ? StatusText.warning : Color.primary)
                 Text(label)
                     .font(.callout)
                     .foregroundStyle(.secondary)

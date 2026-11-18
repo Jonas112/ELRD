@@ -115,7 +115,7 @@ struct UnitChoiceTile: View {
                         .minimumScaleFactor(0.85)
                     Text(statusText)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(style == .assigned ? Color.white.opacity(0.85) : style == .busy ? Color.orange : Color.secondary)
+                        .foregroundStyle(style == .assigned ? Color.white.opacity(0.85) : style == .busy ? StatusText.warning : Color.secondary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: style == .assigned ? "xmark.circle.fill" : "plus.circle.fill")

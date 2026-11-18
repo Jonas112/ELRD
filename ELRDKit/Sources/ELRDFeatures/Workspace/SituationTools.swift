@@ -144,7 +144,7 @@ struct DemandCard: View {
                         Text("\(demand.used[type] ?? 0)").monospacedDigit()
                         Text("\(missing)")
                             .font(.headline.monospacedDigit())
-                            .foregroundStyle(missing > 0 ? Color.orange : Color.secondary)
+                            .foregroundStyle(missing > 0 ? StatusText.warning : Color.secondary)
                     }
                 }
             }
@@ -217,7 +217,7 @@ struct ChecklistSheet: View {
                             HStack(spacing: Spacing.m) {
                                 Image(systemName: entry == nil ? "circle" : "checkmark.circle.fill")
                                     .font(.title2)
-                                    .foregroundStyle(entry == nil ? Color.secondary : Color.green)
+                                    .foregroundStyle(entry == nil ? Color.secondary : StatusText.success)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.title)
                                         .foregroundStyle(.primary)
@@ -478,7 +478,7 @@ struct HospitalQuotaSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(limit.map { "\(count) von \($0)" } ?? "\(count) Patienten")
                     .font(.body.weight(.semibold).monospacedDigit())
-                    .foregroundStyle((limit.map { count > $0 } ?? false) ? Color.orange : Color.primary)
+                    .foregroundStyle((limit.map { count > $0 } ?? false) ? StatusText.warning : Color.primary)
                 if limit != nil {
                     // Zurücksetzen bewusst unter der Zahl: Plus und Minus bleiben an ihrem Platz.
                     Button("Kontingent entfernen") { setLimit(load, triage, nil) }

@@ -88,7 +88,7 @@ struct MissionTimelineView: View {
                     Text("Lagebild jetzt").font(.headline)
                     Text(snapshotCaption(state))
                         .font(.subheadline)
-                        .foregroundStyle(snapshotState.isFailure ? Color.orange : Color.secondary)
+                        .foregroundStyle(snapshotState.isFailure ? StatusText.warning : Color.secondary)
                 }
                 Spacer()
                 if snapshotState == .working { ProgressView() }

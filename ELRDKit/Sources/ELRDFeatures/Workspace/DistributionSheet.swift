@@ -102,7 +102,7 @@ struct DistributionSheet: View {
                 Text(hospital.name).font(.headline)
                 Text(isChanged ? "Von Hand geändert" : proposal.reason)
                     .font(.subheadline)
-                    .foregroundStyle(proposal.traumaRoom != .none && !isChanged ? Color.orange : Color.secondary)
+                    .foregroundStyle(proposal.traumaRoom != .none && !isChanged ? StatusText.warning : Color.secondary)
             }
             .opacity(isSelected ? 1 : 0.5)
             Spacer(minLength: Spacing.s)

@@ -934,7 +934,7 @@ struct MapSectionList: View {
                     }
                     Text(pin.coordinate == nil ? "nicht auf der Karte" : (pin.summary.isEmpty ? "keine Einheiten" : pin.summary))
                         .font(.subheadline)
-                        .foregroundStyle(pin.coordinate == nil ? Color.orange : Color.secondary)
+                        .foregroundStyle(pin.coordinate == nil ? StatusText.warning : Color.secondary)
                 }
                 Spacer(minLength: 0)
             }

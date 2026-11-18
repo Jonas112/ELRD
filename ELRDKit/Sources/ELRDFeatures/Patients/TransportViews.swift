@@ -92,7 +92,7 @@ struct HospitalRow: View {
                     .foregroundStyle(capacity.isFull ? Color.white : Color.primary)
                     .padding(.horizontal, Spacing.s)
                     .padding(.vertical, Spacing.xxs)
-                    .background(capacity.isFull ? Color.orange : Surface.elevated, in: Capsule())
+                    .background(capacity.isFull ? ActionFill.warning : Surface.elevated, in: Capsule())
             }
             if isSelected {
                 Image(systemName: "checkmark.circle.fill").font(.title2).foregroundStyle(.tint)

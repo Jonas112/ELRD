@@ -235,7 +235,7 @@ struct SubscriptionView: View {
         List {
             Section("Stand") {
                 Label(current.summary(now: Date()), systemImage: current.hasFullAccess ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                    .foregroundStyle(current.hasFullAccess ? Color.green : Color.orange)
+                    .foregroundStyle(current.hasFullAccess ? StatusText.success : StatusText.warning)
                     .frame(minHeight: TouchTarget.minimum)
             }
             Section {

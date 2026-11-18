@@ -54,7 +54,7 @@ struct RegionImportSheet: View {
                 Spacer()
                 Label(isLoaded ? "geladen" : "Laden", systemImage: isLoaded ? "checkmark.circle.fill" : "arrow.down.circle.fill")
                     .font(.headline)
-                    .foregroundStyle(isLoaded ? Color.green : ActionFill.primary)
+                    .foregroundStyle(isLoaded ? StatusText.success : ActionFill.primary)
             }
             .padding(.horizontal, Spacing.m)
             .frame(minHeight: 64)

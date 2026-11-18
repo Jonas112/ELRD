@@ -402,7 +402,7 @@ struct PatientTitle: View {
                     .foregroundStyle(.black)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Color.orange, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
+                    .background(ActionFill.warning, in: RoundedRectangle(cornerRadius: Radius.chip, style: .continuous))
                     .layoutPriority(1)
             }
         }

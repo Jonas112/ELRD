@@ -67,7 +67,7 @@ struct ExerciseDirectorSheet: View {
                         .font(.system(size: 44, weight: .heavy).monospacedDigit())
                     Text("von \(score.maximum) Punkten").font(.title3).foregroundStyle(.secondary)
                     Spacer()
-                    StatusChip(score.rating, systemImage: "rosette", color: score.total * 4 >= score.maximum * 3 ? .green : .orange)
+                    StatusChip(score.rating, systemImage: "rosette", color: score.total * 4 >= score.maximum * 3 ? StatusText.success : StatusText.warning)
                 }
                 ForEach(score.parts) { part in
                     VStack(alignment: .leading, spacing: Spacing.xs) {

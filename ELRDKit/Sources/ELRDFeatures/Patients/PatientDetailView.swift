@@ -295,7 +295,7 @@ struct PatientDetailView: View {
                     let limit = (appSettings?.settings.reminders ?? ReminderSettings()).retriageMinutes(for: patient.triage)
                     Label("Zuletzt gesichtet \(last.formatted(date: .omitted, time: .shortened)) Uhr (vor \(minutes) min)", systemImage: "clock.arrow.circlepath")
                         .font(.subheadline.weight(limit > 0 && minutes >= limit ? .bold : .regular))
-                        .foregroundStyle(limit > 0 && minutes >= limit ? Color.orange : Color.secondary)
+                        .foregroundStyle(limit > 0 && minutes >= limit ? StatusText.warning : Color.secondary)
                 }
             }
             if canEdit {

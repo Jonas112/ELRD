@@ -1,6 +1,6 @@
 # Fortschritt
 
-**Nächster Schritt:** Gerätetest unten; nächster Code-Schritt 146 (HIG-Befunde, Abschnitt W). Schritte 140–145 (Alamos FE2) auf dem Gerät mit dem Python-Backend testen (Tailscale-IP, Änderung auf der Debug-Seite simulieren → Mitteilung und Hinweis im Einsatz; Jonas: APNs-Schlüssel anlegen, `backend-python/README.md` Abschnitt 6, Test-Mitteilung, dann App schließen und Testeinsatz anlegen); danach Jonas prüft taktische Zeichen (114) und NFC am iPhone (110); Gerätetest; Jonas: Datenschutz-Felder (102) bestätigen, Sichtungsfragen und Übungslagen prüfen; Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
+**Nächster Schritt:** Gerätetest unten; nächster Code-Schritt 146 (HIG-Befunde, Abschnitt W; Frage 8 geklärt, E132). Schritte 140–145 (Alamos FE2) auf dem Gerät mit dem Python-Backend testen (Tailscale-IP, Änderung auf der Debug-Seite simulieren → Mitteilung und Hinweis im Einsatz; Jonas: APNs-Schlüssel anlegen, `backend-python/README.md` Abschnitt 6, Test-Mitteilung, dann App schließen und Testeinsatz anlegen); danach Jonas prüft taktische Zeichen (114) und NFC am iPhone (110); Gerätetest; Jonas: Datenschutz-Felder (102) bestätigen, Sichtungsfragen und Übungslagen prüfen; Gerätetest (Live Activity, Mitteilungen, Teilnehmer mit zwei Apple-IDs); Jonas prüft Sichtungsfragen (87) und Übungslagen (88). Parallel Gerätetest von iCloud-Teilen, 67–83 (Kamera-Scan, Diktat, Zeichnen mit Zoomen, Mitteilungen auf dem Sperrbildschirm nur auf echten Geräten), Rückmeldungen einarbeiten; danach neue Schritte mit Jonas festlegen.
 **Weitermachen:** In einer neuen Sitzung „weiter mit Schritt N“ schreiben. Claude liest zuerst diese Datei, `ARCHITEKTUR.md` und `ENTSCHEIDUNGEN.md`.
 
 Ablauf je Schritt: Claude schreibt Code, committet und prüft den CI-Build (GitHub Actions) selbst → Fehler behebt Claude im selben Schritt. Jonas testet zusätzlich auf dem Gerät.
@@ -244,9 +244,9 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 ## W – HIG-Prüfung (2026-11-18, Befunde in `HIG-PRUEFUNG.md`)
 | # | Schritt | Status |
 |---|---|---|
-| 146 | Nachtmodus: Abdunklung nur auf der Inhaltsebene (Kartenkacheln, Fotos), nicht über Text und Bedienelemente; Text behält mindestens 4,5:1. Frage 8 vorher klären | ⬜ |
+| 146 | Nachtmodus entfernen (E132): Schalter in den Einstellungen, `preferredColorScheme`-Zwang und schwarze Abdunklung entfallen, die App folgt der Systemdarstellung; gespeichertes Feld `nightMode` beim Laden still ignorieren (alte Einstellungen bleiben lesbar); Handschuhmodus bleibt | ⬜ |
 | 147 | Statusfarben für Schrift: Tokens `StatusText.warning` (hell #A84E00, dunkel Systemorange) und `StatusText.success` (hell #1E7B34, dunkel Systemgrün) im Designsystem; alle Text-Stellen mit `.orange`/`.green` umstellen, Symbole dürfen Signalfarbe behalten | ⬜ |
-| 148 | Bedienungshilfen: sichtbare Beschriftung und Name angleichen („Meldungen“/„Benachrichtigungen“, „Einsätze“), `accessibilityInputLabels` für Voice Control; Bereichsleisten mit Tab-Semantik („n von 5“) | ⬜ |
+| 148 | Bedienungshilfen: sichtbare Beschriftung und Name angleichen („Meldungen“/„Benachrichtigungen“, „Einsätze“), `accessibilityInputLabels` für Voice Control; Bereichsleisten mit Tab-Semantik („n von 5“); Leiste unten auf dem iPad mini bleibt (E132) | ⬜ |
 | 149 | „Kontrast erhöhen“: High-Contrast-Varianten für `AccentColor`, `ActionFill.primary` und `ActionFill.selected` | ⬜ |
 | 150 | Feinschliff: aussagekräftige Titel statt „Hinweis“, „Einsatz übernommen“ als Leiste statt Hinweisfenster, Zeigereffekte (`hoverEffect`) für eigene Knöpfe nach Gerätetest | ⬜ |
 
@@ -387,4 +387,4 @@ Status: ⬜ offen · 🔨 in Arbeit · 🧪 wartet auf Build in Xcode · ✅ fer
 5. **Auf dem Gerät prüfen:** Kamera, Mikrofon, Kartenkacheln, Drucken, Kauf mit `ELRD.storekit`, Tastaturkürzel mit Magic Keyboard, VoiceOver bei der Schnellanlage.
 6. **Sichtung (87) und Übungslagen (88):** Fragen, Reihenfolge und erwartete Kategorien fachlich prüfen; PRIOR-Namensnutzung (Marke) klären.
 7. **Datenschutz (102):** Anonymisierung wirkt bei allen Teilnehmern eines geteilten Einsatzes und ist endgültig – so gewollt? Reichen Namen, Geburtsdatum, Merkmale, Freitext?
-8. **Nachtmodus (E118, HIG-Prüfung):** Apple rät von einer app-eigenen Hell/Dunkel-Einstellung ab. Schalter behalten (schneller im Nachteinsatz) und nur als „gedimmt“ ausweisen, oder dem System überlassen? Leiste unten auf dem iPad mini (E56) so lassen?
+8. ~~Nachtmodus und Leiste unten~~ geklärt (E132): kein eigener Schalter, Leiste auf dem iPad mini bleibt unten. Ursprüngliche Frage: Apple rät von einer app-eigenen Hell/Dunkel-Einstellung ab. Schalter behalten (schneller im Nachteinsatz) und nur als „gedimmt“ ausweisen, oder dem System überlassen? Leiste unten auf dem iPad mini (E56) so lassen?

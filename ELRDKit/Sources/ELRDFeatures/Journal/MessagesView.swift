@@ -203,7 +203,7 @@ struct MessageRow: View {
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
                     if message.kind == .warning {
-                        Text("Warnung").font(.caption.weight(.heavy)).foregroundStyle(.orange)
+                        Text("Warnung").font(.caption.weight(.heavy)).foregroundStyle(StatusText.warning)
                     }
                 }
                 Text(message.text)

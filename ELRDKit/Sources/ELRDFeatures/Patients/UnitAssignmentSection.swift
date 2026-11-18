@@ -42,7 +42,7 @@ struct UnitAssignmentSection: View {
             if groups.assigned.isEmpty {
                 Label("Noch keine Einheit zugeordnet", systemImage: "exclamationmark.circle")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
             } else {
                 group("Zugeordnet", groups.assigned) { choice in
                     UnitChoiceTile(choice: choice, style: .assigned) { onUnassign(choice.id) }

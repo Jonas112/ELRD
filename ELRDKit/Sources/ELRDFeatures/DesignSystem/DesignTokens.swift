@@ -68,6 +68,27 @@ public enum ActionFill {
     })
     /// Ausgewählter Zustand von Auswahlknöpfen (Hintergrund).
     public static let selected = Color.accentColor.opacity(0.22)
+    /// Schritt 147: Warn-Aktionen mit weißer Schrift (5,6:1). Systemorange trägt
+    /// weiße Schrift nur mit 2,1:1.
+    public static let warning = Color(uiColor: UIColor(red: 0xA8 / 255, green: 0x4E / 255, blue: 0, alpha: 1))
+}
+
+/// Schriftfarben für Warn- und Erfolgstexte (Schritt 147, HIG-Befund 2).
+///
+/// Systemorange und -grün haben auf Weiß nur rund 2:1. Hell daher dunklere Töne
+/// (≥ 4,5:1 auf Weiß und gruppiertem Hintergrund), dunkel die Systemfarben (≥ 6,7:1).
+/// Für reine Symbole darf die Signalfarbe bleiben.
+public enum StatusText {
+    public static let warning = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? .systemOrange
+            : UIColor(red: 0xA8 / 255, green: 0x4E / 255, blue: 0, alpha: 1)
+    })
+    public static let success = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? .systemGreen
+            : UIColor(red: 0x1E / 255, green: 0x7B / 255, blue: 0x34 / 255, alpha: 1)
+    })
 }
 
 public extension Color {

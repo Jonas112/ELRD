@@ -332,7 +332,7 @@ struct SectionCard: View {
             }
             if !column.loosePatients.isEmpty {
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("Patienten ohne Einheit").font(.subheadline.weight(.semibold)).foregroundStyle(.orange)
+                    Text("Patienten ohne Einheit").font(.subheadline.weight(.semibold)).foregroundStyle(StatusText.warning)
                     FlowLayout(spacing: Spacing.xs) {
                         ForEach(column.loosePatients) { badge in
                             PatientBadgeButton(badge: badge) { onOpenPatient(badge.id) }
@@ -545,7 +545,7 @@ struct UnitRowLabel: View {
                 if entry.unit.isPlaceholder, showsMoveHint {
                     Text("Tippen: Fahrzeug eintragen")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(StatusText.warning)
                 }
                 ArrivalLine(unit: entry.unit)
                 if !entry.patients.isEmpty {

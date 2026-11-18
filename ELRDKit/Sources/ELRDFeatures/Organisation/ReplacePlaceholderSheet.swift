@@ -49,7 +49,7 @@ struct ReplacePlaceholderSheet: View {
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
                     if !typed.isEmpty, !exactMatch {
                         Button(action: replaceTyped) {

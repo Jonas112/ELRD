@@ -60,11 +60,11 @@ struct CloudShareSection: View {
             }
             if let problem = cloud.accountProblem {
                 Label(problem, systemImage: "exclamationmark.icloud")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
             }
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
             }
         } header: {
             Text("Mehrere Geräte (iCloud)")
@@ -344,7 +344,7 @@ struct JoinCloudMissionSheet: View {
                 if let errorMessage, !needsApproval {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
                 }
                 if !needsApproval {
@@ -487,7 +487,7 @@ struct JoinRequestBanner: View {
                 if let errorMessage {
                     Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                         .font(.subheadline)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(StatusText.warning)
                         .padding(Spacing.s)
                         .background(.regularMaterial, in: Capsule())
                 }

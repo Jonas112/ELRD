@@ -116,7 +116,7 @@ struct CommunicationPlanSheet: View {
                 }
             }
             if let errorMessage {
-                Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+                Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning) }
             }
             Section {
                 EmptyView()
@@ -301,7 +301,7 @@ private struct ContactEditor: View {
                     }
                 }
                 if let errorMessage {
-                    Section { Text(errorMessage).foregroundStyle(.orange) }
+                    Section { Text(errorMessage).foregroundStyle(StatusText.warning) }
                 }
             }
             .navigationTitle(isNew ? "Neue Stelle" : contact.name)

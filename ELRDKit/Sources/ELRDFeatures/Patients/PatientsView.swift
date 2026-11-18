@@ -417,7 +417,7 @@ struct PatientUnitText: View {
         if !row.hasUnit && row.status == .waiting && row.triage != .sk3 {
             Label(row.unitText, systemImage: "exclamationmark.circle")
                 .fontWeight(.semibold)
-                .foregroundStyle(.orange)
+                .foregroundStyle(StatusText.warning)
         } else if !row.hasUnit && row.status == .waiting {
             // Schritt 135: SK 3 ohne Einheit ist normal – nicht in jeder Zeile warnen.
             Text(row.unitText).foregroundStyle(.secondary)

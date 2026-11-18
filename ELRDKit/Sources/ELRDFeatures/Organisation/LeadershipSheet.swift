@@ -59,7 +59,7 @@ struct LeadershipSheet: View {
                         }
                     }
                     if let errorMessage {
-                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning)
                     }
                 }
                 .padding(Spacing.xl)
@@ -86,7 +86,7 @@ struct LeadershipSheet: View {
             if forces.placeholderCount > 0 {
                 Text("Angefordert: \(forces.placeholderSummary)")
                     .font(.headline)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -237,7 +237,7 @@ struct PositionEditor: View {
                     }
                 }
                 if let errorMessage {
-                    Section { Text(errorMessage).foregroundStyle(.orange) }
+                    Section { Text(errorMessage).foregroundStyle(StatusText.warning) }
                 }
             }
             .navigationTitle(title)

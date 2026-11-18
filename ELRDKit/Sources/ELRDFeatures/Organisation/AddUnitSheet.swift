@@ -42,13 +42,13 @@ struct AddUnitSheet: View {
                     if let lastAdded {
                         Label(lastAdded, systemImage: "checkmark.circle.fill")
                             .font(.headline)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(StatusText.success)
                             .accessibilityAddTraits(.updatesFrequently)
                     }
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
                     switch source {
                     case .masterData: masterList

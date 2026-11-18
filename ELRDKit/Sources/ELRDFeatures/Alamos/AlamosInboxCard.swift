@@ -75,7 +75,7 @@ struct AlamosInboxCard: View {
         if let error = inbox.lastError {
             Label(error, systemImage: "exclamationmark.triangle.fill")
                 .font(.caption)
-                .foregroundStyle(.orange)
+                .foregroundStyle(StatusText.warning)
                 .lineLimit(2)
         } else if let last = inbox.lastSuccess {
             Text("Stand \(last.formatted(date: .omitted, time: .shortened))")
@@ -122,7 +122,7 @@ struct AlamosAlarmRow: View {
                     if alarm.revision > 1 { Text("Stand \(alarm.revision)") }
                     if let imported {
                         Label("übernommen: \(imported.displayNumber)", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(StatusText.success)
                     }
                 }
                 .font(.caption)

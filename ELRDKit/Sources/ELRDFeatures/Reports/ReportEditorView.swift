@@ -120,7 +120,7 @@ struct ReportEditorView: View {
             } label: {
                 HStack {
                     Text(template.name).font(.title3.weight(.bold)).foregroundStyle(.primary)
-                    if isModified { Text("geändert").font(.caption.weight(.semibold)).foregroundStyle(.orange) }
+                    if isModified { Text("geändert").font(.caption.weight(.semibold)).foregroundStyle(StatusText.warning) }
                     Spacer()
                     Image(systemName: "chevron.up.chevron.down").foregroundStyle(.secondary)
                 }

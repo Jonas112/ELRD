@@ -99,7 +99,7 @@ struct TutorialCoach: View {
                 } else {
                     Label("Geschafft! Alle Schritte erledigt.", systemImage: "checkmark.seal.fill")
                         .font(.title3.weight(.bold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(StatusText.success)
                     Text("Unter Lage › Übungsleitung siehst du deine Punkte. Den Lernpfad kannst du jederzeit neu starten.")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }

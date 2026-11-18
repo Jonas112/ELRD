@@ -24,7 +24,7 @@ struct TransportBoardView: View {
         VStack(alignment: .leading, spacing: Spacing.m) {
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
             }
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: Spacing.l) {

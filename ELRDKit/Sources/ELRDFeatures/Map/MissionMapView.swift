@@ -803,7 +803,7 @@ struct MissionMapView: View {
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(.white)
                             .padding(4)
-                            .background(Color.orange, in: Circle())
+                            .background(ActionFill.warning, in: Circle())
                             .offset(x: 4, y: -4)
                     }
                 }

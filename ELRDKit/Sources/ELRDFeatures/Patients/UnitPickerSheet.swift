@@ -71,7 +71,7 @@ struct UnitPickerSheet: View {
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
 
                     if let newCallsign { newUnitPanel(newCallsign) }

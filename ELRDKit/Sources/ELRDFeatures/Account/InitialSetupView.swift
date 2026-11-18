@@ -96,7 +96,7 @@ struct InitialSetupView: View {
                         Text("Mindestens \(PasswordPolicy.minimumLength) Zeichen. Das Passwort wird nur verschlüsselt (als Hash) gespeichert.")
                         if form.problems.contains(.passwordsDiffer) {
                             Label("Die Passwörter stimmen nicht überein.", systemImage: "exclamationmark.circle")
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(StatusText.warning)
                         }
                     }
                 }
@@ -104,7 +104,7 @@ struct InitialSetupView: View {
                 if let errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
                 }
 

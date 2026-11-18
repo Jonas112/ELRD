@@ -283,9 +283,9 @@ struct JournalComposerSheet: View {
             switch recorder.phase {
             case .denied:
                 Text("Mikrofon nicht freigegeben (Einstellungen → ELRD → Mikrofon).")
-                    .font(.subheadline).foregroundStyle(.orange)
+                    .font(.subheadline).foregroundStyle(StatusText.warning)
             case .failed(let message):
-                Text(message).font(.subheadline).foregroundStyle(.orange)
+                Text(message).font(.subheadline).foregroundStyle(StatusText.warning)
             default:
                 EmptyView()
             }

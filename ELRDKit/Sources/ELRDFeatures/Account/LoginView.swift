@@ -101,7 +101,7 @@ struct LoginView: View {
 
             if let errorMessage {
                 Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
                     .font(.callout)
             }
 

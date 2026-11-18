@@ -39,7 +39,7 @@ struct ExerciseDirectorSheet: View {
                         Text("Geplante Einlagen spielt das Gerät der Einsatzleitung zur Minute ab Beginn ein; „Jetzt“ sofort. Alle sehen eine Warnmeldung „ÜBUNG – …“. Für die Übungsleitung auf einem zweiten Gerät: Rechte „Voll“ geben.")
                     }
                     if let errorMessage {
-                        Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+                        Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning) }
                     }
                 }
                 .navigationTitle("Übungsleitung")

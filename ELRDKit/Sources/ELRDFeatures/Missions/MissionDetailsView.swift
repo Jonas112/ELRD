@@ -51,14 +51,14 @@ struct MissionDetailsView: View {
                     Section {
                         ForEach(problems, id: \.message) { problem in
                             Label(problem.message, systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(StatusText.warning)
                         }
                     }
                 }
                 if let errorMessage {
                     Section {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
                 }
 

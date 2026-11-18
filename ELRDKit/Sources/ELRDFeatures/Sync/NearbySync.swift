@@ -288,11 +288,11 @@ struct NearbySyncView: View {
             Label("Gleiche ab mit \(name) …", systemImage: "arrow.triangle.2.circlepath")
         case .done(let name):
             VStack(alignment: .leading, spacing: 4) {
-                Label("Abgeglichen mit \(name)", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                Label("Abgeglichen mit \(name)", systemImage: "checkmark.circle.fill").foregroundStyle(StatusText.success)
                 Text(summary).font(.subheadline).foregroundStyle(.secondary)
             }
         case .failed(let message):
-            Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            Label(message, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning)
         }
     }
 

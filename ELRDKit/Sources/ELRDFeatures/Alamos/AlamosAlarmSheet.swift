@@ -49,7 +49,7 @@ struct AlamosAlarmSheet: View {
                 if let imported {
                     Section {
                         Label("Übernommen als Einsatz \(imported.displayNumber) „\(imported.title)“", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(StatusText.success)
                     } footer: {
                         Text("Spätere Änderungen aus FE2 (z. B. Nachalarmierungen) bitte im Einsatz von Hand ergänzen.")
                     }
@@ -89,7 +89,7 @@ struct AlamosAlarmSheet: View {
                             if match.master != nil {
                                 Label("Stammdaten", systemImage: "checkmark.seal")
                                     .labelStyle(.iconOnly)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(StatusText.success)
                                     .accessibilityLabel("in den Stammdaten")
                             } else {
                                 Text("temporär").font(.caption).foregroundStyle(.secondary)

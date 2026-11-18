@@ -95,9 +95,9 @@ struct AlamosSettingsView: View {
             .frame(minHeight: TouchTarget.minimum)
             switch testState {
             case .success(let text):
-                Label(text, systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                Label(text, systemImage: "checkmark.circle.fill").foregroundStyle(StatusText.success)
             case .failure(let text):
-                Label(text, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Label(text, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning)
             default:
                 EmptyView()
             }
@@ -171,13 +171,13 @@ struct AlamosSettingsView: View {
             }
         case .registered(backendSends: true):
             Label("Angemeldet – das Backend sendet Mitteilungen.", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(StatusText.success)
         case .registered(backendSends: false):
             Label("Angemeldet, aber im Backend ist Push noch nicht eingerichtet.", systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(StatusText.warning)
         case .failed(let text):
             Label(text, systemImage: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(StatusText.warning)
         }
     }
 

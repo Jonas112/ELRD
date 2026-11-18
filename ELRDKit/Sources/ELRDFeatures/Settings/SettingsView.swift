@@ -185,7 +185,7 @@ struct GeneralSettingsView: View {
                     .onSubmit(commitText)
                 if !ilsEmail.isEmpty, !draftEmailIsValid {
                     Label("Diese Adresse sieht unvollständig aus.", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(StatusText.warning)
                 }
             } header: {
                 Text("E-Mail der Leitstelle")
@@ -1138,7 +1138,7 @@ private struct GPXSharesStatusRow: View {
             if let error = center.lastDeleteError {
                 Label(error, systemImage: "exclamationmark.triangle.fill")
                     .font(.subheadline)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
             }
         }
         .padding(.vertical, Spacing.xs)

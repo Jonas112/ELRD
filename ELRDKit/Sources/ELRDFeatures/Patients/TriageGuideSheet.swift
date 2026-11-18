@@ -127,7 +127,7 @@ struct TriageGuideSheet: View {
             .buttonStyle(.borderedProminent)
             .tint(Color.triage(suggestion.triage))
             if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning)
             }
             Text("Nur ein Vorschlag – die Kategorie legt der Sichtende fest. Antworten und Ergebnis stehen nach dem Übernehmen im Protokoll.")
                 .font(.footnote)

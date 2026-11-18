@@ -34,7 +34,7 @@ struct GPXHandoutSheet: View {
                     }
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     Button {

@@ -87,7 +87,7 @@ struct GPXExportSheet: View {
                     }
                 }
                 if let errorMessage {
-                    Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+                    Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning) }
                 }
             }
             .navigationTitle("GPX-Export")

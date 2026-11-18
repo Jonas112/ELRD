@@ -20,12 +20,12 @@ struct RegionImportSheet: View {
                     if let result {
                         Label(result, systemImage: "checkmark.circle.fill")
                             .font(.headline)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(StatusText.success)
                     }
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
                     ForEach(BundledMasterData.regions) { region in
                         row(region)

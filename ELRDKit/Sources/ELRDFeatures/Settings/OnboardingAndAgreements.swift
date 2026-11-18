@@ -276,7 +276,7 @@ struct SubscriptionView: View {
                     }
                 }
                 if let message = subscriptions.message {
-                    Section { Text(message).foregroundStyle(.orange) }
+                    Section { Text(message).foregroundStyle(StatusText.warning) }
                 }
             }
         }

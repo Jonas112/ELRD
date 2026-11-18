@@ -216,7 +216,7 @@ struct PatientDetailView: View {
         case .failed:
             Label("nicht gespeichert", systemImage: "exclamationmark.triangle.fill")
                 .labelStyle(isCompact ? AnyLabelStyle(IconOnlyLabelStyle()) : AnyLabelStyle(TitleAndIconLabelStyle()))
-                .font(.subheadline).foregroundStyle(.orange)
+                .font(.subheadline).foregroundStyle(StatusText.warning)
         }
     }
 
@@ -384,11 +384,11 @@ struct PatientDetailView: View {
                 }
                 ForEach(problems, id: \.message) { problem in
                     Label(problem.message, systemImage: "exclamationmark.triangle.fill")
-                        .font(.callout).foregroundStyle(.orange)
+                        .font(.callout).foregroundStyle(StatusText.warning)
                 }
                 ForEach(hints, id: \.self) { hint in
                     Label(hint, systemImage: "info.circle.fill")
-                        .font(.callout).foregroundStyle(.orange)
+                        .font(.callout).foregroundStyle(StatusText.warning)
                 }
             }
             .disabled(!canEdit)

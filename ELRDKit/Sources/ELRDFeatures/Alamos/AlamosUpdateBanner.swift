@@ -58,7 +58,7 @@ struct AlamosUpdateBanner: View {
                     .buttonStyle(.bordered)
                 Button("Alles übernehmen (\(events.count))") { onApply(update.fullSelection) }
                     .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(ActionFill.warning)
                     .disabled(!canEdit)
             }
             .font(.headline)
@@ -110,7 +110,7 @@ struct AlamosEventRow: View {
             .accessibilityLabel("\(event.title) verwerfen")
             Button("Übernehmen", action: onApply)
                 .buttonStyle(.borderedProminent)
-                .tint(.orange)
+                .tint(ActionFill.warning)
                 .accessibilityLabel("\(event.title) übernehmen")
         }
         .controlSize(compact ? .regular : .large)

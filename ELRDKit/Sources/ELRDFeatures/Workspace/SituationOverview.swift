@@ -420,7 +420,7 @@ struct SituationOverview: View {
                                 if !load.overloadedTriages.isEmpty {
                                     Label("über Kontingent", systemImage: "exclamationmark.triangle.fill")
                                         .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.orange)
+                                        .foregroundStyle(StatusText.warning)
                                 }
                             }
                             Spacer(minLength: Spacing.m)
@@ -543,7 +543,7 @@ struct SituationOverview: View {
             if let journalError {
                 Label(journalError, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(StatusText.warning)
             }
         }
         .padding(Spacing.xl)

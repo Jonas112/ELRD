@@ -64,7 +64,7 @@ struct AddSectionSheet: View {
                         if isDuplicate {
                             Label("Einen Abschnitt mit diesem Namen gibt es schon.", systemImage: "exclamationmark.triangle.fill")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(StatusText.warning)
                         }
                         Toggle(isOn: $makeInitial) {
                             VStack(alignment: .leading, spacing: 2) {

@@ -55,14 +55,14 @@ struct DistributionSheet: View {
                                 badge(patient.triage)
                                 Text(patient.number).font(.headline.monospacedDigit())
                                 Spacer()
-                                Text(patient.reason).foregroundStyle(.orange)
+                                Text(patient.reason).foregroundStyle(StatusText.warning)
                             }
                             .frame(minHeight: TouchTarget.minimum)
                         }
                     }
                 }
                 if let errorMessage {
-                    Section { Text(errorMessage).foregroundStyle(.orange) }
+                    Section { Text(errorMessage).foregroundStyle(StatusText.warning) }
                 }
             }
             .navigationTitle("Verteilung vorschlagen")

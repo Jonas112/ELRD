@@ -55,7 +55,7 @@ struct SituationReportSheet: View {
                     }
                     if let errorMessage {
                         Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(StatusText.warning)
                     }
                 }
                 .padding(Spacing.xl)
@@ -179,7 +179,7 @@ struct DemandCard: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             if let errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning)
             }
         }
         .padding(Spacing.xl)
@@ -240,7 +240,7 @@ struct ChecklistSheet: View {
                     Text("Jeder Haken steht mit Uhrzeit im Tagebuch. Die Liste lässt sich in den Einstellungen anpassen.")
                 }
                 if let errorMessage {
-                    Section { Text(errorMessage).foregroundStyle(.orange) }
+                    Section { Text(errorMessage).foregroundStyle(StatusText.warning) }
                 }
             }
             .navigationTitle("Checkliste")
@@ -321,7 +321,7 @@ struct HandoverSheet: View {
                     Text("Aus den Einsatzdaten erstellt; vor der Übergabe ergänzen. Er steht danach im Tagebuch.")
                 }
                 if let errorMessage {
-                    Section { Text(errorMessage).foregroundStyle(.orange) }
+                    Section { Text(errorMessage).foregroundStyle(StatusText.warning) }
                 }
                 Section {
                     Button { confirms = true } label: {
@@ -412,7 +412,7 @@ struct HospitalQuotaSheet: View {
                             Text(load.name)
                             if !load.overloadedTriages.isEmpty {
                                 Label("über Kontingent", systemImage: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(StatusText.warning)
                                     .textCase(nil)
                             }
                         }
@@ -442,7 +442,7 @@ struct HospitalQuotaSheet: View {
                     .frame(minHeight: TouchTarget.minimum)
                 }
                 if let errorMessage {
-                    Section { Text(errorMessage).foregroundStyle(.orange) }
+                    Section { Text(errorMessage).foregroundStyle(StatusText.warning) }
                 }
             }
             .navigationTitle("Kliniken und Kontingente")

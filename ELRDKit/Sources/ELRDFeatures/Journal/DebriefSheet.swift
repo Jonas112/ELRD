@@ -59,7 +59,7 @@ struct DebriefSheet: View {
                     Section { Text("Gespeichert \(date.formatted(date: .numeric, time: .shortened))").foregroundStyle(.secondary) }
                 }
                 if let errorMessage {
-                    Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+                    Section { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(StatusText.warning) }
                 }
             }
             .disabled(!canEdit)

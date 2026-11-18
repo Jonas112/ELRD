@@ -567,6 +567,11 @@ struct MissionListView: View {
                     onOpen: { summary in
                         selectedAlarm = nil
                         open(summary.id)
+                    },
+                    linkCandidates: model.missions.filter { !$0.isClosed && $0.externalAlarmID == nil },
+                    onLink: { summary in
+                        selectedAlarm = nil
+                        link(alarm, to: summary)
                     }
                 )
                 .largeSheet()
@@ -589,6 +594,19 @@ struct MissionListView: View {
                 default: break
                 }
             }
+    }
+
+    /// Schritt 152: laufenden Einsatz mit dem FE2-Einsatz verknüpfen und öffnen – dort
+    /// erscheint Fehlendes als einzelne Ereignisse.
+    private func link(_ alarm: AlamosAlarm, to summary: MissionSummary) {
+        do {
+            let store = try model.open(summary.id)
+            try store.perform(LinkExternalAlarm(alarm: alarm, offersMissing: true))
+            model.reload()
+            onOpen(store)
+        } catch {
+            actionError = ErrorText.message(for: error)
+        }
     }
 
     /// Schritt 151: FE2-Einsatz aus einer Mitteilung zeigen (vorher abrufen, falls noch unbekannt).

@@ -233,6 +233,33 @@ struct AlarmImportTests {
         #expect(store.state.units.contains { $0.callsign == "MHD SW 71/2" && $0.type == .ktw && !$0.isDeleted })
     }
 
+    /// Schritt 152: laufenden Einsatz nachträglich verknüpfen – Fehlendes wird angeboten.
+    @Test func linkRunningMissionOffersMissing() throws {
+        let fixture = try StoreFixture()
+        let store = try create(NewMissionRequest(reason: "VU"), fixture: fixture)
+        try store.perform(AddMasterUnits([rtw]))
+        try store.perform(AddPatient(triage: .sk2))
+        let fe2 = alarm()
+        try store.perform(LinkExternalAlarm(alarm: fe2, offersMissing: true))
+        #expect(store.state.mission.externalAlarm?.externalID == fe2.externalId)
+        #expect(store.state.journal.contains { $0.text.contains("Mit Einsatz aus Alamos FE2 verknüpft") })
+
+        let update = try #require(AlarmUpdate(alarm: fe2, state: store.state, masterUnits: [rtw, nef]))
+        #expect(update.changes.keyword == nil && update.changes.address == nil, "Stichwort und Ort gelten als bekannt")
+        #expect(!update.changes.messageLines.isEmpty, "Alarmtext wird angeboten")
+        #expect(!update.changes.callsigns.contains { MasterDataMatching.key($0) == rtw.matchKey }, "RTW ist schon im Einsatz")
+        #expect(update.changes.patientKeys == ["1", "2"], "eigener Patient hat keine Leitstellen-Nummer")
+
+        let other = AlamosAlarm(externalId: "anderer", receivedAt: fe2.receivedAt, data: fe2.data)
+        #expect(throws: CommandError.self) { try store.perform(LinkExternalAlarm(alarm: other, offersMissing: true)) }
+
+        try store.perform(UnlinkExternalAlarm())
+        #expect(store.state.mission.externalAlarm == nil)
+        #expect(AlarmUpdate(alarm: fe2, state: store.state) == nil)
+        #expect(store.state.units.contains { $0.callsign == rtw.callsign && !$0.isDeleted }, "Übernommenes bleibt")
+        #expect(throws: CommandError.self) { try store.perform(UnlinkExternalAlarm()) }
+    }
+
     @Test func vehicleAddedByHandIsNotOfferedAgain() throws {
         let fixture = try StoreFixture()
         let first = alarm()

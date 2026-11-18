@@ -12,6 +12,9 @@ struct AlamosAlarmSheet: View {
     let canCreate: Bool
     let onImport: () -> Void
     let onOpen: (MissionSummary) -> Void
+    /// Schritt 152: laufende Einsätze ohne FE2-Verknüpfung, mit denen verknüpft werden kann.
+    var linkCandidates: [MissionSummary] = []
+    var onLink: (MissionSummary) -> Void = { _ in }
 
     @Environment(\.dismiss) private var dismiss
 
@@ -153,6 +156,22 @@ struct AlamosAlarmSheet: View {
                         .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
                 }
                 .buttonStyle(PrimaryActionStyle())
+                // Schritt 152: Einsatz läuft schon (z. B. vor dem Alarm angelegt) → verknüpfen.
+                if !linkCandidates.isEmpty {
+                    Menu {
+                        Section("Laufende Einsätze") {
+                            ForEach(linkCandidates) { summary in
+                                Button("\(summary.displayNumber) „\(summary.title)“") { onLink(summary) }
+                            }
+                        }
+                    } label: {
+                        Label("Mit laufendem Einsatz verknüpfen …", systemImage: "link")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: TouchTarget.minimum)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityHint("Danach erscheinen fehlende Fahrzeuge, Patienten und der Alarmtext im Einsatz zum Übernehmen")
+                }
             } else {
                 Text("Ohne Abo können keine Einsätze angelegt werden.")
                     .font(.callout)

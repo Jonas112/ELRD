@@ -258,18 +258,50 @@ public struct DismissAlarmUpdate: MissionCommand {
     }
 }
 
-/// Einsatz mit einem FE2-Einsatz verknüpfen, ohne etwas anzulegen; der angegebene Stand
-/// gilt als übernommen (Schritt 143, Beispieldaten; später „Mit FE2 verknüpfen“).
+/// Einsatz mit einem FE2-Einsatz verknüpfen, ohne etwas anzulegen (Schritt 143/152).
+///
+/// `offersMissing = false` (Beispieldaten): der angegebene Stand gilt als übernommen.
+/// `offersMissing = true` (laufenden Einsatz nachträglich verknüpfen): als übernommen gilt
+/// nur, was der Einsatz schon hat – seine Fahrzeuge und Patienten (Nummer der Leitstelle);
+/// Stichwort und Ort gelten als bekannt. Alles andere, auch der Alarmtext, erscheint danach
+/// als einzelne Ereignisse zum Übernehmen.
 public struct LinkExternalAlarm: MissionCommand {
     public let alarm: AlamosAlarm
+    public let offersMissing: Bool
 
-    public init(alarm: AlamosAlarm) {
+    public init(alarm: AlamosAlarm, offersMissing: Bool = false) {
         self.alarm = alarm
+        self.offersMissing = offersMissing
     }
 
     public func execute(_ draft: inout MissionDraft) throws {
-        let reference = ExternalAlarmReference(externalID: alarm.externalId, revision: alarm.revision, importedAt: draft.context.now, applied: AlarmSnapshot(alarm.data))
+        if let existing = draft.mission.externalAlarm, existing.externalID != alarm.externalId {
+            throw CommandError.invalid("Der Einsatz ist schon mit FE2-Einsatz \(existing.externalID) verknüpft. Erst die Verknüpfung lösen.")
+        }
+        var snapshot = AlarmSnapshot(alarm.data)
+        if offersMissing {
+            snapshot.message = []
+            snapshot.vehicleKeys = draft.active(MissionUnit.self).compactMap(\.matchKey)
+            snapshot.patientKeys = draft.active(Patient.self).compactMap(\.dispatchPatientNumber)
+        }
+        let reference = ExternalAlarmReference(externalID: alarm.externalId, revision: alarm.revision, importedAt: draft.context.now, applied: snapshot)
         try draft.updateMission { $0.externalAlarm = reference }
+        if offersMissing {
+            _ = try draft.addJournalEntry(text: "Mit Einsatz aus Alamos FE2 verknüpft (Einsatznummer \(alarm.externalId), Stand \(alarm.revision)).", origin: .automatic)
+        }
         draft.log(.mission, "Mit Alamos FE2 verknüpft (Einsatznummer \(alarm.externalId), Stand \(alarm.revision))", subject: .mission(draft.missionID))
+    }
+}
+
+/// Verknüpfung mit Alamos FE2 lösen (Schritt 152): weitere Änderungen kommen nicht mehr an,
+/// Übernommenes bleibt im Einsatz.
+public struct UnlinkExternalAlarm: MissionCommand {
+    public init() {}
+
+    public func execute(_ draft: inout MissionDraft) throws {
+        guard let reference = draft.mission.externalAlarm else { throw CommandError.invalid("Der Einsatz ist nicht mit Alamos FE2 verknüpft.") }
+        try draft.updateMission { $0.externalAlarm = nil }
+        _ = try draft.addJournalEntry(text: "Verknüpfung mit Alamos FE2 gelöst (Einsatznummer \(reference.externalID)).", origin: .automatic)
+        draft.log(.mission, "Verknüpfung mit Alamos FE2 gelöst (Einsatznummer \(reference.externalID))", subject: .mission(draft.missionID))
     }
 }

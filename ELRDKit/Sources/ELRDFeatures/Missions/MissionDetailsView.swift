@@ -21,6 +21,9 @@ struct MissionDetailsView: View {
     @State private var cloudInvite: CloudInvite?
     @State private var confirmsCloudDisconnect = false
     @State private var cloudError: String?
+    /// Schritt 152: Verknüpfung mit Alamos FE2.
+    @Environment(AlamosInbox.self) private var alamos: AlamosInbox?
+    @State private var confirmsUnlink = false
 
     init(store: MissionStore, people: [PersonChoice]) {
         self.store = store
@@ -41,6 +44,8 @@ struct MissionDetailsView: View {
                     commanderSection
                 }
                 .disabled(mission.isClosed)
+
+                if !mission.isClosed { alamosSection(mission) }
 
                 // Mehrere Geräte: früh im Einsatz gebraucht, daher weit oben.
                 if let cloud {
@@ -141,6 +146,65 @@ struct MissionDetailsView: View {
             labeledField("ILS-Einsatznummer", prompt: "Freitext", text: $form.dispatchNumber)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
+        }
+    }
+
+    /// Schritt 152: mit einem FE2-Einsatz verknüpfen bzw. die Verknüpfung lösen.
+    @ViewBuilder
+    private func alamosSection(_ mission: Mission) -> some View {
+        if let reference = mission.externalAlarm {
+            Section {
+                LabeledContent("FE2-Einsatznummer", value: reference.externalID)
+                LabeledContent("Übernommener Stand", value: "\(reference.revision)")
+                Button("Verknüpfung lösen", role: .destructive) { confirmsUnlink = true }
+                    .frame(minHeight: TouchTarget.minimum)
+                    .disabled(!store.isEnabled(.missionEditing))
+                    .confirmationDialog("Verknüpfung mit Alamos FE2 lösen?", isPresented: $confirmsUnlink, titleVisibility: .visible) {
+                        Button("Lösen", role: .destructive) { perform(UnlinkExternalAlarm()) }
+                    } message: {
+                        Text("Weitere Änderungen aus FE2 kommen dann nicht mehr an. Bereits Übernommenes bleibt im Einsatz.")
+                    }
+            } header: {
+                Text("Alamos FE2")
+            } footer: {
+                Text("Neue Fahrzeuge, Patienten und Meldungen aus FE2 erscheinen oben im Einsatz zum Übernehmen.")
+            }
+        } else if let alamos, alamos.isEnabled {
+            let candidates = alamos.visibleAlarms.filter { !$0.isClosed }
+            Section {
+                if candidates.isEmpty {
+                    Text("Keine offenen Einsätze aus Alamos FE2.").foregroundStyle(.secondary)
+                } else {
+                    Menu {
+                        ForEach(candidates) { alarm in
+                            Button {
+                                perform(LinkExternalAlarm(alarm: alarm, offersMissing: true), thenDismiss: true)
+                            } label: {
+                                Text([alarm.data.keyword, alarm.data.title, alarm.data.location?.city].compactMap { $0 }.joined(separator: " · "))
+                                Text("Einsatznummer \(alarm.externalId)")
+                            }
+                        }
+                    } label: {
+                        Label("Mit FE2-Einsatz verknüpfen …", systemImage: "link")
+                            .frame(minHeight: TouchTarget.minimum)
+                    }
+                    .disabled(!store.isEnabled(.missionEditing))
+                }
+            } header: {
+                Text("Alamos FE2")
+            } footer: {
+                Text("Danach erscheint alles aus FE2, was dem Einsatz noch fehlt (Fahrzeuge, Patienten, Alarmtext), oben im Einsatz zum Übernehmen.")
+            }
+        }
+    }
+
+    private func perform(_ command: some MissionCommand, thenDismiss: Bool = false) {
+        do {
+            try store.perform(command)
+            errorMessage = nil
+            if thenDismiss { dismiss() }
+        } catch {
+            errorMessage = ErrorText.message(for: error)
         }
     }
 

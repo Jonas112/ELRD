@@ -106,6 +106,29 @@ struct AlamosInboxTests {
         #expect(AlamosAnnouncements.presentation(for: ["aps": [:]]) == nil, "andere Mitteilungen wie bisher")
     }
 
+    /// Schritt 151: Tippen auf eine FE2-Mitteilung – gleiche Zusatzdaten wie der Push des Backends.
+    @Test func notificationRoute() {
+        let alarm = AlamosAlarm(externalId: "2611-04711", receivedAt: Date(), data: AlamosAlarmData(keyword: "RD 4"))
+        let route = AlamosNotificationPayload.route(from: AlamosNotificationPayload.userInfo(for: alarm))
+        #expect(route == AlarmNotificationRoute(alarmID: alarm.id, externalID: "2611-04711"))
+        // Push vom Backend (Kennung klein geschrieben, ohne Einsatznummer möglich).
+        let push: [AnyHashable: Any] = ["aps": [:], "elrd": ["kind": "alamos", "alarmId": alarm.id.uuidString.lowercased()]]
+        #expect(AlamosNotificationPayload.route(from: push)?.alarmID == alarm.id)
+        #expect(AlamosNotificationPayload.route(from: push)?.externalID == nil)
+        #expect(AlamosNotificationPayload.route(from: ["elrd": ["kind": "test"]]) == nil)
+        #expect(NotificationPayload.route(from: AlamosNotificationPayload.userInfo(for: alarm)) == nil, "keine Verwechslung mit offenen Punkten")
+
+        let inbox = NotificationInbox.shared
+        let mission = MissionID(UUID())
+        inbox.receive(route!)
+        #expect(inbox.pendingAlarm == route)
+        inbox.routeAlarmToMission(mission)
+        #expect(inbox.pendingAlarm == nil)
+        #expect(!inbox.takeAlarmReview(for: MissionID(UUID())), "anderer Einsatz")
+        #expect(inbox.takeAlarmReview(for: mission))
+        #expect(!inbox.takeAlarmReview(for: mission), "nur einmal")
+    }
+
     @Test func filtersClosedAndTests() throws {
         let clock = Clock()
         let inbox = try makeInbox(clock: clock)

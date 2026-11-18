@@ -210,6 +210,17 @@ public struct MissionWorkspaceView: View {
             notifier?.forget(store.state.mission.id)
             liveActivity?.end()
         }
+        // Schritt 151: angetippte FE2-Mitteilung zu diesem Einsatz → Änderungsliste.
+        .task(id: NotificationInbox.shared.alarmReview) {
+            guard NotificationInbox.shared.takeAlarmReview(for: store.missionID) else { return }
+            if linkedAlarm == nil { await alamos?.refresh() }
+            if let alarm = linkedAlarm {
+                path = []
+                reviewedAlarm = alarm
+            }
+        }
+        // Schritt 151: neuer FE2-Einsatz, während dieser Einsatz offen ist → Leiste.
+        .overlay(alignment: .bottom) { notifiedAlarmBar }
         // Schritt 84: angetippte Mitteilung dieses Einsatzes → zum Punkt.
         .onChange(of: NotificationInbox.shared.pending, initial: true) {
             guard let route = NotificationInbox.shared.take(for: store.missionID) else { return }
@@ -362,6 +373,29 @@ public struct MissionWorkspaceView: View {
     private var linkedAlarm: AlamosAlarm? {
         guard let alamos, let reference = store.state.mission.externalAlarm, !store.state.mission.isClosed else { return nil }
         return alamos.alarms.first { $0.externalId == reference.externalID }
+    }
+
+    /// Schritt 151: Leiste für einen angetippten neuen FE2-Einsatz; „Ansehen“ wechselt zur
+    /// Einsatzliste (die dann die Einzelheiten zeigt), „Später“ verwirft.
+    @ViewBuilder private var notifiedAlarmBar: some View {
+        if let route = NotificationInbox.shared.pendingAlarm {
+            let alarm = alamos?.alarms.first { $0.id == route.alarmID }
+            let place = alarm?.data.location?.city ?? alarm?.data.location?.street
+            let text = [alarm?.data.keyword, alarm?.data.keywordDescription, place].compactMap { $0 }.joined(separator: " · ")
+            NoticeBar(
+                title: alarm?.isTest == true ? "Neuer Testeinsatz aus Alamos FE2" : "Neuer Einsatz aus Alamos FE2",
+                message: text.isEmpty ? "Einsatznummer \(route.externalID ?? "unbekannt")" : text,
+                systemImage: "antenna.radiowaves.left.and.right",
+                iconColor: StatusText.warning,
+                actionTitle: onClose == nil ? nil : "Ansehen",
+                action: onClose
+            ) {
+                NotificationInbox.shared.discardAlarm()
+            }
+            .padding(Spacing.l)
+            .padding(.bottom, Spacing.xxl)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
     }
 
     /// Schritt 145: Ereignisse übernehmen; Fehlertext oder `nil`.
@@ -1059,7 +1093,7 @@ struct MessagesBellButton: View {
                             .font(.caption2.weight(.heavy))
                             .foregroundStyle(.black)
                             .frame(minWidth: 20, minHeight: 20)
-                            .background(Color.orange, in: Circle())
+                            .background(ActionFill.warning, in: Circle())
                     }
                 }
         }

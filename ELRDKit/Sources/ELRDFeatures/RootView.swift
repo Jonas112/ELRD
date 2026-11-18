@@ -159,7 +159,12 @@ struct SignedInView: View {
         }
         // Schritt 84: angetippte Mitteilung → Einsatz öffnen (Ziel übernimmt der Arbeitsbereich).
         .onChange(of: NotificationInbox.shared.pending) { openNotifiedMission() }
-        .onChange(of: list == nil) { openNotifiedMission() }
+        .onChange(of: list == nil) {
+            openNotifiedMission()
+            openNotifiedAlarm()
+        }
+        // Schritt 151: angetippte FE2-Mitteilung.
+        .onChange(of: NotificationInbox.shared.pendingAlarm) { openNotifiedAlarm() }
         // Nach „Region laden“ stehen neue Kliniken gleich in der Klinikauswahl.
         .onChange(of: masterData?.revision) {
             catalogs = PatientCatalogs.load(from: environment.repository)
@@ -194,6 +199,25 @@ struct SignedInView: View {
         } catch {
             // Einsatz gibt es hier nicht (mehr) – Mitteilung verwerfen.
             NotificationInbox.shared.discard()
+        }
+    }
+
+    /// Schritt 151: FE2-Mitteilung zu einem laufenden, übernommenen Einsatz → diesen Einsatz
+    /// mit der Änderungsliste öffnen. Neue Einsätze übernimmt die Einsatzliste; ist gerade
+    /// ein anderer Einsatz offen, zeigt dieser eine Leiste mit „Ansehen“.
+    private func openNotifiedAlarm() {
+        guard let route = NotificationInbox.shared.pendingAlarm, let list else { return }
+        let externalID = route.externalID ?? environment.alamos.alarms.first { $0.id == route.alarmID }?.externalId
+        guard let externalID,
+              let summary = list.missions.first(where: { $0.externalAlarmID == externalID && !$0.isClosed }) else { return }
+        NotificationInbox.shared.routeAlarmToMission(summary.id)
+        guard openStore?.missionID != summary.id else { return }
+        do {
+            let store = try list.open(summary.id)
+            if let current = openStore { environment.unregister(current) }
+            openStore = store
+        } catch {
+            _ = NotificationInbox.shared.takeAlarmReview(for: summary.id)
         }
     }
 

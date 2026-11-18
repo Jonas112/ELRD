@@ -89,23 +89,34 @@ struct NoticeBar: View {
     let title: String
     let message: String
     var systemImage = "checkmark.circle.fill"
+    var iconColor: Color = StatusText.success
+    /// Schritt 151: optionale Aktion („Ansehen“); „OK“ heißt dann „Später“.
+    var actionTitle: String?
+    var action: (() -> Void)?
     let onDismiss: () -> Void
 
     var body: some View {
         HStack(spacing: Spacing.m) {
             Image(systemName: systemImage)
                 .font(.title2)
-                .foregroundStyle(StatusText.success)
+                .foregroundStyle(iconColor)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(title).font(.headline)
                 Text(message).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
             }
             Spacer(minLength: Spacing.s)
-            Button("OK", action: onDismiss)
+            Button(action == nil ? "OK" : "Später", action: onDismiss)
                 .font(.headline)
                 .frame(minWidth: TouchTarget.minimum, minHeight: TouchTarget.comfortable)
                 .hoverEffect(.highlight)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .font(.headline)
+                    .buttonStyle(.borderedProminent)
+                    .tint(ActionFill.primary)
+                    .controlSize(.large)
+            }
         }
         .padding(.leading, Spacing.xl)
         .padding(.trailing, Spacing.s)

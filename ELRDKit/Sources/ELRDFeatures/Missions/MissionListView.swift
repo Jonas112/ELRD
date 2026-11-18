@@ -578,6 +578,8 @@ struct MissionListView: View {
                     onOpen(store)
                 }
             }
+            // Schritt 151: angetippte Mitteilung zu einem neuen FE2-Einsatz → Einzelheiten.
+            .task(id: NotificationInbox.shared.pendingAlarm) { await showNotifiedAlarm() }
             .task {
                 // Bildschirmfotos: Einzelheiten bzw. Übernahme direkt zeigen.
                 guard let alamos, alamos.isDemo, let first = alamos.visibleAlarms.first else { return }
@@ -587,6 +589,19 @@ struct MissionListView: View {
                 default: break
                 }
             }
+    }
+
+    /// Schritt 151: FE2-Einsatz aus einer Mitteilung zeigen (vorher abrufen, falls noch unbekannt).
+    private func showNotifiedAlarm() async {
+        guard let route = NotificationInbox.shared.pendingAlarm, let alamos else { return }
+        // Übernommen und laufend: RootView öffnet den Einsatz.
+        if let external = route.externalID, importedAlarms[external].map({ !$0.isClosed }) == true { return }
+        if !alamos.alarms.contains(where: { $0.id == route.alarmID }) { await alamos.refresh() }
+        guard NotificationInbox.shared.pendingAlarm == route else { return }
+        NotificationInbox.shared.discardAlarm()
+        guard let alarm = alamos.alarms.first(where: { $0.id == route.alarmID }) else { return }
+        alamos.markSeen(alarm)
+        selectedAlarm = alarm
     }
 
     private var extrasHost: some View {

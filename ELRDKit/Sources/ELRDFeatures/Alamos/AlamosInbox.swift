@@ -300,6 +300,8 @@ enum AlamosAlert {
             .joined(separator: " · ")
         content.sound = .default
         content.threadIdentifier = "alamos"
+        // Schritt 151: Tippen öffnet die Einzelheiten bzw. den übernommenen Einsatz.
+        content.userInfo = AlamosNotificationPayload.userInfo(for: alarm)
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
     }
@@ -325,6 +327,7 @@ enum AlamosAlert {
             content.body = line
             content.sound = index == 0 ? .default : nil
             content.threadIdentifier = "alamos-\(alarm.id.uuidString)"
+            content.userInfo = AlamosNotificationPayload.userInfo(for: alarm)
             let request = UNNotificationRequest(identifier: "alamos-\(alarm.id.uuidString)-\(alarm.revision)-\(index)", content: content, trigger: nil)
             UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
         }

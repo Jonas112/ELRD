@@ -53,6 +53,28 @@ enum NotificationPayload {
     }
 }
 
+/// Schritt 151: angetippte Mitteilung zu einem Einsatz aus Alamos FE2.
+public struct AlarmNotificationRoute: Equatable, Sendable {
+    /// Kennung im ELRD-Backend (`AlamosAlarm.id`).
+    public let alarmID: UUID
+    /// FE2-Einsatznummer – damit der übernommene ELRD-Einsatz auch ohne Abruf gefunden wird.
+    public let externalID: String?
+}
+
+/// Zusatzdaten der FE2-Mitteilungen – gleich bei Push vom Backend und eigenen Mitteilungen.
+enum AlamosNotificationPayload {
+    static func userInfo(for alarm: AlamosAlarm) -> [String: Any] {
+        ["elrd": ["kind": "alamos", "alarmId": alarm.id.uuidString.lowercased(), "externalId": alarm.externalId]]
+    }
+
+    static func route(from userInfo: [AnyHashable: Any]) -> AlarmNotificationRoute? {
+        guard let elrd = userInfo["elrd"] as? [String: Any], elrd["kind"] as? String == "alamos",
+              let text = elrd["alarmId"] as? String, let id = UUID(uuidString: text) else { return nil }
+        let external = (elrd["externalId"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        return AlarmNotificationRoute(alarmID: id, externalID: external)
+    }
+}
+
 /// Angetippte Mitteilung, bis der passende Einsatz offen ist und sie übernimmt.
 @MainActor
 @Observable
@@ -76,6 +98,33 @@ public final class NotificationInbox {
     func discard() {
         pending = nil
     }
+
+    // MARK: Alamos FE2 (Schritt 151)
+
+    /// Angetippte FE2-Mitteilung, bis Einsatzliste oder Einsatz sie übernimmt.
+    public private(set) var pendingAlarm: AlarmNotificationRoute?
+    /// Übernommener Einsatz, in dem die Änderungsliste aufgehen soll.
+    public private(set) var alarmReview: MissionID?
+
+    func receive(_ route: AlarmNotificationRoute) {
+        pendingAlarm = route
+    }
+
+    func discardAlarm() {
+        pendingAlarm = nil
+    }
+
+    /// Mitteilung gehört zu einem übernommenen Einsatz: dort die Änderungen zeigen.
+    func routeAlarmToMission(_ mission: MissionID) {
+        pendingAlarm = nil
+        alarmReview = mission
+    }
+
+    func takeAlarmReview(for mission: MissionID) -> Bool {
+        guard alarmReview == mission else { return false }
+        alarmReview = nil
+        return true
+    }
 }
 
 /// Nimmt angetippte Mitteilungen entgegen und zeigt sie auch bei offener App
@@ -88,10 +137,15 @@ public final class ELRDNotificationDelegate: NSObject, UNUserNotificationCenterD
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let route = NotificationPayload.route(from: response.notification.request.content.userInfo)
+        let userInfo = response.notification.request.content.userInfo
+        let route = NotificationPayload.route(from: userInfo)
+        let alarmRoute = AlamosNotificationPayload.route(from: userInfo)
         completionHandler()
-        guard let route else { return }
-        Task { @MainActor in NotificationInbox.shared.receive(route) }
+        if let route {
+            Task { @MainActor in NotificationInbox.shared.receive(route) }
+        } else if let alarmRoute {
+            Task { @MainActor in NotificationInbox.shared.receive(alarmRoute) }
+        }
     }
 
     public func userNotificationCenter(

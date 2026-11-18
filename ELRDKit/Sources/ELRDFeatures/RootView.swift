@@ -226,29 +226,18 @@ struct PreviewEnvironmentView: View {
     PreviewEnvironmentView(screen: .login)
 }
 
-/// Handschuh- und Nachtmodus (Schritt 113) aus den Einstellungen anwenden.
-/// Handschuhe: Schrift mindestens „sehr groß“, große Bedienelemente, Tippflächen
-/// +30 %. Nacht: dunkle Darstellung und gedimmter Inhalt (Karte, Listen), damit
-/// das Display bei Dunkelheit nicht blendet.
+/// Handschuhmodus (Schritt 113) aus den Einstellungen anwenden: Schrift mindestens
+/// „sehr groß“, große Bedienelemente, Tippflächen +30 %. Hell/Dunkel folgt dem
+/// System – kein eigener Nachtmodus mehr (Schritt 146, E132).
 struct DisplayModeModifier: ViewModifier {
     let settings: AppSettingsStore
     private let mode = DisplayMode.shared
 
     func body(content: Content) -> some View {
         let glove = settings.settings.gloveMode
-        let night = settings.settings.nightMode
         content
             .dynamicTypeSize(glove ? DynamicTypeSize.xxLarge...DynamicTypeSize.accessibility3 : DynamicTypeSize.xSmall...DynamicTypeSize.accessibility3)
             .controlSize(glove ? .large : .regular)
-            .preferredColorScheme(night ? .dark : nil)
-            .overlay {
-                if night {
-                    Color.black.opacity(0.35)
-                        .ignoresSafeArea()
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-            }
             .onChange(of: settings.settings, initial: true) { _, new in
                 mode.apply(new)
             }

@@ -23,7 +23,7 @@ struct SettingsView: View {
             List {
                 Section {
                     row(.general, "Organisation und Bericht", "building.2", "Organisation, Banner, ILS-Mail, Standardbericht")
-                    row(.display, "Darstellung", "circle.lefthalf.filled", "Handschuhmodus, Nachtmodus")
+                    row(.display, "Darstellung", "circle.lefthalf.filled", "Handschuhmodus")
                     row(.sharing, "Teilen und Karten", "icloud", "Beitritt genehmigen, GPX für Hundeteams, Offline-Karte")
                     row(.missionAids, "Erinnerungen, Einsatzarten, Checklisten", "checklist", "Lagemeldung im Takt, Wartezeiten, Checkliste je Einsatzart")
                     row(.leadershipPeople, "Führungspersonal", "person.3.sequence", "ELRD, LNA, OrgL, Abschnittsleiter zur Auswahl")
@@ -215,18 +215,10 @@ struct GeneralSettingsView: View {
                     }
                 }
                 .frame(minHeight: TouchTarget.comfortable)
-                Toggle(isOn: Binding(get: { settings.nightMode }, set: { on in save { $0.nightMode = on } })) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(Image(systemName: "moon.stars.fill"))  Nachtmodus").font(.headline)
-                        Text("Dunkle, gedimmte Darstellung, die nachts nicht blendet. Displayhelligkeit zusätzlich im Kontrollzentrum senken.")
-                            .font(.subheadline).foregroundStyle(.secondary)
-                    }
-                }
-                .frame(minHeight: TouchTarget.comfortable)
             } header: {
                 Text("Darstellung im Einsatz")
             } footer: {
-                Text("Gilt für dieses Gerät.")
+                Text("Gilt für dieses Gerät. Hell oder dunkel richtet sich nach der Einstellung des iPad (Kontrollzentrum oder Einstellungen › Anzeige & Helligkeit); nachts zusätzlich die Helligkeit senken.")
             }
     }
 

@@ -54,8 +54,16 @@ struct FieldFeaturesTests {
     @Test func displaySettingsDecodeWithDefaults() throws {
         let settings = try JSONDecoder().decode(AppSettings.self, from: Data("{}".utf8))
         #expect(!settings.gloveMode)
-        #expect(!settings.nightMode)
         #expect(settings.reminders.situationSnapshotMinutes == 0)
+    }
+
+    /// Schritt 146 (E132): Einstellungen mit dem früheren Nachtmodus bleiben lesbar,
+    /// das Feld wird nicht mehr geschrieben.
+    @Test func formerNightModeIsIgnored() throws {
+        let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"nightMode":true,"gloveMode":true}"#.utf8))
+        #expect(old.gloveMode)
+        let written = try String(decoding: JSONEncoder().encode(old), as: UTF8.self)
+        #expect(!written.contains("nightMode"))
     }
 
     // MARK: 114 Taktische Zeichen

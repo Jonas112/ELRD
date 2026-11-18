@@ -44,8 +44,6 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var anonymizeAfterDays: Int = 0
     /// Handschuhmodus (Schritt 113): größere Tippflächen und Schrift.
     public var gloveMode: Bool = false
-    /// Nachtmodus (Schritt 113): dunkel und abgedunkelt, blendfrei.
-    public var nightMode: Bool = false
     /// Schritt 116: Beitritt zu eigenen geteilten Einsätzen nur nach Zulassung.
     public var requiresJoinApproval: Bool = false
     /// Schritt 120: GPX-Freigaben für Hundeteams bei Einsatzende in iCloud löschen.
@@ -80,7 +78,8 @@ public struct AppSettings: Codable, Hashable, Sendable {
         phoneBook = try container.decodeIfPresent([PhoneEntry].self, forKey: .phoneBook) ?? []
         anonymizeAfterDays = try container.decodeIfPresent(Int.self, forKey: .anonymizeAfterDays) ?? 0
         gloveMode = try container.decodeIfPresent(Bool.self, forKey: .gloveMode) ?? false
-        nightMode = try container.decodeIfPresent(Bool.self, forKey: .nightMode) ?? false
+        // Schritt 146 (E132): früheres Feld „nightMode“ wird nicht mehr gelesen – die App folgt
+        // der Hell/Dunkel-Einstellung des Systems. Alte Einstellungen bleiben lesbar.
         requiresJoinApproval = try container.decodeIfPresent(Bool.self, forKey: .requiresJoinApproval) ?? false
         deletesGPXSharesOnClose = try container.decodeIfPresent(Bool.self, forKey: .deletesGPXSharesOnClose) ?? true
         alamos = (try? container.decodeIfPresent(AlamosSettings.self, forKey: .alamos)) ?? AlamosSettings()

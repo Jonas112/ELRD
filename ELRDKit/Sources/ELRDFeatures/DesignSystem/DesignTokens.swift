@@ -45,7 +45,6 @@ public final class DisplayMode: @unchecked Sendable {
     public static let shared = DisplayMode()
 
     public internal(set) var isGloveMode = false
-    public internal(set) var isNightMode = false
 
     private init() {}
 
@@ -54,7 +53,6 @@ public final class DisplayMode: @unchecked Sendable {
 
     func apply(_ settings: AppSettings) {
         if isGloveMode != settings.gloveMode { isGloveMode = settings.gloveMode }
-        if isNightMode != settings.nightMode { isNightMode = settings.nightMode }
     }
 }
 

@@ -81,3 +81,41 @@ public enum Haptics {
         UINotificationFeedbackGenerator().notificationOccurred(.warning)
     }
 }
+
+/// Bestätigung als Leiste unten (Schritt 150, HIG `feedback.md`): für Informationen
+/// ohne nötige Entscheidung statt eines Hinweisfensters. Verschwinden lässt sie der
+/// Aufrufer (z. B. nach einigen Sekunden); VoiceOver liest sie beim Erscheinen vor.
+struct NoticeBar: View {
+    let title: String
+    let message: String
+    var systemImage = "checkmark.circle.fill"
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: Spacing.m) {
+            Image(systemName: systemImage)
+                .font(.title2)
+                .foregroundStyle(StatusText.success)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text(title).font(.headline)
+                Text(message).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+            }
+            Spacer(minLength: Spacing.s)
+            Button("OK", action: onDismiss)
+                .font(.headline)
+                .frame(minWidth: TouchTarget.minimum, minHeight: TouchTarget.comfortable)
+                .hoverEffect(.highlight)
+        }
+        .padding(.leading, Spacing.xl)
+        .padding(.trailing, Spacing.s)
+        .padding(.vertical, Spacing.s)
+        .frame(maxWidth: 640)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
+        .accessibilityElement(children: .contain)
+        .onAppear {
+            AccessibilityNotification.Announcement("\(title). \(message)").post()
+        }
+    }
+}

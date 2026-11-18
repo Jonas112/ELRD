@@ -171,7 +171,7 @@ struct MissionListView: View {
                 }
             }
         }
-        .alert("Hinweis", isPresented: Binding(get: { model.loadError != nil }, set: { if !$0 { model.clearError() } })) {
+        .alert(model.loadErrorTitle, isPresented: Binding(get: { model.loadError != nil }, set: { if !$0 { model.clearError() } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.loadError ?? "")
@@ -185,11 +185,21 @@ struct MissionListView: View {
         .onOpenURL { url in
             if url.pathExtension == MissionArchive.fileExtension { importArchive(url) }
         }
-        .alert("Einsatz übernommen", isPresented: Binding(get: { importNotice != nil }, set: { if !$0 { importNotice = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(importNotice ?? "")
+                // Schritt 150: Bestätigung als Leiste unten statt Hinweisfenster (verschwindet selbst).
+        .overlay(alignment: .bottom) {
+            if let importNotice {
+                NoticeBar(title: "Einsatz übernommen", message: importNotice, systemImage: "checkmark.circle.fill") {
+                    withAnimation { self.importNotice = nil }
+                }
+                .padding(Spacing.l)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .task(id: importNotice) {
+                    try? await Task.sleep(for: .seconds(8))
+                    withAnimation { self.importNotice = nil }
+                }
+            }
         }
+        .animation(.default, value: importNotice)
         .confirmationDialog(
             purgeTitle,
             isPresented: Binding(get: { pendingPurge != nil }, set: { if !$0 { pendingPurge = nil } }),

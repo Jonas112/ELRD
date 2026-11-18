@@ -31,6 +31,8 @@ struct ReportEditorView: View {
     @State private var showsMail = false
     @State private var shareURL: URL?
     @State private var errorMessage: String?
+    /// Schritt 150: Titel passend zum Fehler statt „Hinweis“.
+    @State private var errorTitle = "Bericht"
 
     private var templates: [ReportTemplate] { library?.library.all ?? ReportTemplateLibrary.standardTemplates }
     private var isStandard: Bool { ReportTemplateLibrary.isStandard(template.id) }
@@ -72,7 +74,7 @@ struct ReportEditorView: View {
         } message: {
             Text("Die Vorlage steht danach bei jedem Einsatz zur Auswahl.")
         }
-        .alert("Hinweis", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+        .alert(errorTitle, isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage ?? "")
@@ -290,6 +292,7 @@ struct ReportEditorView: View {
 
     private func sendMail() {
         guard MailComposer.canSend else {
+            errorTitle = "Kein Mailkonto"
             errorMessage = "Auf diesem iPad ist kein Mailkonto eingerichtet. Über „Teilen“ lässt sich der Bericht trotzdem versenden."
             return
         }
@@ -340,6 +343,7 @@ struct ReportEditorView: View {
         do {
             if let stored = try library?.save(candidate) { template = stored }
         } catch {
+            errorTitle = "Vorlage nicht gespeichert"
             errorMessage = ErrorText.message(for: error)
         }
     }
@@ -356,6 +360,7 @@ struct ReportEditorView: View {
             try library?.delete(template.id)
             template = withSettings(ReportTemplateLibrary.full)
         } catch {
+            errorTitle = "Vorlage nicht gelöscht"
             errorMessage = ErrorText.message(for: error)
         }
     }

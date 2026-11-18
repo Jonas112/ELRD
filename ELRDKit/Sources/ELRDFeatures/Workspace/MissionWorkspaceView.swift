@@ -657,6 +657,7 @@ struct SituationBar: View {
                     .frame(width: buttonSize, height: buttonSize)
             }
             .buttonStyle(.plain)
+            .hoverEffect(.highlight)
             .foregroundStyle(Color.primary.opacity(0.8))
             .accessibilityLabel("Suchen")
             .accessibilityInputLabels(["Suchen", "Suche"])
@@ -675,6 +676,7 @@ struct SituationBar: View {
                     .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
+            .hoverEffect(.highlight)
             .accessibilityLabel("Zurück zur Einsatzliste")
             .accessibilityInputLabels(["Zurück", "Einsätze", "Einsatzliste"])
         }
@@ -726,6 +728,7 @@ struct SituationBar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Öffnet die Einsatzdaten")
@@ -769,6 +772,7 @@ struct SituationBar: View {
                 .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .disabled(!canAddPatients)
         .opacity(canAddPatients ? 1 : 0.4)
         .keyboardShortcut("p", modifiers: [.command, .shift])
@@ -803,6 +807,7 @@ struct TriageCounterButton: View {
             .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .accessibilityLabel("\(category.displayName): \(count)")
         .accessibilityHint("Zeigt die Patienten")
     }
@@ -825,6 +830,7 @@ struct QuickAddPanel: View {
                             .background(Color.triage(category), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }
                     .buttonStyle(.plain)
+                    .hoverEffect(.highlight)
                     .accessibilityLabel("Patient \(category.displayName) anlegen")
                 }
             }
@@ -858,7 +864,8 @@ struct UndoToast: View {
                     .frame(minHeight: TouchTarget.minimum + 4)
                     .background(ActionFill.primary, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
-            .buttonStyle(.plain) }
+            .buttonStyle(.plain)
+            .hoverEffect(.highlight) }
         }
         .padding(.leading, Spacing.xl)
         .padding(.trailing, Spacing.s)
@@ -900,6 +907,7 @@ struct WorkspaceRail: View {
                 RailIcon(systemImage: "magnifyingglass", title: "Suchen", showsLabel: true, size: TouchTarget.comfortable)
             }
             .buttonStyle(.plain)
+            .hoverEffect(.highlight)
             .foregroundStyle(Color.primary.opacity(0.8))
             .accessibilityLabel("Suchen")
             .accessibilityInputLabels(["Suchen", "Suche"])
@@ -920,6 +928,7 @@ struct WorkspaceRail: View {
                     .background(Surface.elevated, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .hoverEffect(.highlight)
                 .foregroundStyle(Color.primary.opacity(0.85))
                 // Schritt 148: Name wie die sichtbare Beschriftung (Voice Control „Tippe Einsätze“).
                 .accessibilityLabel("Einsätze")
@@ -998,6 +1007,7 @@ struct SectionButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .accessibilityLabel(section.title)
         .accessibilityValue(accessibilityValue)
         .accessibilityInputLabels([section.title])
@@ -1026,6 +1036,7 @@ struct ReportButton: View {
             RailIcon(systemImage: "doc.richtext", title: "Bericht", showsLabel: showsLabel, size: size)
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .foregroundStyle(Color.primary.opacity(0.8))
         .accessibilityLabel("Bericht")
         .accessibilityHint("Erstellt den Einsatzbericht")
@@ -1053,6 +1064,7 @@ struct MessagesBellButton: View {
                 }
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .foregroundStyle(Color.primary.opacity(0.8))
         // Schritt 148: Name wie die sichtbare Beschriftung „Meldungen“.
         .accessibilityLabel("Meldungen")

@@ -103,6 +103,8 @@ final class MissionListModel {
     private(set) var deletedMissions: [MissionSummary] = []
     var filter = MissionListFilter()
     private(set) var loadError: String?
+    /// Titel zur Fehlermeldung (Schritt 150).
+    private(set) var loadErrorTitle = "Einsätze nicht geladen"
 
     let session: SessionIdentity
     @ObservationIgnored private let repository: any EntityRepository
@@ -158,7 +160,9 @@ final class MissionListModel {
     var result: MissionListFilter.Result { filter.apply(to: missions, now: now()) }
 
     /// Fehler von außen anzeigen (z. B. Einladung konnte nicht angenommen werden).
-    func reportError(_ message: String) {
+    /// Schritt 150: mit aussagekräftigem Titel statt „Hinweis“.
+    func reportError(_ message: String, title: String = "Einladung nicht angenommen") {
+        loadErrorTitle = title
         loadError = message
     }
 
@@ -182,6 +186,7 @@ final class MissionListModel {
             deletedMissions = try MissionOverview.loadDeleted(from: repository)
             loadError = nil
         } catch {
+            loadErrorTitle = "Einsätze nicht geladen"
             loadError = ErrorText.message(for: error)
         }
     }

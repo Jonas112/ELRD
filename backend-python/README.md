@@ -135,6 +135,7 @@ Die Datei wird beim ersten Start angelegt. Nach einer Änderung das Backend neu 
 | `broker.port` | `1883` | Port des eingebauten Brokers |
 | `broker.tls_port`, `zertifikat`, `schluessel` | – | optional MQTT mit TLS (z. B. 8883, PEM-Dateien) |
 | `externer_broker.eingeschaltet` … | `false` | statt/zusätzlich: Einsätze bei einem externen Broker abholen (`host`, `port`, `tls`, `benutzer`, `passwort`, `ca_datei`) |
+| `https.eingeschaltet` … | `false` | HTTPS auf `https.port` (8443); `zertifikat`/`schluessel` leer = selbst erzeugen, `namen` = weitere Namen/IPs fürs Zertifikat, siehe Abschnitt 7 |
 | `push.eingeschaltet` … | `false` | Push-Mitteilungen bei neuen Einsätzen (`team_id`, `key_id`, `schluessel_datei`, `bundle_id`, `testeinsaetze`), siehe Abschnitt 6 |
 
 Für einen einzelnen Start gehen auch Startoptionen:
@@ -193,7 +194,54 @@ Gut zu wissen:
 - Gesendet wird mit `curl` (auf dem Mac vorhanden), weil Apple HTTP/2 verlangt.
 - Lehnt Apple ein Gerät ab (App gelöscht), meldet das Backend es selbst ab.
 
-## 7. Wenn etwas nicht klappt
+## 7. HTTPS (Betrieb außerhalb von WLAN und Tailscale)
+
+Im eigenen WLAN oder über Tailscale reicht `http://` (Tailscale verschlüsselt selbst). Ist
+das Backend über das Internet erreichbar (Portfreigabe, DynDNS), muss die Verbindung
+verschlüsselt sein – sonst gehen App-Schlüssel und Einsatzdaten im Klartext übers Netz.
+
+**Mit selbst erzeugtem Zertifikat (am einfachsten):**
+
+1. In `daten/einstellungen.json`:
+
+   ```json
+   "https": {
+     "eingeschaltet": true,
+     "port": 8443,
+     "zertifikat": "",
+     "schluessel": "",
+     "namen": ["elrd.meine-dyndns.de"]
+   }
+   ```
+
+   Unter `namen` alles eintragen, unter dem das iPad das Backend erreicht und das nicht
+   automatisch drin ist (DynDNS-Name, Tailscale-Name). Lokale IPs, der Rechnername und
+   `….local` kommen von selbst dazu.
+2. Backend neu starten. Es legt `daten/tls/elrd-backend.crt` und `.key` an und zeigt:
+
+   ```
+    HTTPS:               Port 8443 (selbst signiert)
+    Fingerabdruck (in der App unter Alamos FE2 eintragen):
+      4D:6B:B0:25:…
+   ```
+
+3. In der App: Einstellungen › Alamos FE2 › Adresse `https://elrd.meine-dyndns.de:8443`,
+   darunter **Fingerabdruck des Zertifikats** eintragen (abtippen oder von der
+   Verwaltungsseite kopieren). Die App vertraut dann genau diesem Zertifikat.
+4. „Verbindung testen“.
+
+Neues Zertifikat (z. B. weil ein Name fehlt): Ordner `daten/tls` löschen, Backend neu
+starten, neuen Fingerabdruck in der App eintragen. Das Zertifikat gilt 825 Tage.
+
+**Mit Zertifikat einer Zertifizierungsstelle** (z. B. Let's Encrypt über certbot oder vom
+Router): Pfade in `zertifikat` (Kette, PEM) und `schluessel` eintragen. In der App bleibt
+der Fingerabdruck leer.
+
+Der MQTT-Broker hat eigene TLS-Einstellungen (`broker.tls_port`, `broker.zertifikat`,
+`broker.schluessel`) – für FE2 über das Internet ebenfalls einschalten; dasselbe
+Zertifikat geht.
+
+## 8. Wenn etwas nicht klappt
 
 | Meldung / Problem | Lösung |
 |---|---|
@@ -205,6 +253,9 @@ Gut zu wissen:
 | `Anmeldung abgelehnt` beim Senden | MQTT-Benutzer = Kennung der Organisation, Passwort von der Verwaltungsseite |
 | Gesendet, aber kein Einsatz | Topic muss `elrd/<eigene-kennung>/alarm` sein (steht im Backend-Fenster als Warnung) |
 | `Verwaltungsseite fehlt` | Backend aus dem ELRD-Projektordner starten (die Seite liegt in `backend/src/ELRD.Backend/wwwroot`) |
+| App: „Das Zertifikat des Backends passt nicht zum eingetragenen Fingerabdruck“ | Fingerabdruck im Fenster des Backends bzw. auf der Verwaltungsseite vergleichen; nach Löschen von `daten/tls` gibt es einen neuen |
+| App: „Backend nicht erreichbar“ mit `https://` und selbst erzeugtem Zertifikat | Fingerabdruck eintragen; der Name in der Adresse muss im Zertifikat stehen (`https.namen`, danach `daten/tls` löschen) |
+| `HTTP-Anfrage … auf dem HTTPS-Port` | In der App `https://` statt `http://` eintragen |
 | `Push-Mitteilungen: FEHLER – Schlüsseldatei … nicht gefunden` | `.p8`-Datei in `daten` legen, Dateiname in `schluessel_datei` genau so eintragen |
 | Test-Mitteilung: `403 InvalidProviderToken` | Team ID oder Key ID falsch, oder der Schlüssel ist nicht für APNs freigeschaltet |
 | Test-Mitteilung: `400 BadDeviceToken` / `DeviceTokenNotForTopic` | `bundle_id` muss `ELRD.App` sein; das Gerät wird abgemeldet und meldet sich beim nächsten Abruf neu an |
@@ -220,6 +271,7 @@ Gut zu wissen:
   - `broker.py`: eingebauter MQTT-3.1.1-Broker
   - `bridge.py`: externer Broker
   - `web.py`: HTTP
+  - `tls.py`: HTTPS (Zertifikat erzeugen mit `openssl`, Fingerabdruck)
   - `push.py`: Push-Mitteilungen (ES256-Token in reinem Python, Versand über `curl --http2`)
 
   Gemeinsam mit den Werkzeugen genutzt werden `tools/alamos/fe2_format.py` (Vorlagen,

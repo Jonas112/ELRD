@@ -1,5 +1,7 @@
+import CryptoKit
 import Foundation
 import ELRDDomain
+import Security
 
 /// Fehler beim Abfragen des ELRD-Backends – mit Texten für die Oberfläche.
 enum AlamosClientError: LocalizedError, Equatable {
@@ -9,6 +11,8 @@ enum AlamosClientError: LocalizedError, Equatable {
     case server(Int)
     case unreadable
     case network(String)
+    /// Schritt 153: Zertifikat passt nicht zum eingetragenen Fingerabdruck.
+    case certificateMismatch
 
     var errorDescription: String? {
         switch self {
@@ -16,6 +20,7 @@ enum AlamosClientError: LocalizedError, Equatable {
         case .invalidURL: "Die Adresse des Backends ist ungültig."
         case .unauthorized: "Der App-Schlüssel wird nicht angenommen. Bitte in den Einstellungen prüfen."
         case .server(let code): "Das Backend antwortet mit Fehler \(code)."
+        case .certificateMismatch: "Das Zertifikat des Backends passt nicht zum eingetragenen Fingerabdruck. Fingerabdruck im Fenster des Backends prüfen."
         case .unreadable: "Die Antwort des Backends ist unlesbar (passt die Version?)."
         case .network(let text): text
         }
@@ -27,6 +32,15 @@ struct AlamosBackendClient: Sendable {
     let baseURL: URL
     let apiKey: String
     var session: URLSession = .shared
+    /// Schritt 153: Fingerabdruck des erwarteten Zertifikats (selbst signiert).
+    var pinnedFingerprint: String?
+
+    init(baseURL: URL, apiKey: String, pinnedFingerprint: String? = nil) {
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.pinnedFingerprint = pinnedFingerprint
+        if let pinnedFingerprint { session = PinnedSessions.session(for: pinnedFingerprint) }
+    }
 
     func ping() async throws -> AlamosPing {
         try await get("api/v1/ping", query: [])
@@ -75,6 +89,9 @@ struct AlamosBackendClient: Sendable {
         do {
             result = try await session.data(for: request)
         } catch let error as URLError {
+            if pinnedFingerprint != nil, error.code == .cancelled || error.code == .serverCertificateUntrusted {
+                throw AlamosClientError.certificateMismatch
+            }
             throw AlamosClientError.network(Self.describe(error))
         }
         let (data, response) = result
@@ -103,5 +120,54 @@ struct AlamosBackendClient: Sendable {
             "Zertifikat des Backends ungültig."
         default: "Verbindung fehlgeschlagen (\(error.code.rawValue))."
         }
+    }
+}
+
+// MARK: - Zertifikat mit Fingerabdruck (Schritt 153)
+
+/// Eine Sitzung je Fingerabdruck (Sitzungen mit Delegate werden nicht freigegeben, daher
+/// nicht bei jedem Abruf neu anlegen).
+enum PinnedSessions {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var sessions: [String: URLSession] = [:]
+
+    static func session(for fingerprint: String) -> URLSession {
+        lock.lock()
+        defer { lock.unlock() }
+        if let session = sessions[fingerprint] { return session }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 15
+        let session = URLSession(configuration: configuration, delegate: PinningDelegate(fingerprint: fingerprint), delegateQueue: nil)
+        sessions[fingerprint] = session
+        return session
+    }
+}
+
+/// Vertraut genau dem Zertifikat mit dem eingetragenen SHA-256-Fingerabdruck – für das
+/// selbst signierte Zertifikat des Python-Backends. Andere Zertifikate werden abgelehnt.
+final class PinningDelegate: NSObject, URLSessionDelegate, Sendable {
+    let fingerprint: String
+
+    init(fingerprint: String) {
+        self.fingerprint = fingerprint
+    }
+
+    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let trust = challenge.protectionSpace.serverTrust else {
+            return (.performDefaultHandling, nil)
+        }
+        guard Self.leafFingerprint(of: trust) == fingerprint else { return (.cancelAuthenticationChallenge, nil) }
+        return (.useCredential, URLCredential(trust: trust))
+    }
+
+    static func leafFingerprint(of trust: SecTrust) -> String? {
+        guard let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], let leaf = chain.first else { return nil }
+        return fingerprint(of: SecCertificateCopyData(leaf) as Data)
+    }
+
+    /// SHA-256 der DER-Daten, 64 Hex-Zeichen groß.
+    static func fingerprint(of der: Data) -> String {
+        SHA256.hash(data: der).map { String(format: "%02X", $0) }.joined()
     }
 }

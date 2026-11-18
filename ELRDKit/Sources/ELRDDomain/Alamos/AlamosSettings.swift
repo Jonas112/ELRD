@@ -20,6 +20,9 @@ public struct AlamosSettings: Codable, Hashable, Sendable {
     public var organisationName: String?
     /// Schritt 144: beim Backend für Push-Mitteilungen anmelden (neuer Einsatz auch bei geschlossener App).
     public var pushEnabled: Bool = true
+    /// Schritt 153: SHA-256-Fingerabdruck eines selbst signierten Zertifikats (Python-Backend
+    /// mit HTTPS); die App vertraut dann genau diesem Zertifikat. Leer = normale Prüfung.
+    public var certificateFingerprint: String = ""
 
     public static let pollChoices = [15, 30, 60, 120]
 
@@ -37,6 +40,17 @@ public struct AlamosSettings: Codable, Hashable, Sendable {
         showsTests = try container.decodeIfPresent(Bool.self, forKey: .showsTests) ?? defaults.showsTests
         organisationName = try container.decodeIfPresent(String.self, forKey: .organisationName)
         pushEnabled = try container.decodeIfPresent(Bool.self, forKey: .pushEnabled) ?? defaults.pushEnabled
+        certificateFingerprint = try container.decodeIfPresent(String.self, forKey: .certificateFingerprint) ?? ""
+    }
+
+    /// Fingerabdruck als 64 Hex-Zeichen (groß, ohne „:“), `nil` wenn leer oder ungültig.
+    public var pinnedFingerprint: String? { Self.normalizeFingerprint(certificateFingerprint) }
+
+    /// „4d:6b:b0 …“, „4D6BB0…“ oder mit Leerzeichen → „4D6BB0…“ (genau 32 Byte).
+    public static func normalizeFingerprint(_ text: String) -> String? {
+        let hex = text.uppercased().filter { !":- \n\t".contains($0) }
+        guard hex.count == 64, hex.allSatisfy({ $0.isHexDigit }) else { return nil }
+        return hex
     }
 
     /// Adresse als URL: ohne Schema wird `https://` ergänzt – bei einer IP-Adresse,

@@ -166,6 +166,22 @@ struct AlamosAlarmTests {
         #expect(!roundTrip.pushEnabled)
     }
 
+    /// Schritt 153: Fingerabdruck in verschiedenen Schreibweisen.
+    @Test func fingerprintNormalization() throws {
+        let hex = String(repeating: "4D6B", count: 16)
+        let colons = stride(from: 0, to: 64, by: 2).map { i in String(Array(hex)[i..<i + 2]) }.joined(separator: ":")
+        #expect(AlamosSettings.normalizeFingerprint(colons.lowercased()) == hex)
+        #expect(AlamosSettings.normalizeFingerprint(" " + hex + "\n") == hex)
+        #expect(AlamosSettings.normalizeFingerprint("4D:6B") == nil, "zu kurz")
+        #expect(AlamosSettings.normalizeFingerprint(String(repeating: "ZZ", count: 32)) == nil, "kein Hex")
+        #expect(AlamosSettings.normalizeFingerprint("") == nil)
+        var settings = AlamosSettings()
+        #expect(settings.pinnedFingerprint == nil)
+        settings.certificateFingerprint = colons
+        let decoded = try JSONDecoder().decode(AlamosSettings.self, from: JSONEncoder().encode(settings))
+        #expect(decoded.pinnedFingerprint == hex)
+    }
+
     @Test func settingsNormalizeURL() {
         #expect(AlamosSettings.normalize("elrd.example.de/")?.absoluteString == "https://elrd.example.de")
         #expect(AlamosSettings.normalize(" http://192.168.1.20:8080 ")?.absoluteString == "http://192.168.1.20:8080")

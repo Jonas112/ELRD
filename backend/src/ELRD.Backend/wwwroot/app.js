@@ -93,6 +93,11 @@ function renderStatus(status) {
     ["Einsätze gespeichert", `${status.alarms} (Löschen nach ${status.retentionHours} h)`],
     ["Debug", status.debugEnabled ? "eingeschaltet" : "aus"],
   ];
+  // Schritt 153: HTTPS des Python-Backends (Fingerabdruck für die App).
+  if (status.https) {
+    rows.push(["HTTPS", `Port ${status.https.port}` + (status.https.selfSigned ? " (selbst signiert)" : "")]);
+    if (status.https.selfSigned) rows.push(["Fingerabdruck für die App", element("code", {}, status.https.fingerprint)]);
+  }
   // Schritt 144: Push-Mitteilungen über Apple.
   if (status.push) {
     const push = status.push;

@@ -13,6 +13,7 @@ import json
 import logging
 import mimetypes
 import re
+import ssl
 import threading
 from datetime import timedelta
 from http import HTTPStatus
@@ -28,6 +29,7 @@ from .bridge import ExternalBridge
 from .broker import Broker
 from .ingest import AlarmIngest, IngestResult
 from .organisations import Organisations
+from . import tls
 from .push import PushService
 from .store import Store, alarm_dto, iso, parse_iso, utc_now
 
@@ -69,6 +71,8 @@ class Backend:
         self.bridge = bridge
         self.web_root = web_root
         self.addresses = addresses or []
+        # Schritt 153: HTTPS (Port, Fingerabdruck, selbst signiert) – None = aus.
+        self.https: Optional[dict[str, Any]] = None
         # Schritt 144: Push-Mitteilungen bei neuen Einsätzen.
         self.push = push or PushService(store)
         self.ingest.listeners.append(self.push.on_ingest)
@@ -246,7 +250,8 @@ def build_routes() -> list[Route]:
         organisations, alarm_count = backend.store.read(lambda s: (len(s["organisations"]), len(s["alarms"])))
         return {"version": VERSION, "debugEnabled": backend.debug, "retentionHours": backend.retention_hours,
                 "mqtt": backend.mqtt_status(), "organisations": organisations, "alarms": alarm_count,
-                "builtInBroker": backend.broker is not None, "addresses": backend.addresses, "push": backend.push.status()}
+                "builtInBroker": backend.broker is not None, "addresses": backend.addresses, "push": backend.push.status(),
+                "https": backend.https}
 
     @route("GET", r"/admin/api/organisations", "admin")
     def organisations(backend: Backend, request: "Request") -> Any:
@@ -502,11 +507,44 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(data)
 
 
-def make_server(backend: Backend, host: str, port: int) -> ThreadingHTTPServer:
-    handler = type("BoundHandler", (Handler,), {"backend": backend})
+def make_server(backend: Backend, host: str, port: int, tls_context: Optional[ssl.SSLContext] = None) -> ThreadingHTTPServer:
+    """HTTP- bzw. (Schritt 153) HTTPS-Server mit derselben Schnittstelle."""
+    handler = type("BoundHandler", (TlsHandler if tls_context else Handler,), {"backend": backend})
     server = ThreadingHTTPServer((host, port), handler)
     server.daemon_threads = True
+    if tls_context:
+        tls.wrap_server(server, tls_context)
     return server
+
+
+class TlsHandler(Handler):
+    """Schritt 153: TLS-Handshake im Thread der Anfrage; misslungene Verbindungen still verwerfen."""
+
+    timeout = 30
+    _tls_ok = True
+
+    def setup(self) -> None:
+        try:
+            self.request.settimeout(15)
+            self.request.do_handshake()
+        except ssl.SSLError as error:
+            self._tls_ok = False
+            if getattr(error, "reason", "") == "HTTP_REQUEST":
+                client = self.client_address[0] if self.client_address else "?"
+                log.warning("HTTP-Anfrage von %s auf dem HTTPS-Port – in der App die Adresse mit „https://“ eintragen.", client)
+        except OSError:
+            self._tls_ok = False
+        super().setup()
+
+    def handle(self) -> None:
+        if self._tls_ok:
+            super().handle()
+
+    def finish(self) -> None:
+        try:
+            super().finish()
+        except OSError:
+            pass
 
 
 def start_retention(backend: Backend, stop: threading.Event) -> None:

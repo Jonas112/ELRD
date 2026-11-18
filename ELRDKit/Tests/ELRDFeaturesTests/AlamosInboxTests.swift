@@ -129,6 +129,16 @@ struct AlamosInboxTests {
         #expect(!inbox.takeAlarmReview(for: mission), "nur einmal")
     }
 
+    /// Schritt 153: Fingerabdruck wie beim Backend (SHA-256 der DER-Daten, groß, ohne „:“).
+    @Test func certificateFingerprint() {
+        let der = Data("ELRD".utf8)
+        // Gleicher Wert wie hashlib.sha256(b"ELRD").hexdigest().upper() im Python-Backend.
+        #expect(PinningDelegate.fingerprint(of: der) == "2CD8E7B15FD0991D48E951B3F60D928CE5457127A7608C10DD541D14483812D8")
+        let a = PinnedSessions.session(for: String(repeating: "A", count: 64))
+        #expect(a === PinnedSessions.session(for: String(repeating: "A", count: 64)), "eine Sitzung je Fingerabdruck")
+        #expect(a !== URLSession.shared)
+    }
+
     @Test func filtersClosedAndTests() throws {
         let clock = Clock()
         let inbox = try makeInbox(clock: clock)

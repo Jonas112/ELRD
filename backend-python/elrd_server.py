@@ -36,6 +36,7 @@ from elrd.bridge import ExternalBridge  # noqa: E402
 from elrd.broker import Broker  # noqa: E402
 from elrd.organisations import Organisations  # noqa: E402
 from elrd.push import PushService  # noqa: E402
+from elrd.tls import TlsSetup  # noqa: E402
 from elrd.store import Store  # noqa: E402
 from elrd.web import Backend, make_server, start_retention  # noqa: E402
 
@@ -46,6 +47,9 @@ DEV_MQTT_PASSWORD = "entwicklung-fe2"
 
 DEFAULT_SETTINGS: dict[str, Any] = {
     "http": {"host": "0.0.0.0", "port": 8080},
+    # Schritt 153: HTTPS für Betrieb außerhalb von WLAN/Tailscale. Ohne Zertifikat/Schlüssel
+    # wird eines selbst erzeugt (daten/tls); „namen“: zusätzliche Namen/IPs fürs Zertifikat.
+    "https": {"eingeschaltet": False, "port": 8443, "zertifikat": "", "schluessel": "", "namen": []},
     "admin_schluessel": DEV_ADMIN_KEY,
     "debug": True,
     "aufbewahrung_stunden": 24,
@@ -168,6 +172,7 @@ def main() -> None:
         server = make_server(backend, bind, http_port)
     except OSError as error:
         sys.exit(f"HTTP-Port {http_port} ist belegt ({error.strerror}). Läuft das Backend schon (oder Docker)? Anderen Port mit --http-port wählen.")
+    https_server = start_https(backend, settings["https"], args, bind)
     stop = threading.Event()
     start_retention(backend, stop)
 
@@ -179,10 +184,31 @@ def main() -> None:
     finally:
         stop.set()
         server.server_close()
+        if https_server:
+            https_server.shutdown()
+            https_server.server_close()
         if backend.broker:
             backend.broker.stop()
         if backend.bridge:
             backend.bridge.stop()
+
+
+def start_https(backend: Backend, https: dict[str, Any], args: argparse.Namespace, bind: str) -> Any:
+    """Schritt 153: zweiter Server mit TLS (gleiche Schnittstelle) in eigenem Thread."""
+    if not https.get("eingeschaltet"):
+        return None
+    port = int(https.get("port") or 8443)
+    lan = [] if args.nur_lokal else local_addresses()
+    try:
+        setup = TlsSetup(https, args.daten, lan)
+        server = make_server(backend, bind, port, setup.context)
+    except (RuntimeError, OSError, ValueError) as error:
+        sys.exit(f"HTTPS konnte nicht starten: {error}")
+    threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.5}, name="https", daemon=True).start()
+    hosts = lan + [n for n in (https.get("namen") or []) if n not in lan]
+    backend.addresses += [f"https://{h}:{port}" for h in hosts]
+    backend.https = {"port": port, "fingerprint": setup.fingerprint, "selfSigned": setup.self_signed}
+    return server
 
 
 def print_banner(backend: Backend, settings: dict[str, Any], settings_path: Path, http_port: int, created_key: Any, local_only: bool) -> None:
@@ -195,9 +221,14 @@ def print_banner(backend: Backend, settings: dict[str, Any], settings_path: Path
         print(f" Adresse für die App: {address}")
     if local_only:
         print(" (nur lokal erreichbar – für das iPad ohne --nur-lokal starten)")
+    if backend.https:
+        print(f" HTTPS:               Port {backend.https['port']}" + (" (selbst signiert)" if backend.https["selfSigned"] else ""))
+        if backend.https["selfSigned"]:
+            print(" Fingerabdruck (in der App unter Alamos FE2 eintragen):")
+            print(f"   {backend.https['fingerprint']}")
     print(f" Admin-Schlüssel:     {backend.admin_key or '– (fehlt! in einstellungen.json setzen)'}")
     if backend.broker:
-        hosts = [a.split('//')[1].rsplit(':', 1)[0] for a in backend.addresses] or ["localhost"]
+        hosts = [a.split('//')[1].rsplit(':', 1)[0] for a in backend.addresses if a.startswith("http://")] or ["localhost"]
         tls = f", TLS auf {backend.broker.tls_port}" if backend.broker.tls_port else ""
         print(f" MQTT-Broker:         {hosts[0]}:{backend.broker.port}{tls} (eingebaut)")
         print(f" Topic für FE2:       {backend.prefix}/<organisation>/alarm, Benutzer = Organisation")

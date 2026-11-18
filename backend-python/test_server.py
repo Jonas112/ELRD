@@ -37,6 +37,7 @@ from elrd.ingest import AlarmIngest  # noqa: E402
 from elrd.organisations import Organisations, hash_api_key, verify_password  # noqa: E402
 from elrd.store import Store, iso, parse_iso, utc_now  # noqa: E402
 from elrd import push as apns  # noqa: E402
+from elrd import tls  # noqa: E402
 from elrd.web import Backend, make_server  # noqa: E402
 
 ADMIN = "test-admin-schluessel-123"
@@ -520,6 +521,57 @@ class PushTests(unittest.TestCase):
         finally:
             server.shutdown()
             server.server_close()
+
+
+class HttpsTests(unittest.TestCase):
+    """Schritt 153: HTTPS mit selbst erzeugtem Zertifikat."""
+
+    @unittest.skipUnless(shutil.which("openssl"), "openssl fehlt")
+    def test_https_with_generated_certificate(self) -> None:
+        import ssl
+        with TempDir() as directory:
+            setup = tls.TlsSetup({"namen": ["elrd.example.de", "100.101.102.103"]}, directory, ["192.168.1.20"])
+            self.assertTrue(setup.self_signed)
+            self.assertTrue((directory / "tls" / tls.KEY_NAME).exists())
+            self.assertEqual(oct((directory / "tls" / tls.KEY_NAME).stat().st_mode & 0o777), "0o600")
+            self.assertRegex(setup.fingerprint, r"^([0-9A-F]{2}:){31}[0-9A-F]{2}$")
+            # Zweiter Start: vorhandenes Zertifikat wiederverwenden.
+            self.assertEqual(tls.TlsSetup({}, directory, []).fingerprint, setup.fingerprint)
+            text = subprocess.run(["openssl", "x509", "-in", str(setup.cert), "-noout", "-text"], capture_output=True, text=True).stdout
+            for name in ("DNS:localhost", "IP Address:127.0.0.1", "DNS:elrd.example.de", "IP Address:100.101.102.103", "IP Address:192.168.1.20"):
+                self.assertIn(name, text)
+
+            backend = Backend(Store(directory), admin_key=ADMIN)
+            server = make_server(backend, "127.0.0.1", 0, setup.context)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            port = server.server_address[1]
+            try:
+                # http:// auf dem HTTPS-Port: Hinweis im Log, Server läuft weiter.
+                with self.assertLogs("elrd.web", level="WARNING") as logs:
+                    with socket.create_connection(("127.0.0.1", port), timeout=5) as raw:
+                        raw.sendall(b"GET /health HTTP/1.1\r\nHost: x\r\n\r\n")
+                        raw.recv(64)
+                self.assertTrue(any("HTTPS-Port" in line for line in logs.output), logs.output)
+
+                context = ssl.create_default_context(cafile=str(setup.cert))
+                with urllib.request.urlopen(f"https://127.0.0.1:{port}/health", context=context, timeout=5) as response:
+                    self.assertEqual(response.status, 200)
+                    self.assertTrue(response.read())
+                # Ohne das Zertifikat: abgelehnt (wie auf dem iPad ohne Fingerabdruck).
+                with self.assertRaises(urllib.error.URLError):
+                    urllib.request.urlopen(f"https://127.0.0.1:{port}/health", context=ssl.create_default_context(), timeout=5)
+                # Server nach abgelehntem Handshake weiter erreichbar.
+                with urllib.request.urlopen(f"https://127.0.0.1:{port}/health", context=context, timeout=5) as response:
+                    self.assertEqual(response.status, 200)
+            finally:
+                server.shutdown()
+                server.server_close()
+
+    def test_own_certificate_paths(self) -> None:
+        with TempDir() as directory:
+            with self.assertRaises((OSError, ValueError, Exception)):
+                tls.TlsSetup({"zertifikat": "fehlt.crt", "schluessel": "fehlt.key"}, directory, [])
+            self.assertFalse((directory / "tls").exists(), "kein Zertifikat erzeugt, wenn eigenes angegeben")
 
 if __name__ == "__main__":
     unittest.main()

@@ -90,13 +90,14 @@ final class AlamosInbox {
         let token: String
         let url: URL
         let key: String
+        var fingerprint: String?
     }
 
     /// Gewünschte Anmeldung nach den aktuellen Einstellungen (`nil`: keine).
     private var wantedRegistration: DeviceRegistration? {
         guard isEnabled, settings.pushEnabled, !isDemo, let token = PushToken.shared.hex,
               let url = settings.normalizedURL, let key = storedAPIKey, !key.isEmpty else { return nil }
-        return DeviceRegistration(token: token, url: url, key: key)
+        return DeviceRegistration(token: token, url: url, key: key, fingerprint: settings.pinnedFingerprint)
     }
 
     /// Beim Backend an- bzw. abmelden, wenn sich Kennzeichen, Adresse, Schlüssel oder
@@ -113,12 +114,12 @@ final class AlamosInbox {
         pushTask = Task { [weak self] in
             await earlier?.value
             if let previous {
-                try? await AlamosBackendClient(baseURL: previous.url, apiKey: previous.key).unregisterDevice(token: previous.token)
+                try? await AlamosBackendClient(baseURL: previous.url, apiKey: previous.key, pinnedFingerprint: previous.fingerprint).unregisterDevice(token: previous.token)
             }
             guard let wanted else { return }
             self?.push = .registering
             do {
-                let result = try await AlamosBackendClient(baseURL: wanted.url, apiKey: wanted.key)
+                let result = try await AlamosBackendClient(baseURL: wanted.url, apiKey: wanted.key, pinnedFingerprint: wanted.fingerprint)
                     .registerDevice(token: wanted.token, environment: PushToken.environment)
                 self?.push = .registered(backendSends: result.pushEnabled)
             } catch {
@@ -142,7 +143,7 @@ final class AlamosInbox {
         guard let base = url ?? settings.normalizedURL, let key = key ?? storedAPIKey, !key.isEmpty else {
             throw AlamosClientError.notConfigured
         }
-        return AlamosBackendClient(baseURL: base, apiKey: key)
+        return AlamosBackendClient(baseURL: base, apiKey: key, pinnedFingerprint: settings.pinnedFingerprint)
     }
 
     // MARK: Anzeige

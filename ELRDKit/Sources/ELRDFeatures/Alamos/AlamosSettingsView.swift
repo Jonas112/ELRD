@@ -7,6 +7,8 @@ struct AlamosSettingsView: View {
     @Environment(AlamosInbox.self) private var inbox: AlamosInbox?
 
     @State private var url = ""
+    /// Schritt 153: Fingerabdruck eines selbst signierten Zertifikats.
+    @State private var fingerprint = ""
     @State private var newKey = ""
     @State private var editsKey = false
     @State private var testState: TestState = .idle
@@ -30,6 +32,7 @@ struct AlamosSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             url = inbox?.settings.backendURL ?? ""
+            fingerprint = inbox?.settings.certificateFingerprint ?? ""
             editsKey = !(inbox?.hasAPIKey ?? false)
         }
         .onDisappear(perform: commitURL)
@@ -105,6 +108,26 @@ struct AlamosSettingsView: View {
             Text("ELRD-Backend")
         } footer: {
             Text("Adresse und App-Schlüssel bekommt ihr vom Betreiber des Backends (Verwaltungsseite › Organisation). Der Schlüssel liegt nur in der Keychain dieses Geräts. Im lokalen Netz geht auch http:// (bei einer IP-Adresse ohne Angabe automatisch), sonst nur https://.")
+        }
+
+        // Schritt 153: selbst signiertes Zertifikat (Python-Backend mit HTTPS).
+        if url.lowercased().hasPrefix("https://") || !fingerprint.isEmpty {
+            Section {
+                TextField("AB:CD:… (64 Zeichen)", text: $fingerprint, axis: .vertical)
+                    .font(.callout.monospaced())
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .onSubmit(commitURL)
+                    .frame(minHeight: TouchTarget.minimum)
+                if !fingerprint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, AlamosSettings.normalizeFingerprint(fingerprint) == nil {
+                    Label("Kein gültiger SHA-256-Fingerabdruck (32 Bytes, z. B. „4D:6B:…“).", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(StatusText.warning)
+                }
+            } header: {
+                Text("Fingerabdruck des Zertifikats")
+            } footer: {
+                Text("Nur bei einem selbst erzeugten Zertifikat nötig: Das Python-Backend zeigt den Fingerabdruck beim Start an (auch auf der Verwaltungsseite). Die App vertraut dann genau diesem Zertifikat. Bei einem Zertifikat einer Zertifizierungsstelle (z. B. Let’s Encrypt) leer lassen.")
+            }
         }
 
         Section("Abfrage") {
@@ -195,8 +218,16 @@ struct AlamosSettingsView: View {
     private func commitURL() {
         guard let inbox else { return }
         let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed != inbox.settings.backendURL else { return }
-        do { try inbox.updateSettings { $0.backendURL = trimmed } } catch { errorMessage = ErrorText.message(for: error) }
+        let print = fingerprint.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != inbox.settings.backendURL || print != inbox.settings.certificateFingerprint else { return }
+        do {
+            try inbox.updateSettings {
+                $0.backendURL = trimmed
+                $0.certificateFingerprint = print
+            }
+        } catch {
+            errorMessage = ErrorText.message(for: error)
+        }
     }
 
     private func saveKey(_ inbox: AlamosInbox) {

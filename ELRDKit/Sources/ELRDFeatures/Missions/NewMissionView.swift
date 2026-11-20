@@ -99,7 +99,7 @@ struct NewMissionView: View {
             HStack(spacing: Spacing.s) {
                 Label("Aus Alamos FE2", systemImage: "antenna.radiowaves.left.and.right")
                     .font(.headline)
-                if alarm.isTest { StatusChip("Test", color: .purple) }
+                if alarm.isTest { StatusChip("Test", color: StatusText.test) }
                 Spacer(minLength: 0)
                 Text("Nr. \(alarm.externalId)")
                     .font(.callout.monospacedDigit())

@@ -320,7 +320,7 @@ struct JournalComposerSheet: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, Spacing.l)
                     .frame(minHeight: TouchTarget.comfortable)
-                    .background(Color.red, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+                    .background(ActionFill.critical, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             }
             .buttonStyle(.plain)
         }
@@ -658,7 +658,7 @@ struct JournalEntryEditor: View {
                     Button(role: .destructive) { confirmsDelete = true } label: {
                         Label("Eintrag löschen", systemImage: "trash")
                             .font(.headline)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(StatusText.critical)
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
                             .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }

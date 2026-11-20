@@ -32,9 +32,9 @@ struct AlamosAlarmSheet: View {
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, Spacing.s)
                                     .padding(.vertical, Spacing.xxs)
-                                    .background(alarm.isClosed ? Color.gray : Color.red, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                                    .background(alarm.isClosed ? Color.gray : ActionFill.critical, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                             }
-                            if alarm.isTest { StatusChip("Test", color: .purple) }
+                            if alarm.isTest { StatusChip("Test", color: StatusText.test) }
                             if alarm.isClosed { StatusChip("in FE2 geschlossen", color: .gray) }
                         }
                         Text(data.title).font(.title2.weight(.semibold))

@@ -114,7 +114,7 @@ struct TriageGuideSheet: View {
             if !suggestion.measures.isEmpty {
                 Label(suggestion.measures.joined(separator: " · "), systemImage: "cross.case.fill")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.red)
+                    .foregroundStyle(StatusText.critical)
             }
             if let patient, patient.triage == suggestion.triage {
                 Text("Entspricht der bisherigen Kategorie.").font(.subheadline).foregroundStyle(.secondary)

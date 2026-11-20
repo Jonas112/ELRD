@@ -81,6 +81,11 @@ public enum ActionFill {
     public static let warning = Color(uiColor: UIColor { traits in
         UIColor(rgb: traits.accessibilityContrast == .high ? 0x8F4200 : 0xA84E00)
     })
+    /// Schritt 154: kritische Flächen mit weißer Schrift (6,0:1, bei „Kontrast erhöhen“ 8,1:1).
+    /// Systemrot trägt weiße Schrift nur mit 3,6:1.
+    public static let critical = Color(uiColor: UIColor { traits in
+        UIColor(rgb: traits.accessibilityContrast == .high ? 0xA0101A : 0xC4161C)
+    })
 }
 
 /// Schriftfarben für Warn- und Erfolgstexte (Schritt 147, HIG-Befund 2).
@@ -98,6 +103,18 @@ public enum StatusText {
     public static let success = Color(uiColor: UIColor { traits in
         guard traits.userInterfaceStyle != .dark else { return UIColor.systemGreen.resolvedColor(with: traits) }
         return UIColor(rgb: traits.accessibilityContrast == .high ? 0x176B2C : 0x1E7B34)
+    })
+    /// Schritt 154: kritische Texte („überfällig“, Löschen, Maßnahmen). Systemrot hat hell nur
+    /// 3,6:1, dunkel auf Zellen 4,1:1. Hell #B3141A (≥ 4,9:1 auch im Chip), dunkel #FF6961 (≥ 4,9:1).
+    public static let critical = Color(uiColor: UIColor { traits in
+        let high = traits.accessibilityContrast == .high
+        if traits.userInterfaceStyle == .dark { return UIColor(rgb: high ? 0xFF8A84 : 0xFF6961) }
+        return UIColor(rgb: high ? 0xA0101A : 0xB3141A)
+    })
+    /// Schritt 154: Kennzeichen „Test“ (Systemlila im Chip nur 3,2–3,5:1). Hell #7A2FA8,
+    /// dunkel #D08CF7 – im Chip ≥ 4,5:1.
+    public static let test = Color(uiColor: UIColor { traits in
+        UIColor(rgb: traits.userInterfaceStyle == .dark ? 0xD08CF7 : 0x7A2FA8)
     })
 }
 

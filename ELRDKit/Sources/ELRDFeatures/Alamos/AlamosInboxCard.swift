@@ -51,7 +51,7 @@ struct AlamosInboxCard: View {
             Label("Alamos FE2", systemImage: "antenna.radiowaves.left.and.right")
                 .font(.headline)
             if count > 0 {
-                StatusChip("\(count) offen", color: .red)
+                StatusChip("\(count) offen", color: StatusText.critical)
             }
             Spacer(minLength: Spacing.s)
             statusText
@@ -99,14 +99,14 @@ struct AlamosAlarmRow: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, Spacing.s)
                 .frame(minWidth: 64, minHeight: 36)
-                .background(alarm.isClosed ? Color.gray : Color.red, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+                .background(alarm.isClosed ? Color.gray : ActionFill.critical, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             VStack(alignment: .leading, spacing: Spacing.xxs) {
                 HStack(spacing: Spacing.s) {
                     Text(data.title)
                         .font(.body.weight(.semibold))
                         .lineLimit(2)
-                    if isNew { StatusChip("Neu", color: .red) }
-                    if alarm.isTest { StatusChip("Test", color: .purple) }
+                    if isNew { StatusChip("Neu", color: StatusText.critical) }
+                    if alarm.isTest { StatusChip("Test", color: StatusText.test) }
                     if alarm.isClosed { StatusChip("geschlossen", color: .gray) }
                 }
                 if let address = data.location?.addressLine, !address.isEmpty {

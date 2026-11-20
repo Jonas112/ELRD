@@ -147,7 +147,7 @@ struct MapObjectEditor: View {
                     Button(role: .destructive) { confirmsDelete = true } label: {
                         Label("Löschen", systemImage: "trash")
                             .font(.headline)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(StatusText.critical)
                             .frame(maxWidth: .infinity, minHeight: TouchTarget.comfortable)
                             .background(Surface.card, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
                     }

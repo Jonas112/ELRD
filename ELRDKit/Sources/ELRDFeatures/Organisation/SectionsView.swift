@@ -652,7 +652,7 @@ struct ArrivalBadge: View {
                 .font(.subheadline.weight(.heavy).monospacedDigit())
                 .foregroundStyle(unit.expectedArrival == nil ? Color.secondary : .white)
                 .frame(width: 56, height: 40)
-                .background(unit.expectedArrival == nil ? Surface.card : (overdue ? Color.red : ActionFill.warning),
+                .background(unit.expectedArrival == nil ? Surface.card : (overdue ? ActionFill.critical : ActionFill.warning),
                             in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                     .strokeBorder(Surface.separator, lineWidth: unit.expectedArrival == nil ? 1 : 0))
@@ -676,7 +676,7 @@ struct ArrivalLine: View {
                     systemImage: "clock"
                 )
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(overdue ? Color.red : StatusText.warning)
+                .foregroundStyle(overdue ? StatusText.critical : StatusText.warning)
             }
         }
     }
